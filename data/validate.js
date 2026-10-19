@@ -34,6 +34,9 @@ for (const file of files) {
     if (allIds.has(q.id)) err('duplicate id');
     allIds.add(q.id);
     if (!DOMAINS.includes(q.domain)) err(`bad domain ${q.domain}`);
+    if (q.source !== undefined && !/^https:\/\/(docs\.aws\.amazon\.com|aws\.amazon\.com)\/\S+$/.test(q.source)) {
+      err('source must be a https://docs.aws.amazon.com/ or https://aws.amazon.com/ URL');
+    }
     if (!Array.isArray(q.options) || !Array.isArray(q.answer)) return;
     if (q.answer.some(a => !Number.isInteger(a) || a < 0 || a >= q.options.length)) err('answer index out of range');
     if (new Set(q.answer).size !== q.answer.length) err('duplicate answer index');

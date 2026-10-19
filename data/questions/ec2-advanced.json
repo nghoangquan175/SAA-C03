@@ -776,5 +776,617 @@
     ],
     "explanation": "CloudWatch bills for each unique custom metric, which is defined by its name and dimension combination, so per-instance dimensions on a frequently replaced fleet create a large number of metrics. Publishing the metrics with only the AutoScalingGroupName dimension provides group-level values with far fewer custom metrics. Detailed monitoring adds cost for the default metrics, a 1-second interval increases API requests and cost, and the agent does not publish metrics to S3.",
     "subtopic": "CloudWatch agent metric cost"
+  },
+  {
+    "id": "ec2-advanced-041",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a production web application in a load-balanced AWS Elastic Beanstalk environment. Deployments must never reduce serving capacity, a failed deployment must leave the instances that run the current version untouched, and rollback must be as quick and safe as possible without any DNS change. Which deployment policy should the company use?",
+    "options": [
+      "Immutable",
+      "Rolling",
+      "All at once",
+      "Rolling with additional batch"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "An immutable deployment launches a full set of new instances in a separate Auto Scaling group; if they fail health checks, Elastic Beanstalk terminates them and the original instances keep serving, so rollback is simply terminating the new instances. All at once causes downtime. Rolling takes batches out of service and reduces capacity. Rolling with additional batch keeps capacity but updates existing instances, so a failure after some batches leaves a mix of versions that must be fixed by a manual redeploy.",
+    "subtopic": "Elastic Beanstalk immutable deployments",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.deploy-existing-version.html"
+  },
+  {
+    "id": "ec2-advanced-042",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs 20 instances in a load-balanced AWS Elastic Beanstalk environment. During deployments the environment must keep its full capacity of 20 instances serving traffic. To control cost, the company does not want to run a second full set of 20 instances during each deployment, and a longer deployment time is acceptable. Which deployment policy meets these requirements?",
+    "options": [
+      "Immutable",
+      "Rolling with additional batch",
+      "Traffic splitting",
+      "Rolling"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Rolling with additional batch first launches one extra batch of instances and then deploys batch by batch, so full capacity is kept while only one batch of extra instances runs at a time; the extra batch is terminated when the deployment completes. Immutable and traffic-splitting deployments launch a full new set of instances equal to the current fleet. A plain rolling deployment takes each batch out of service and reduces capacity.",
+    "subtopic": "Elastic Beanstalk rolling with additional batch",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.rolling-version-deploy.html"
+  },
+  {
+    "id": "ec2-advanced-043",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must move an AWS Elastic Beanstalk application to a new platform branch with a newer major runtime version, which is not compatible with an in-place platform update. The company wants to test the new version with production-like settings and switch users over with minimal downtime, and it must be able to switch back quickly. Which approach meets these requirements?",
+    "options": [
+      "Enable managed platform updates with the minor and patch update level",
+      "Change the deployment policy to traffic splitting and update the platform version in place",
+      "Clone the environment onto the new platform version, test it, and then swap the environment URLs (CNAMEs) of the two environments",
+      "Use the all at once deployment policy and redeploy the previous version if problems occur"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A blue/green deployment is required for an incompatible platform version: run the new version in a separate environment, test it, and swap the environment CNAMEs to redirect traffic; swapping back returns users to the old environment, which should be kept until DNS caches expire. Managed platform updates apply only patch and minor updates within a platform branch. Traffic splitting and all at once are deployment policies for application versions within the same environment, and all at once causes downtime.",
+    "subtopic": "Elastic Beanstalk blue/green deployments",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.CNAMESwap.html"
+  },
+  {
+    "id": "ec2-advanced-044",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A team deploys a new application version to an AWS Elastic Beanstalk environment that uses an Application Load Balancer. The team wants to send 10% of client traffic to the new version for 15 minutes, automatically shift all traffic to it if it stays healthy, and automatically move traffic back to the old version if it does not. Which deployment policy should the team configure?",
+    "options": [
+      "Rolling with a batch size of 10%",
+      "Immutable with a health check threshold of Warning",
+      "All at once with enhanced health reporting",
+      "Traffic splitting with a 10% traffic split and a 15-minute evaluation time"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Traffic-splitting deployments launch a full set of new instances, forward a configured percentage of traffic to them for an evaluation period, and then either shift all traffic to the new version or move traffic back and terminate the new instances; this canary pattern requires an Application Load Balancer. A rolling deployment with 10% batches updates existing instances and does not control the share of client traffic. Immutable deployments do not send a defined fraction of traffic for evaluation, and all at once causes downtime.",
+    "subtopic": "Elastic Beanstalk traffic splitting",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.rolling-version-deploy.html"
+  },
+  {
+    "id": "ec2-advanced-045",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Developers deploy to an AWS Elastic Beanstalk development environment dozens of times a day. They want the fastest possible deployments and do not want to pay for any extra instances during deployments. Brief interruptions in the development environment are acceptable. Which deployment policy should they use?",
+    "options": [
+      "All at once",
+      "Immutable",
+      "Rolling with additional batch",
+      "Traffic splitting"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "All at once deploys the new version to all existing instances simultaneously, which is the quickest method and launches no extra instances, at the cost of a short loss of service. Immutable and traffic splitting launch a full set of new instances and are the slowest policies. Rolling with additional batch launches an extra batch and takes longer than a plain rolling deployment.",
+    "subtopic": "Elastic Beanstalk all at once deployments",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.deploy-existing-version.html"
+  },
+  {
+    "id": "ec2-advanced-046",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A web application on AWS Elastic Beanstalk generates PDF reports and resizes uploaded images inside web requests, which makes the site slow under load. The company wants the web tier to stay responsive, the background work to scale independently, and nightly cleanup jobs to run on a schedule, with the LEAST custom infrastructure code. Which solution meets these requirements?",
+    "options": [
+      "Increase the instance size of the web environment and enable sticky sessions on the load balancer",
+      "Create an Elastic Beanstalk worker environment; have the web tier send tasks to the worker environment's Amazon SQS queue and define the nightly jobs in a cron.yaml file",
+      "Run the background tasks as cron jobs on every web server instance by using .ebextensions",
+      "Add a second web server environment and use Route 53 weighted routing to send report requests to it"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An Elastic Beanstalk worker environment manages an Amazon SQS queue and runs a daemon that pulls messages and posts them to the application, so long-running tasks are decoupled from the web tier and scale separately; periodic tasks are defined in cron.yaml. Larger web instances still process the work inside requests. Cron jobs on every web instance compete with user traffic and run duplicate jobs. A second web environment behind weighted routing still processes the work synchronously.",
+    "subtopic": "Elastic Beanstalk worker environments",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features-managing-env-tiers.html"
+  },
+  {
+    "id": "ec2-advanced-047",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company's AWS Elastic Beanstalk environment includes an Amazon RDS DB instance that Elastic Beanstalk created as part of the environment. The company now wants to use blue/green deployments for major releases without losing or disrupting the production database. Which actions should a solutions architect recommend? (Select TWO.)",
+    "options": [
+      "Run the production database independently of the environment, for example by decoupling it with the Retain option or using a standalone RDS instance, and point both environments to it",
+      "Enable Multi-AZ on the Elastic Beanstalk-created database so that it moves to the green environment automatically",
+      "Switch to the all at once deployment policy so that the database is updated together with the application",
+      "Clone the environment, deploy and test the new version in the clone, and then swap the environment URLs",
+      "Terminate the blue environment immediately after the URL swap so that DNS changes propagate faster"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Blue/green deployments require the environments to run independently of the production database, so a database created inside the environment should be decoupled (for example with the Retain lifecycle option) or replaced by a standalone RDS instance that both environments use. The release is then deployed to a cloned environment and traffic is moved by swapping environment URLs. Multi-AZ does not move a database between environments, all at once is not a blue/green method, and the old environment should be kept until DNS records cached by clients have expired.",
+    "subtopic": "Elastic Beanstalk and RDS",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.CNAMESwap.html"
+  },
+  {
+    "id": "ec2-advanced-048",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security policy requires that every AWS Elastic Beanstalk production environment receives operating system and runtime security patches within a week of their release, without reducing serving capacity and without engineers performing manual updates. Which solution meets these requirements?",
+    "options": [
+      "Create a cron job on each instance that runs the package manager's update command every night",
+      "Use AWS Systems Manager Patch Manager to patch the Elastic Beanstalk instances in place every week",
+      "Enable managed platform updates with a weekly maintenance window, which applies patch and minor platform updates through immutable updates",
+      "Rebuild the environment from scratch every week by using a saved configuration"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Managed platform updates automatically upgrade an environment to the latest patch or minor platform version during a weekly maintenance window, and they always use immutable updates so the application stays in service with no reduction in capacity. In-place patching with cron or Patch Manager changes instances outside Elastic Beanstalk's control, and patched instances are replaced by unpatched ones when the environment scales. Rebuilding environments weekly is manual and disruptive.",
+    "subtopic": "Elastic Beanstalk managed platform updates",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environment-platform-update-managed.html"
+  },
+  {
+    "id": "ec2-advanced-049",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "Which AWS Elastic Beanstalk deployment policies deploy the new application version only to newly launched instances instead of updating instances that are already serving traffic? (Select TWO.)",
+    "options": [
+      "All at once",
+      "Immutable",
+      "Rolling",
+      "Rolling with additional batch",
+      "Traffic splitting"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "Immutable and traffic-splitting deployments launch a fresh set of instances for the new version and terminate the old instances only after the new ones are healthy, which gives a fast and safe rollback. All at once and rolling deploy to existing instances. Rolling with additional batch deploys to the extra batch of new instances and also to existing instances.",
+    "subtopic": "Elastic Beanstalk deployment policies",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.deploy-existing-version.html"
+  },
+  {
+    "id": "ec2-advanced-050",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup uses AWS Elastic Beanstalk for an internal tool that has a handful of users and for several developer test environments. The startup wants to minimize the monthly cost of these environments and does not need automatic scaling. Which configuration is MOST cost-effective?",
+    "options": [
+      "Load-balanced environments with a minimum of two instances in different Availability Zones",
+      "Worker environments, which do not include a load balancer",
+      "Load-balanced environments that use the traffic-splitting deployment policy",
+      "Single-instance environments, which run one instance with an Elastic IP address and no load balancer"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A single-instance environment runs one EC2 instance with an Elastic IP address and has no load balancer, which reduces cost for low-traffic and development workloads; it can be changed to a load-balanced environment later. Elastic Beanstalk itself has no additional charge, so cost comes from the resources it creates. Load-balanced environments add load balancer charges and more instances. A worker environment processes queue messages and cannot serve web traffic.",
+    "subtopic": "Elastic Beanstalk environment types",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features-managing-env-types.html"
+  },
+  {
+    "id": "ec2-advanced-051",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A stateless API runs in a load-balanced AWS Elastic Beanstalk environment that scales between 4 and 24 instances. The company wants to cut compute costs with Spot Instances but must always keep at least 4 On-Demand Instances and wants half of any capacity above that to be On-Demand. Which configuration meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Enable Spot Instances in the environment's capacity settings with an On-Demand base of 4 and an On-Demand above base percentage of 50",
+      "Create a separate Spot Fleet outside Elastic Beanstalk and register its instances with the environment's load balancer",
+      "Purchase 1-year Reserved Instances to cover the maximum of 24 instances",
+      "Create two Elastic Beanstalk environments, one On-Demand and one Spot, and split traffic with Route 53 weighted records"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Elastic Beanstalk can launch a mix of On-Demand and Spot Instances in the environment's Auto Scaling group by using EnableSpot, SpotFleetOnDemandBase, and SpotFleetOnDemandAboveBasePercentage, so a base of 4 On-Demand Instances with 50% On-Demand above the base meets the requirement natively; Capacity Rebalancing can further reduce interruption impact. A separate Spot Fleet or two environments add infrastructure to manage, and Reserved Instances sized for the maximum of 24 instances would pay for capacity that is idle most of the time.",
+    "subtopic": "Elastic Beanstalk Spot Instances",
+    "source": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-autoscaling-spot-and-demand.html"
+  },
+  {
+    "id": "ec2-advanced-052",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An EC2 Image Builder pipeline produces a new hardened AMI every week. Auto Scaling groups in two application accounts reference launch templates, and engineers currently update each launch template by hand after every build, which sometimes leaves groups launching outdated images. Which solution automates this with the LEAST operational overhead?",
+    "options": [
+      "Use AWS Systems Manager Patch Manager to patch the running instances so that the AMI does not need to change",
+      "Add launch template configurations to the pipeline's distribution settings so that Image Builder creates a new launch template version with the new AMI ID and sets it as the default",
+      "Write a Lambda function that polls for new AMIs and updates the Auto Scaling groups to use the AMI ID directly",
+      "Share the AMI with the organization and ask each team to update its launch templates after receiving an email notification"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Image Builder distribution settings can include launch template configurations; for each build, Image Builder creates a new launch template version that contains the new AMI ID and can set it as the default version, including for launch templates in other accounts through its cross-account distribution role. Auto Scaling groups that use the default version then launch the new image. Patching instances in place does not change what new instances launch with. A custom Lambda function or manual updates add maintenance and risk.",
+    "subtopic": "Image Builder launch template distribution",
+    "source": "https://docs.aws.amazon.com/imagebuilder/latest/userguide/dist-using-launch-template.html"
+  },
+  {
+    "id": "ec2-advanced-053",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Auto Scaling group was created with version 3 of a launch template selected explicitly. An engineer created version 4 with a patched AMI and set it as the template's default version, but instances launched during scale-out still use the old AMI. What should the engineer do so that the group uses the new AMI?",
+    "options": [
+      "Modify version 3 of the launch template in place to reference the patched AMI",
+      "Reboot all instances in the group so that they load the new default version",
+      "Update the Auto Scaling group to use the launch template's default (or latest) version, and then replace the existing instances, for example with an instance refresh",
+      "Wait for the new default version to propagate to the Auto Scaling group, which can take up to 24 hours"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "An Auto Scaling group uses the default version, the latest version, or a specific version of a launch template, as configured on the group; because this group pins version 3, changing the template's default has no effect until the group is set to use the default or latest version (or version 4). Existing instances keep their original configuration until they are replaced, for example by an instance refresh. Launch template versions are immutable, rebooting does not change the AMI of an instance, and there is no propagation delay.",
+    "subtopic": "Launch template versions",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/manage-launch-template-versions.html"
+  },
+  {
+    "id": "ec2-advanced-054",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company requires that an endpoint protection agent be installed and running on every managed EC2 instance, including instances launched by Auto Scaling in the future. Operators sometimes stop the service while troubleshooting and forget to restart it. Which solution keeps the instances compliant with the LEAST operational overhead?",
+    "options": [
+      "Install the agent in the AMI and rely on the operators to restart it after troubleshooting",
+      "Use Run Command once a month to reinstall the agent on all instances",
+      "Add the installation script to the user data of every launch template",
+      "Create an AWS Systems Manager State Manager association that targets the instances by tag and runs on a schedule to install the agent if it is missing and start the service if it is stopped"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "State Manager associations define a desired state, target nodes by tags or other criteria, and are reapplied on a schedule, so the agent is installed on new instances and restarted if it is found stopped, correcting configuration drift automatically. Baking the agent into the AMI or user data covers only the first boot. A monthly Run Command leaves long gaps and must be triggered by someone.",
+    "subtopic": "Systems Manager State Manager",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-state.html"
+  },
+  {
+    "id": "ec2-advanced-055",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs 15 critical instances of a quorum-based service. Each instance must run on distinct hardware so that a single rack failure affects at most one instance, and the service must also survive the loss of an Availability Zone. The Region has three Availability Zones. Which placement configuration meets these requirements?",
+    "options": [
+      "A single spread placement group that spans the three Availability Zones, with five instances in each Availability Zone",
+      "A single cluster placement group in one Availability Zone",
+      "A partition placement group with one partition in one Availability Zone",
+      "A single spread placement group with all 15 instances in one Availability Zone"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A rack-level spread placement group places each instance on a distinct rack and can span multiple Availability Zones in a Region, with a maximum of seven running instances per Availability Zone, so five instances in each of three AZs fits and also survives an AZ loss. Fifteen instances in one AZ exceed the spread limit and do not survive an AZ failure. A cluster placement group concentrates instances in one AZ, and a single partition does not separate the instances from each other.",
+    "subtopic": "Spread placement groups across AZs",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-strategies.html"
+  },
+  {
+    "id": "ec2-advanced-056",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A developer can launch EC2 instances but receives an authorization error whenever the developer tries to launch an instance with the instance profile AppServerProfile, which contains the role AppServerRole. Following least privilege, which permission should an administrator add to the developer's IAM policy?",
+    "options": [
+      "iam:CreateRole on all resources",
+      "iam:PassRole on the ARN of AppServerRole",
+      "sts:AssumeRole on the ARN of AppServerRole",
+      "iam:* on all roles in the account"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Launching an instance with an IAM role, or attaching or replacing a role, requires iam:PassRole for that role, and least privilege means scoping the permission to the specific role ARN rather than using a wildcard. The developer does not need to create roles or assume the role; the EC2 service delivers the role credentials to the instance. iam:* grants far more access than required.",
+    "subtopic": "iam:PassRole for instance roles",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/permission-to-pass-iam-roles.html"
+  },
+  {
+    "id": "ec2-advanced-057",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company wants AWS Systems Manager to manage every current and future EC2 instance in an account, so that Session Manager, Patch Manager, and Inventory work, without attaching an IAM instance profile to each instance. The instances run a recent version of SSM Agent. Which actions are required? (Select TWO.)",
+    "options": [
+      "Assign a public IPv4 address to every instance so that it can register with Systems Manager",
+      "Allow inbound HTTPS from the Systems Manager service in each instance security group",
+      "Turn on Default Host Management Configuration in each AWS Region where the instances run",
+      "Attach the AmazonSSMManagedInstanceCore policy to an instance profile on every instance",
+      "Configure the instances to use IMDSv2, because Default Host Management Configuration does not support IMDSv1"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Default Host Management Configuration lets Systems Manager manage EC2 instances by applying a default IAM role at the account and Region level, so no per-instance instance profile is needed; it must be turned on in each Region, and managed instances must use IMDSv2 and a supported SSM Agent version. SSM Agent makes outbound connections, so no inbound rules or public IP addresses are required, and attaching instance profiles is exactly what the company wants to avoid.",
+    "subtopic": "Default Host Management Configuration",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/managed-instances-default-host-management.html"
+  },
+  {
+    "id": "ec2-advanced-058",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Database administrators need to connect from their laptops with a SQL client to an Amazon RDS for MySQL instance in a private subnet. The company does not allow bastion hosts with open SSH ports or public IP addresses, and every connection must be authorized through IAM. A managed EC2 instance with SSM Agent already runs in the same VPC. Which solution meets these requirements?",
+    "options": [
+      "Make the RDS instance publicly accessible and restrict its security group to the administrators' IP addresses",
+      "Create a Site-to-Site VPN connection from each laptop to the VPC",
+      "Start a Session Manager port forwarding session to the remote host by using the AWS-StartPortForwardingSessionToRemoteHost document through the managed instance",
+      "Open TCP port 22 on the managed instance and use SSH tunneling with a shared key"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Session Manager can forward a local port through a managed node to a remote host such as an RDS endpoint by using the AWS-StartPortForwardingSessionToRemoteHost document; access is controlled with IAM and no inbound ports or bastion host are needed, while the remote host does not have to be a managed node. Making the database public or opening SSH violates the requirements, and per-laptop VPN connections are not a practical or IAM-controlled solution.",
+    "subtopic": "Session Manager port forwarding",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-working-with-sessions-start.html"
+  },
+  {
+    "id": "ec2-advanced-059",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Support engineers occasionally need a graphical Remote Desktop session to Windows Server EC2 instances in private subnets. The security team will not allow inbound RDP (TCP 3389) in any security group, bastion hosts, or VPN clients. Which solution meets these requirements?",
+    "options": [
+      "Use EC2 Instance Connect to push a temporary RDP certificate to each instance",
+      "Associate Elastic IP addresses with the instances and allow RDP only from the support office",
+      "Deploy a Network Load Balancer that forwards TCP 3389 to the instances",
+      "Use AWS Systems Manager Fleet Manager Remote Desktop to connect to the managed instances from the Systems Manager console"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Fleet Manager Remote Desktop provides browser-based RDP connections to Windows Server managed instances through Session Manager, so no inbound ports need to be opened, and access is governed by IAM. EC2 Instance Connect is for SSH, not RDP. Elastic IP addresses and a load balancer both require exposing port 3389, which the security team prohibits.",
+    "subtopic": "Fleet Manager Remote Desktop",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/fleet-manager-remote-desktop-connections.html"
+  },
+  {
+    "id": "ec2-advanced-060",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "After a library vulnerability is announced, a security team must identify every EC2 instance across 40 AWS accounts and several Regions that has a specific version of the library installed. The team wants to run SQL queries against a central dataset and keep it updated automatically. All instances are Systems Manager managed nodes. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Configure Systems Manager Inventory to collect application inventory from the managed nodes",
+      "Run a script over SSH in every account that writes package lists to a shared spreadsheet",
+      "Create resource data syncs that send inventory data to a central Amazon S3 bucket, and query the data with Amazon Athena",
+      "Enable AWS CloudTrail data events for EC2 and search them with CloudTrail Lake",
+      "Use AWS Trusted Advisor checks to list the installed software on each instance"
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "Systems Manager Inventory collects software and configuration metadata from managed nodes, and a resource data sync automatically delivers that data from multiple accounts and Regions to a central S3 bucket, where Amazon Athena can query it with SQL. SSH scripts are manual and need open ports. CloudTrail records API activity, not installed packages, and Trusted Advisor does not inventory software inside instances.",
+    "subtopic": "Systems Manager Inventory",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/inventory-resource-data-sync.html"
+  },
+  {
+    "id": "ec2-advanced-061",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company with AWS Organizations must scan all managed EC2 instances in 60 accounts and 4 Regions for missing patches every day and install approved patches every Sunday night. The company wants a single configuration to manage instead of maintenance windows in every account and Region pair. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Create a Quick Setup patch policy for the organization that specifies the patch baselines, a daily scan schedule, and a weekly install schedule",
+      "Create a maintenance window and patch group in each account and Region by using CloudFormation StackSets",
+      "Use AWS Config conformance packs to install missing patches",
+      "Use EC2 Image Builder to rebuild every instance with the latest patches each week"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Patch policies in Quick Setup let one configuration apply patching to all managed nodes across accounts, Regions, or selected organizational units, with separate scan and install schedules and a selected patch baseline per operating system, and they run AWS-RunPatchBaseline. Per-account maintenance windows work but create many resources to maintain. AWS Config evaluates compliance but does not install patches, and rebuilding images does not patch running instances.",
+    "subtopic": "Patch Manager patch policies",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/patch-manager-policies.html"
+  },
+  {
+    "id": "ec2-advanced-062",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses AWS Systems Manager Session Manager for shell access. Developers must be able to start sessions only on instances tagged Environment=dev and must be able to end only their own sessions, while production instances remain off limits. Which solution meets these requirements?",
+    "options": [
+      "Create separate VPCs for development and production and block Session Manager endpoints in the production VPC",
+      "Attach an IAM policy that allows ssm:StartSession on instances with the condition ssm:resourceTag/Environment equal to dev, and allows ssm:TerminateSession only on sessions that begin with the user's ID",
+      "Change the security groups of production instances to deny inbound traffic from the developers' IP addresses",
+      "Remove the SSM Agent from production instances so that they cannot be reached"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Session Manager access is controlled with IAM; ssm:StartSession can be limited to instances whose tags match by using the ssm:resourceTag condition key, and ssm:TerminateSession can be restricted to session resources prefixed with the caller's user ID. Security groups do not affect Session Manager because the agent connects outbound. Removing the agent or blocking endpoints breaks management of production instances instead of enforcing least privilege.",
+    "subtopic": "Session Manager IAM policies",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-restrict-access-quickstart.html"
+  },
+  {
+    "id": "ec2-advanced-063",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Operations engineers use an AWS Systems Manager Automation runbook to stop a production database instance, create an AMI, and restart it. Change management now requires that two members of a change advisory board approve each run before the instance is stopped, and approvers must be notified automatically. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Ask the approvers to reply to an email and have the engineer start the runbook after receiving two replies",
+      "Store the approval in a Parameter Store parameter that the runbook reads before stopping the instance",
+      "Add an aws:approve step at the start of the runbook with the two approvers, MinRequiredApprovals set to 2, and an Amazon SNS topic for notifications",
+      "Require the engineers to run the steps manually through Session Manager while an approver watches the session"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "The aws:approve action pauses an automation until the required number of designated principals approve or reject it, sends the request to an SNS topic, and resumes only after approval, which enforces the control inside the runbook. Email replies and manual supervision depend on people following a process and are not enforced. A parameter that anyone with write access can change is not a reliable approval record.",
+    "subtopic": "Systems Manager Automation approvals",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/automation-action-approve.html"
+  },
+  {
+    "id": "ec2-advanced-064",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company wants to add an existing EBS-backed EC2 instance to a cluster placement group with other HPC nodes. What must be done to move the instance into the placement group?",
+    "options": [
+      "Create an AMI and launch a new instance, because instances can never be moved into a placement group",
+      "Detach the instance's network interface and attach it to an instance in the placement group",
+      "Modify the placement of the running instance; the change applies without stopping it",
+      "Stop the instance, change its placement group with the modify instance placement action, and then start it"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An instance must be in the stopped state before it can be added to, moved between, or removed from a placement group, which is done with the Modify instance placement action or the modify-instance-placement command, after which the instance is started. The placement cannot be changed while the instance is running. Relaunching from an AMI is unnecessary, and moving a network interface does not move the instance.",
+    "subtopic": "Changing instance placement",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/change-instance-placement-group.html"
+  },
+  {
+    "id": "ec2-advanced-065",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A data replication service copies large datasets between two supported EC2 instances in different Availability Zones of the same Region over a single TCP connection. Each instance has 50 Gbps of aggregate bandwidth, but the transfer never exceeds about 5 Gbps. Which change will MOST increase the throughput of this single flow?",
+    "options": [
+      "Enable ENA Express on the network interface attachments of both instances so that the flow uses AWS Scalable Reliable Datagram (SRD)",
+      "Move both instances into a cluster placement group",
+      "Attach a second elastic network interface to each instance",
+      "Enable EBS optimization on both instances"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "ENA Express uses SRD to raise the maximum bandwidth of a single flow from 5 Gbps to up to 25 Gbps between supported instances in the same Region, including across Availability Zones, when it is enabled on both the sender and the receiver. A cluster placement group raises single-flow traffic only to 10 Gbps and cannot span Availability Zones. A second network interface does not raise the per-flow limit, and EBS optimization affects storage traffic, not instance-to-instance traffic.",
+    "subtopic": "ENA Express",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ena-express.html"
+  },
+  {
+    "id": "ec2-advanced-066",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A CloudFormation template launches Amazon Linux 2023 instances, and engineers must edit the hardcoded AMI ID in every Region whenever AWS releases a new image. The company wants the template to always use the latest Amazon Linux 2023 AMI in any Region without maintaining a mapping. What should a solutions architect do?",
+    "options": [
+      "Use AWS Compute Optimizer to look up the AMI ID during stack creation",
+      "Reference the AWS public parameter under /aws/service/ami-amazon-linux-latest/ in AWS Systems Manager Parameter Store",
+      "Copy the latest AMI into every Region each month and update a Mappings section",
+      "Store the AMI ID in the instance user data and update it after launch"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS publishes public Parameter Store parameters for the latest Amazon Linux AMIs in each Region under /aws/service/ami-amazon-linux-latest/, so templates and launch templates can reference the parameter instead of a hardcoded AMI ID. Maintaining mappings or copies is manual work. Compute Optimizer gives right-sizing recommendations, and user data runs after the instance has already been launched from an AMI.",
+    "subtopic": "Parameter Store public parameters",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-public-parameters-ami.html"
+  },
+  {
+    "id": "ec2-advanced-067",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "When an Auto Scaling group launches 150 instances during a traffic spike, many instances fail to start their application because GetParameter calls to AWS Systems Manager Parameter Store return ThrottlingException errors. Each instance reads the same 12 parameters one at a time every few seconds. Which actions will resolve the issue? (Select TWO.)",
+    "options": [
+      "Move all parameters to the advanced tier, which removes the throughput limit",
+      "Enable the Parameter Store higher throughput setting for the account and Region",
+      "Convert the parameters to SecureString parameters",
+      "Cache parameter values in the application and retrieve the known parameters together with a single GetParameters call",
+      "Store the parameters in the user data of the launch template"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Parameter Store has a default shared throughput quota for GetParameter, GetParameters, and GetParametersByPath, and enabling higher throughput raises it for the account and Region at an additional per-interaction charge. Reducing calls by caching values and fetching several known parameters with one GetParameters request also avoids throttling. Parameter tiers control size limits and policies, not throughput, and SecureString only adds encryption. User data is not designed for configuration that changes and is readable by anyone who can view instance attributes.",
+    "subtopic": "Parameter Store throughput",
+    "source": "https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-throughput.html"
+  },
+  {
+    "id": "ec2-advanced-068",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A legacy application on EC2 runs a background Java process that sometimes crashes silently while the instance stays healthy, and the operations team also needs to track that process's memory usage over time. Which solution meets these requirements with the LEAST effort?",
+    "options": [
+      "Enable detailed monitoring and alarm on the CPUUtilization metric",
+      "Create an EC2 status check alarm with the reboot action",
+      "Configure the procstat plugin of the CloudWatch agent to collect metrics such as pid_count and memory_rss for the process, and create an alarm when pid_count drops to zero",
+      "Enable VPC Flow Logs and alarm when traffic from the process stops"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "The CloudWatch agent procstat plugin collects metrics for individual processes selected by PID file, executable name, or command-line pattern, including pid_count and memory_rss, so an alarm can fire when the process is not running and memory can be tracked over time. Status checks and CPUUtilization reflect the instance, not a specific process. Flow Logs record network traffic metadata and are an unreliable signal for a background process.",
+    "subtopic": "CloudWatch agent procstat",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Agent-procstat-process-metrics.html"
+  },
+  {
+    "id": "ec2-advanced-069",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A research team runs containerized jobs with AWS Batch. AWS recommends Fargate compute environments for most Batch workloads. Which job requirements would require the team to use an Amazon EC2 compute environment instead of Fargate? (Select TWO.)",
+    "options": [
+      "Jobs that need a GPU",
+      "Jobs that need 4 vCPUs and 16 GiB of memory",
+      "Jobs that must start within about a minute of being submitted",
+      "Jobs that need an IAM role to read input files from Amazon S3",
+      "Jobs that must run on a custom Amazon Machine Image (AMI)"
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "AWS Batch guidance recommends EC2 compute environments when jobs need a GPU, a custom AMI, more than 32 vCPUs, more than 244 GiB of memory, or certain Linux parameters. A job with 4 vCPUs and 16 GiB fits Fargate, Fargate jobs typically start faster than new EC2 instances, and both compute environment types support IAM roles for jobs.",
+    "subtopic": "AWS Batch EC2 vs Fargate",
+    "source": "https://docs.aws.amazon.com/batch/latest/userguide/when-to-use-fargate.html"
+  },
+  {
+    "id": "ec2-advanced-070",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs thousands of short containerized data-processing jobs each day with AWS Batch on a managed EC2 compute environment. Each job needs 2 vCPUs and 4 GiB of memory, and no job needs a GPU or a custom AMI. The instances are often underutilized between job bursts, and the team spends time tuning instance types. Which change will MOST reduce cost and operational effort?",
+    "options": [
+      "Switch to an unmanaged EC2 compute environment and pack jobs onto instances manually",
+      "Purchase EC2 Instance Savings Plans for the instance types used by the compute environment",
+      "Increase the minimum vCPUs of the compute environment so that instances are always warm",
+      "Move the jobs to an AWS Batch Fargate compute environment so that capacity matches each job's requested vCPU and memory"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "With Fargate, AWS Batch provisions compute that closely matches the CPU and memory each job requests, so there are no instances to choose, scale, or over-provision, and jobs can typically start in about 30 seconds. These jobs do not need a GPU, a custom AMI, or large sizes that would require EC2. Unmanaged environments add operational work, a higher minimum keeps idle capacity running, and a Savings Plan discounts underutilized instances without removing the waste.",
+    "subtopic": "AWS Batch on Fargate",
+    "source": "https://docs.aws.amazon.com/batch/latest/userguide/when-to-use-fargate.html"
   }
 ]

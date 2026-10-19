@@ -570,9 +570,9 @@
     "domain": "performance",
     "type": "single",
     "difficulty": 2,
-    "question": "A small team has a containerized web application in Amazon ECR. The team wants AWS to handle load balancing, HTTPS, automatic scaling, and deployments when a new image is pushed, without configuring VPCs, clusters, or load balancers. Which service should the team use?",
+    "question": "A small team that is new to AWS has a containerized web application in Amazon ECR. The team wants to provide only the image and IAM roles and have AWS provision the load balancer with HTTPS, automatic scaling, monitoring, and networking, without designing clusters, target groups, or load balancers itself. Which option should the team use?",
     "options": [
-      "AWS App Runner",
+      "Amazon ECS Express Mode",
       "Amazon ECS on the EC2 launch type",
       "Amazon EKS with a Fargate profile",
       "AWS Batch with a Fargate compute environment"
@@ -580,8 +580,9 @@
     "answer": [
       0
     ],
-    "explanation": "App Runner deploys web applications from source code or container images, and it provides load balancing, TLS, automatic scaling, and automatic deployments with very little configuration. ECS on EC2 requires clusters, instances, and load balancers. EKS needs Kubernetes knowledge and setup. AWS Batch is for batch jobs, not web services.",
-    "subtopic": "AWS App Runner"
+    "explanation": "An Amazon ECS Express Mode service needs only a container image, a task execution role, and an infrastructure role, and it provisions a Fargate service with a URL, a load balancer with TLS, auto scaling, monitoring, and networking. AWS App Runner offered a similar experience but is no longer open to new customers, and AWS recommends ECS Express Mode instead. ECS on EC2 requires clusters, instances, and load balancers. EKS needs Kubernetes knowledge and setup. AWS Batch is for batch jobs, not web services.",
+    "subtopic": "Amazon ECS Express Mode",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-service-overview.html"
   },
   {
     "id": "containers-031",
@@ -679,5 +680,721 @@
     ],
     "explanation": "Spot Instances spread across several instance types give large savings for interruption-tolerant workloads, and Graviton instances offer better price-performance for images that already support arm64. Larger On-Demand instances do not lower the hourly rate. io2 volumes cost more than gp3. Oversized Fargate pods pay for unused capacity.",
     "subtopic": "EKS cost optimization"
+  },
+  {
+    "id": "containers-036",
+    "topic": "containers",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Amazon ECS service uses the EC2 launch type on an Auto Scaling group that spans three Availability Zones. To save money, an engineer set the service's task placement strategy to binpack on memory only. After an Availability Zone outage, the team discovered that all 12 tasks had been packed onto instances in a single Availability Zone. The company wants tasks balanced across Availability Zones while still using as few instances as possible within each zone. Which placement strategy should the service use?",
+    "options": [
+      "binpack on memory followed by spread on instanceId",
+      "random placement with a distinctInstance placement constraint",
+      "spread on attribute:ecs.availability-zone followed by binpack on memory",
+      "spread on instanceId followed by spread on attribute:ecs.availability-zone"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Strategies are applied in the order listed, so spreading on the Availability Zone attribute first balances tasks across zones, and binpack on memory then fills each instance before using another one in that zone. Binpack first would still concentrate tasks wherever capacity is free. Random placement with distinctInstance puts one task per instance, which increases the instance count and does not guarantee zone balance. Spreading by instance first spreads tasks over as many instances as possible, which works against the cost goal.",
+    "subtopic": "ECS task placement strategies",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-placement-strategies.html"
+  },
+  {
+    "id": "containers-037",
+    "topic": "containers",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Amazon ECS cluster that uses the EC2 launch type contains a mix of general purpose and compute optimized container instances. A CPU-heavy pricing engine must run only on the compute optimized c7i instances, while other services may run anywhere. How should a solutions architect make sure the pricing engine tasks are placed correctly?",
+    "options": [
+      "Add a memberOf task placement constraint with an expression that matches attribute:ecs.instance-type =~ c7i.*",
+      "Add a binpack placement strategy on CPU so that the scheduler prefers the largest instances",
+      "Add a distinctInstance placement constraint so that each task gets a dedicated instance",
+      "Set the task definition CPU value higher than the vCPU count of the general purpose instances"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A memberOf constraint uses the cluster query language to limit placement to container instances that match an expression, and ecs.instance-type is a built-in attribute, so the tasks land only on c7i instances. Placement strategies are best effort and do not restrict where tasks can run. distinctInstance places each task on a different instance but does not choose the instance type. Oversizing the CPU reservation is an indirect trick that wastes capacity and breaks when instance sizes change.",
+    "subtopic": "ECS task placement constraints",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-placement-constraints.html"
+  },
+  {
+    "id": "containers-038",
+    "topic": "containers",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a customer-facing Amazon ECS service behind an Application Load Balancer. For each release, the team wants to start the new version next to the current one, send test traffic to it through a separate test listener, shift production traffic only after validation, and keep the old version running for a bake period so that it can switch back instantly if problems appear. Which deployment approach meets these requirements?",
+    "options": [
+      "A rolling update with minimum healthy percent set to 50 and maximum percent set to 100",
+      "A rolling update with the deployment circuit breaker enabled",
+      "Deleting the service and recreating it with the new task definition during a maintenance window",
+      "An Amazon ECS blue/green deployment that uses a test listener, lifecycle hooks, and a bake time"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "ECS blue/green deployments run the blue and green service revisions side by side, can route test traffic to the green revision before production traffic shifts, and keep the blue revision during the bake time so that a rollback is quick. A rolling update replaces tasks gradually and cannot validate the new version with test traffic first. The circuit breaker rolls back only when tasks fail to reach a steady state. Recreating the service causes downtime.",
+    "subtopic": "ECS blue/green deployments",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-type-blue-green.html"
+  },
+  {
+    "id": "containers-039",
+    "topic": "containers",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An Amazon ECS service on AWS Fargate runs 6 tasks. During rolling deployments, the service temporarily drops to 3 healthy tasks and customers see slow responses. The company wants deployments to never reduce the number of healthy tasks below 6. Which deployment configuration should be used?",
+    "options": [
+      "Minimum healthy percent 50 and maximum percent 100",
+      "Minimum healthy percent 100 and maximum percent 200",
+      "Minimum healthy percent 0 and maximum percent 200",
+      "Minimum healthy percent 100 and maximum percent 100"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A minimum healthy percent of 100 keeps all 6 tasks running and healthy, and a maximum percent of 200 lets ECS start up to 6 new tasks before it stops old ones. A minimum of 50 or 0 allows ECS to stop old tasks first, which causes the capacity drop. With both values at 100, ECS can neither start nor stop a task, so the deployment cannot make progress.",
+    "subtopic": "ECS rolling update configuration",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-type-ecs.html"
+  },
+  {
+    "id": "containers-040",
+    "topic": "containers",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Amazon ECS service behind an Application Load Balancer uses rolling deployments with the deployment circuit breaker enabled. A recent release started and passed health checks normally, but a bug made the application return HTTP 500 errors for many requests. The circuit breaker did not roll back the deployment. How can the company make ECS roll back automatically in this situation?",
+    "options": [
+      "Configure CloudWatch alarms on the load balancer's 5XX error metrics in the service's deployment configuration with rollback enabled",
+      "Lower the ALB health check interval so that the circuit breaker detects the errors faster",
+      "Enable task scale-in protection so that tasks from the previous revision are kept",
+      "Switch the service to Fargate Spot so that unhealthy tasks are replaced more often"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The circuit breaker fails a deployment when tasks cannot start or reach a steady state, while deployment alarms fail it when a chosen CloudWatch alarm, such as one on ALB 5XX errors, enters the ALARM state, and both can roll back to the last completed deployment. A faster health check does not help if the health check path still succeeds. Scale-in protection keeps tasks from being stopped but does not detect failures or roll back. Fargate Spot changes the pricing model, not deployment safety.",
+    "subtopic": "ECS deployment alarms and rollback",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/deployment-alarm-failure.html"
+  },
+  {
+    "id": "containers-041",
+    "topic": "containers",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is splitting an application into 15 Amazon ECS services on AWS Fargate. The services call each other over HTTP. The team wants each service to reach the others by short names such as http://orders:8080, with load balancing across tasks, retries of failed connections to unhealthy tasks, and consistent traffic metrics, without deploying an internal load balancer for every service. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Create an internal Application Load Balancer for each service and store the DNS names in Parameter Store",
+      "Run an NGINX reverse proxy service that the other services call for every request",
+      "Configure Amazon ECS Service Connect with a shared AWS Cloud Map namespace for the services",
+      "Assign Elastic IP addresses to each task and publish them in a Route 53 private hosted zone"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Service Connect adds a managed proxy to each task, so services call each other by short names within a Cloud Map namespace, with round-robin load balancing, outlier detection, and standard metrics in the ECS and CloudWatch consoles. One internal ALB per service adds cost and configuration. A self-managed NGINX tier is another component to scale and maintain. Fargate tasks in private subnets do not use Elastic IP addresses, and static records would break when tasks are replaced.",
+    "subtopic": "ECS Service Connect",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect.html"
+  },
+  {
+    "id": "containers-042",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Engineers occasionally need a shell inside running Amazon ECS containers on AWS Fargate to troubleshoot production issues. The security team does not allow SSH keys, bastion hosts, or inbound ports, and every command that is run must be logged. Which solution meets these requirements?",
+    "options": [
+      "Install an SSH server in the container image and allow port 22 from the corporate IP range",
+      "Enable ECS Exec on the service and send session logs to Amazon CloudWatch Logs or Amazon S3",
+      "Turn on VPC Flow Logs and use them to reconstruct the commands that engineers run",
+      "Run a bastion host in a public subnet and connect to the task's private IP address"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "ECS Exec uses AWS Systems Manager Session Manager to open a shell or run commands in a container on Fargate or EC2 without inbound ports or SSH keys, records who connected through the ExecuteCommand event in CloudTrail, and can log commands and output to CloudWatch Logs or S3. An SSH server and a bastion host both break the rules the security team set. Flow Logs record network metadata, not commands.",
+    "subtopic": "ECS Exec",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-exec.html"
+  },
+  {
+    "id": "containers-043",
+    "topic": "containers",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A genomics team runs a containerized job on Amazon ECS with AWS Fargate. Each task downloads about 120 GB of reference files, processes them, and discards everything when the task ends. Tasks currently fail with 'no space left on device'. Which change fixes the problem with the LEAST effort?",
+    "options": [
+      "Move the job to the EC2 launch type and attach a larger root volume to each instance",
+      "Mount an Amazon S3 bucket as the container's root file system",
+      "Increase the task memory so that the files can be held in RAM",
+      "Set the ephemeralStorage parameter in the task definition to about 150 GiB"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Fargate tasks get 20 GiB of ephemeral storage by default, and the ephemeralStorage parameter can raise it up to 200 GiB, which fits temporary scratch data that does not need to persist. Moving to EC2 adds instance management. S3 cannot be used as a container root file system. Holding 120 GB in memory is far more expensive and may exceed Fargate task sizes.",
+    "subtopic": "Fargate ephemeral storage",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/fargate-task-storage.html"
+  },
+  {
+    "id": "containers-044",
+    "topic": "containers",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a transaction-heavy containerized database cache as an Amazon ECS service on AWS Fargate. Each task needs its own high-IOPS block storage volume, preloaded from a nightly snapshot, and the data does not need to be shared with other tasks or kept after a task stops. Which storage option meets these requirements?",
+    "options": [
+      "Configure an Amazon EBS volume for each task at deployment time, created from the snapshot",
+      "Mount one Amazon EFS file system in all tasks and copy the snapshot data into it",
+      "Use Fargate ephemeral storage and download the data from Amazon S3 in the container entrypoint",
+      "Attach one existing Amazon EBS volume to all tasks in the service"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "ECS can attach one new Amazon EBS volume per task, including on Fargate, and the volume can be created from a snapshot, giving each task dedicated block storage for transaction-intensive workloads; volumes for service tasks are deleted when the task ends. EFS is shared file storage, not dedicated block storage per task. Downloading data at every start adds delay and custom code. ECS cannot attach an existing EBS volume, and one volume cannot be shared by all tasks.",
+    "subtopic": "Amazon EBS volumes for ECS tasks",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ebs-volumes.html"
+  },
+  {
+    "id": "containers-045",
+    "topic": "containers",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Amazon ECS service processes video transcoding jobs from an Amazon SQS queue, and some jobs run for up to 3 hours. When service auto scaling scales in during quiet periods, it sometimes stops tasks in the middle of a job, and the work must start over. What should a solutions architect do?",
+    "options": [
+      "Set the service minimum healthy percent to 100 so that tasks are never stopped",
+      "Increase the SQS visibility timeout to 12 hours so that interrupted jobs are not lost",
+      "Have each task set task scale-in protection through the ECS agent endpoint when it starts a job and clear it when the job finishes",
+      "Disable service auto scaling and run the maximum number of tasks at all times"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Task scale-in protection stops service auto scaling and deployments from terminating a protected task, and a task can set and clear the protection itself through the container agent endpoint around each job. Minimum healthy percent applies to deployments, not to scale-in. A longer visibility timeout only delays the retry of a job that was already interrupted. Running the maximum number of tasks all the time wastes money.",
+    "subtopic": "ECS task scale-in protection",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-scale-in-protection.html"
+  },
+  {
+    "id": "containers-046",
+    "topic": "containers",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Amazon ECS cluster runs many small tasks in awsvpc network mode on c5.large container instances. Each instance has plenty of spare CPU and memory, but only two tasks can be placed on it, so the cluster keeps adding instances. Which change will let the company run more tasks per instance and reduce the number of instances?",
+    "options": [
+      "Switch the tasks to host network mode so that they share the instance network interface",
+      "Assign a secondary private IP address to each instance for every additional task",
+      "Increase the CPU and memory reservations in the task definition",
+      "Turn on the awsvpcTrunking account setting and launch new supported container instances"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Each awsvpc task needs its own ENI, and a c5.large supports only a few ENIs; with ENI trunking turned on, newly launched supported instances get a trunk interface and can host many more awsvpc tasks, such as ten instead of two on a c5.large. Host mode removes per-task security groups and causes port conflicts. Secondary IP addresses do not give tasks their own ENIs. Larger reservations reduce density further.",
+    "subtopic": "ECS ENI trunking",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/container-instance-eni.html"
+  },
+  {
+    "id": "containers-047",
+    "topic": "containers",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs a Linux-based Go API on Amazon ECS with AWS Fargate. The container image is already built for both x86 and arm64. The company wants to lower its Fargate compute bill without changing the application or managing servers. What should a solutions architect recommend?",
+    "options": [
+      "Move the tasks to the EC2 launch type with x86 On-Demand Instances",
+      "Set the task definition runtime platform CPU architecture to ARM64 so that the tasks run on AWS Graviton",
+      "Double the task CPU so that requests finish faster",
+      "Move the tasks to Windows containers on Fargate"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Fargate supports 64-bit ARM Linux tasks on AWS Graviton, and the published per-vCPU and per-GB rates for Linux/ARM are lower than for Linux/x86, so an image that already supports arm64 saves money with no code change. The EC2 launch type adds server management. Doubling CPU raises the price per second. Windows containers do not lower the cost and would require rebuilding the application.",
+    "subtopic": "Fargate on AWS Graviton",
+    "source": "https://aws.amazon.com/fargate/pricing/"
+  },
+  {
+    "id": "containers-048",
+    "topic": "containers",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company keeps an Amazon ECS service with one Fargate task running all day, but the task only does useful work for 10 minutes at 01:00 every night when it exports reports. Which change will reduce costs the MOST while keeping the container image unchanged?",
+    "options": [
+      "Run the container as a standalone ECS task started by an Amazon EventBridge Scheduler cron schedule",
+      "Keep the service and reduce the task size to the smallest Fargate configuration",
+      "Move the service to an EC2 instance that runs all day",
+      "Keep the service and buy a Compute Savings Plan for the task"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "EventBridge Scheduler can call the ECS RunTask API on a cron schedule, so the task runs only for the nightly export and Fargate charges only for those minutes. A smaller task or a Savings Plan still pays for 24 hours of idle time. An always-on EC2 instance adds management and still pays for idle hours.",
+    "subtopic": "ECS scheduled tasks",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/scheduled_tasks.html"
+  },
+  {
+    "id": "containers-049",
+    "topic": "containers",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Amazon ECS service on AWS Fargate reads orders from an Amazon SQS queue. Each task can process about 50 messages per minute, and queue depth swings from almost zero to 40,000 messages within minutes. CPU utilization is a poor signal of load. How should the service scale so that the backlog per task stays near a chosen value?",
+    "options": [
+      "Use target tracking on the service's average CPU utilization at 60%",
+      "Use scheduled scaling that doubles the task count during business hours",
+      "Use step scaling on the queue's NumberOfMessagesSent metric",
+      "Use target tracking with a metric math expression that divides ApproximateNumberOfMessagesVisible by the service's RunningTaskCount"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Application Auto Scaling target tracking can use a metric math expression, and dividing visible messages by running tasks gives backlog per task, so the service adds or removes tasks to keep each task's backlog near the target. CPU does not reflect queue depth here. Scheduled scaling ignores real load. NumberOfMessagesSent measures how fast messages arrive, not how much work is waiting for each task.",
+    "subtopic": "ECS scaling on SQS backlog",
+    "source": "https://docs.aws.amazon.com/autoscaling/application/userguide/application-auto-scaling-target-tracking-metric-math.html"
+  },
+  {
+    "id": "containers-050",
+    "topic": "containers",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs Amazon ECS tasks on AWS Fargate. The logging team wants container stdout logs sent to Amazon Data Firehose for delivery to Amazon S3 and also to an AWS Partner observability platform, with filtering applied before the logs leave the task. Developers do not want to change application code. Which solution meets these requirements?",
+    "options": [
+      "Use the awslogs log driver and create CloudWatch Logs subscription filters for each destination",
+      "Configure FireLens in the task definition with an AWS for Fluent Bit log router container",
+      "Install the CloudWatch agent on the Fargate hosts and configure multiple outputs",
+      "Have each application write logs directly to Amazon S3 with the AWS SDK"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "FireLens adds a Fluent Bit or Fluentd log router to the task through task definition parameters, so stdout logs can be filtered and routed to Firehose and to partner destinations without code changes. Subscription filters work after logs reach CloudWatch Logs, which adds a hop and cost. Fargate gives no access to hosts for installing agents. Writing logs with the SDK requires code changes.",
+    "subtopic": "FireLens log routing",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html"
+  },
+  {
+    "id": "containers-051",
+    "topic": "containers",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A batch-processing service runs on Amazon ECS with Fargate Spot capacity. When AWS reclaims capacity, some tasks stop before they save their progress to Amazon S3, and work is lost. The team wants each task to use the full warning period to checkpoint its work. Which actions should a solutions architect recommend? (Select TWO.)",
+    "options": [
+      "Update the application to catch the SIGTERM signal and write a checkpoint when it is received",
+      "Configure Fargate to fall back to regular Fargate capacity automatically when Spot capacity is reclaimed",
+      "Turn on termination protection for the Fargate Spot tasks",
+      "Set the container stopTimeout to 120 seconds in the task definition",
+      "Increase the task size so that the work finishes before an interruption"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Fargate Spot gives a two-minute warning through an EventBridge task state change event and a SIGTERM signal to the task, and the container is killed after stopTimeout, which defaults to 30 seconds and can be raised to 120 seconds. Catching SIGTERM and allowing 120 seconds lets the task save its work. Fargate does not replace Spot capacity with on-demand capacity on its own. No protection setting can stop a Spot interruption when AWS needs the capacity back. A larger task size does not prevent interruptions.",
+    "subtopic": "Fargate Spot interruptions",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/fargate-capacity-providers.html"
+  },
+  {
+    "id": "containers-052",
+    "topic": "containers",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is starting a new Amazon EKS cluster. The small platform team does not want to install or maintain Karpenter, the load balancer controller, or the EBS CSI driver, and it wants AWS to choose, patch, and replace the worker nodes automatically while workloads keep using standard Kubernetes manifests. Which option meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "EKS self-managed node groups with a custom AMI pipeline",
+      "EKS managed node groups with the Cluster Autoscaler installed",
+      "Amazon EKS Auto Mode",
+      "Amazon EKS Anywhere on EC2 instances"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "EKS Auto Mode has AWS manage the cluster infrastructure, including Karpenter-based compute autoscaling, node patching and replacement, load balancing integration, and EBS block storage, so these do not have to be installed as add-ons. Self-managed nodes need the most work. Managed node groups still leave the autoscaler and other add-ons to the team. EKS Anywhere is for running clusters on customer-managed infrastructure.",
+    "subtopic": "EKS Auto Mode",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/automode.html"
+  },
+  {
+    "id": "containers-053",
+    "topic": "containers",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A retailer has servers in its stores that are connected to AWS through reliable AWS Direct Connect links. It wants to run Kubernetes workloads on these servers, but it does not want to operate a Kubernetes control plane on premises; the control plane should be managed by AWS and highly available. Which solution meets these requirements?",
+    "options": [
+      "Amazon EKS Anywhere clusters installed on the store servers",
+      "Amazon EKS Hybrid Nodes that join the store servers to an Amazon EKS cluster in an AWS Region",
+      "Amazon ECS Anywhere with the store servers registered as external instances",
+      "Amazon EKS Distro installed on the store servers with kubeadm"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "EKS Hybrid Nodes let on-premises and edge machines join an EKS cluster whose control plane AWS manages in a Region, over a reliable connection such as Direct Connect or Site-to-Site VPN. EKS Anywhere and EKS Distro run the control plane on customer infrastructure; EKS Anywhere is the better fit only for disconnected environments. ECS Anywhere runs ECS tasks, not Kubernetes workloads.",
+    "subtopic": "EKS Hybrid Nodes",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/hybrid-nodes-overview.html"
+  },
+  {
+    "id": "containers-054",
+    "topic": "containers",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Amazon EKS cluster runs workloads with very different CPU, memory, and GPU needs. The team maintains eight node groups, one per instance type, and many nodes are only half used. The company wants nodes that are right-sized for pending pods, launched in under a minute, and removed or consolidated when they are no longer needed. Which solution meets these requirements?",
+    "options": [
+      "Install Karpenter and define node pools that allow a broad set of instance types",
+      "Increase the minimum size of each node group so that pods never wait for capacity",
+      "Replace all node groups with one node group of the largest instance type",
+      "Use scheduled scaling on each node group's Auto Scaling group"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Karpenter watches for unschedulable pods and launches right-sized EC2 instances that match their compute, storage, and accelerator needs, usually in under a minute, and it removes nodes that are no longer needed. Larger minimum sizes and one oversized instance type increase waste. Scheduled scaling does not respond to actual pod demand.",
+    "subtopic": "EKS cluster autoscaling with Karpenter",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/autoscaling.html"
+  },
+  {
+    "id": "containers-055",
+    "topic": "containers",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A web application on Amazon EKS managed node groups must handle traffic that triples during sales. The number of pods should grow with CPU load, and the cluster should add nodes when new pods cannot be scheduled. Which components should a solutions architect use? (Select TWO.)",
+    "options": [
+      "A Kubernetes DaemonSet that runs one copy of the application on every node",
+      "The Horizontal Pod Autoscaler with the Kubernetes Metrics Server installed",
+      "An EKS Fargate profile for the kube-system namespace",
+      "AWS Global Accelerator in front of the cluster",
+      "Karpenter or the Kubernetes Cluster Autoscaler"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "The Horizontal Pod Autoscaler changes the number of pods based on CPU utilization and needs a metrics source such as the Metrics Server, while Karpenter or the Cluster Autoscaler adds nodes when pods cannot be scheduled. A DaemonSet runs one pod per node and does not follow load. A Fargate profile for kube-system does not scale the application. Global Accelerator improves network paths but does not add capacity.",
+    "subtopic": "EKS Horizontal Pod Autoscaler",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/horizontal-pod-autoscaler.html"
+  },
+  {
+    "id": "containers-056",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company needs to give a group of developers, who assume an IAM role, read-only kubectl access to one namespace of an Amazon EKS cluster. The platform team wants to manage this through the EKS API and infrastructure as code, with access changes logged in AWS CloudTrail, instead of editing a ConfigMap inside the cluster. What should the platform team do?",
+    "options": [
+      "Add the developers' IAM role to the aws-auth ConfigMap with the system:masters group",
+      "Attach the AmazonEKSClusterPolicy managed policy to the developers' IAM role",
+      "Create IAM users for each developer and share the cluster creator's credentials",
+      "Create an EKS access entry for the IAM role and associate a view access policy scoped to that namespace"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "EKS access entries map an IAM principal to Kubernetes permissions through the EKS API, and access policies, which can be scoped to namespaces, give predefined permissions such as view. The aws-auth ConfigMap is the legacy method, and system:masters would grant full admin rights. AmazonEKSClusterPolicy is for the cluster role, not for users. Sharing the creator's credentials breaks least privilege and auditing.",
+    "subtopic": "EKS access entries",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/access-entries.html"
+  },
+  {
+    "id": "containers-057",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A financial company's security policy states that the Kubernetes API server of its Amazon EKS cluster must not be reachable from the internet. Administrators connect from the corporate network over AWS Direct Connect to the cluster's VPC. How should the cluster endpoint be configured?",
+    "options": [
+      "Keep the public endpoint enabled and add the corporate IP range to the public access CIDRs",
+      "Enable public access with an AWS WAF web ACL in front of the endpoint",
+      "Disable public endpoint access, enable private endpoint access, and allow the corporate network on port 443 in the cluster security group",
+      "Create a gateway VPC endpoint for Amazon EKS and remove the internet gateway"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With public access disabled and private access enabled, the API server can only be reached from within the VPC or a connected network, and the cluster security group controls access to the private endpoint. Limiting public CIDRs still leaves the endpoint on the internet. AWS WAF cannot be attached to the EKS API endpoint. Gateway endpoints exist only for S3 and DynamoDB.",
+    "subtopic": "EKS cluster endpoint access",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html"
+  },
+  {
+    "id": "containers-058",
+    "topic": "containers",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A FinOps review finds that several Amazon EKS clusters cost more per cluster hour than others even though they have the same number of nodes. The expensive clusters run a Kubernetes minor version that was released on EKS more than 14 months ago. What is the MOST likely cause, and how can the company reduce the cost?",
+    "options": [
+      "The clusters use more control plane instances; delete and recreate them in another Region",
+      "The clusters are in extended support, which has an additional per-cluster-hour charge; upgrade them to a version in standard support",
+      "The clusters use EKS Pod Identity, which is billed per association; switch to IAM roles for service accounts",
+      "The clusters use managed node groups, which add a per-node fee; switch to self-managed nodes"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An EKS Kubernetes version gets 14 months of standard support and then 12 months of extended support, which adds a charge per cluster hour; upgrading to a version in standard support removes that charge. The control plane is not billed per instance in this way. Pod Identity has no per-association fee. Managed node groups have no additional cost beyond the resources they use.",
+    "subtopic": "EKS Kubernetes version support",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html"
+  },
+  {
+    "id": "containers-059",
+    "topic": "containers",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A content platform runs on Amazon EKS with nodes in three Availability Zones. Pods in all zones must read and write the same set of uploaded files at the same time, and pods that are rescheduled to another zone must still see the files. Which storage solution should a solutions architect choose?",
+    "options": [
+      "Amazon EBS volumes provisioned through the EBS CSI driver for each pod",
+      "The node's local instance store mounted with a hostPath volume",
+      "An Amazon S3 bucket mounted as an emptyDir volume",
+      "An Amazon EFS file system mounted as a persistent volume through the EFS CSI driver"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "The EFS CSI driver lets pods mount an Amazon EFS file system as a persistent volume, and EFS is a Regional file system that many pods across Availability Zones can use at the same time. EBS volumes belong to one Availability Zone and are attached to a single node. Instance store data is lost when the node goes away. An emptyDir volume is temporary pod storage, not an S3 mount.",
+    "subtopic": "EKS persistent storage with EFS",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html"
+  },
+  {
+    "id": "containers-060",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A healthcare company runs Amazon EKS clusters on a current Kubernetes version. An auditor requires that Kubernetes Secrets stored in etcd be encrypted with a key that the company controls, can disable, and whose use is recorded in AWS CloudTrail. What should a solutions architect do?",
+    "options": [
+      "Nothing; the default envelope encryption already uses a customer managed key in the company's account",
+      "Enable EBS encryption by default for the account so that etcd volumes use a company key",
+      "Associate a customer managed AWS KMS key with the cluster for envelope encryption of Kubernetes API data",
+      "Store all secrets in a ConfigMap encrypted with a key that is kept in the container image"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "EKS envelope encrypts all Kubernetes API data by default, but with an AWS owned key; associating a customer managed KMS key gives the company control over the key and CloudTrail records of its use. The default key is not in the customer account. Account-level EBS encryption affects the company's own volumes, not the managed control plane's etcd. Keeping a key in an image is insecure.",
+    "subtopic": "EKS envelope encryption",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/envelope-encryption.html"
+  },
+  {
+    "id": "containers-061",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A team moved a pod from an Amazon EKS managed node group to AWS Fargate by using a Fargate profile. The pod uses an EKS Pod Identity association to get an IAM role for Amazon DynamoDB, and since the move its AWS SDK calls fail because no credentials are found. How should the team give the Fargate pod IAM permissions?",
+    "options": [
+      "Use IAM roles for service accounts by creating an IAM OIDC provider for the cluster and annotating the service account with the role",
+      "Run the EKS Pod Identity Agent as a DaemonSet on the Fargate nodes",
+      "Attach the DynamoDB permissions to the Fargate pod execution role",
+      "Read credentials from the EC2 instance metadata service inside the pod"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "EKS Pod Identity is not supported for pods that run on Fargate, and the EKS documentation says to give Fargate pods IAM credentials through IAM roles for service accounts. DaemonSets do not run on Fargate. The pod execution role is used by Fargate infrastructure, for example to pull images, and is not meant for application permissions. IMDS is not available to Fargate pods.",
+    "subtopic": "EKS IAM for Fargate pods",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/fargate.html"
+  },
+  {
+    "id": "containers-062",
+    "topic": "containers",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company runs an Amazon EKS cluster with a stateless image-rendering service that tolerates interruptions and a StatefulSet message broker that must not be interrupted. Both run on On-Demand managed node groups today. The company wants to cut compute cost while keeping both workloads available. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Move the StatefulSet to a Spot managed node group with a single instance type",
+      "Run both workloads on one Spot managed node group that uses the largest instance type",
+      "Create a Spot managed node group that uses several instance types with the same vCPU and memory for the rendering pods",
+      "Run the rendering pods on EKS Fargate with Fargate Spot",
+      "Keep the StatefulSet on an On-Demand node group by scheduling it with the eks.amazonaws.com/capacityType: ON_DEMAND label"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Spot managed node groups suit stateless, fault-tolerant work, and using several instance types with matching vCPU and memory widens the Spot capacity pools. Stateful, fault-intolerant workloads should stay on On-Demand nodes, which EKS labels with eks.amazonaws.com/capacityType so pods can target them. Putting the StatefulSet on Spot risks interruptions, and a single instance type reduces Spot availability. Amazon EKS does not support Fargate Spot.",
+    "subtopic": "EKS Spot managed node groups",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html"
+  },
+  {
+    "id": "containers-063",
+    "topic": "containers",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company builds container images in a central build account in us-east-1. For disaster recovery, every new image pushed to the production repositories must be copied automatically to Amazon ECR in a separate DR account in us-west-2. Which steps are required? (Select TWO.)",
+    "options": [
+      "In the DR account, add a registry permissions policy that allows the build account to call ecr:ReplicateImage and ecr:CreateRepository",
+      "In the build account, add a repository policy on each source repository that allows the DR account to pull images",
+      "Schedule an AWS Lambda function that pulls each image and pushes it to the DR account",
+      "In the build account's registry settings, create a replication rule with the DR account and us-west-2 as the destination",
+      "Enable S3 Cross-Region Replication on the bucket that stores the ECR image layers"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "ECR cross-account replication is configured with replication rules in the source registry and a registry permissions policy in the destination account that allows the source account to replicate images and create repositories. Source repositories do not need special repository policies for replication. A Lambda copy job adds code to maintain. ECR manages its own storage, so customers cannot configure S3 replication on it.",
+    "subtopic": "Amazon ECR cross-account replication",
+    "source": "https://docs.aws.amazon.com/AmazonECR/latest/userguide/replication.html"
+  },
+  {
+    "id": "containers-064",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company wants to cache Docker Hub images in its Amazon ECR private registry to avoid anonymous pull limits. The security team requires that the Docker Hub access token never be stored in build scripts, task definitions, or node configuration. How should the pull through cache rule be set up?",
+    "options": [
+      "Create the rule without credentials, because Docker Hub images are always pulled anonymously",
+      "Store the token in an environment variable of every Amazon ECS task and EKS pod that pulls images",
+      "Store the token in an AWS Systems Manager Parameter Store parameter and reference it from the repository policy",
+      "Store the Docker Hub credentials in an AWS Secrets Manager secret whose name starts with ecr-pullthroughcache/ and reference it in the rule"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Docker Hub is an upstream registry that requires authentication for pull through cache, and ECR reads the credentials from a Secrets Manager secret with the ecr-pullthroughcache/ prefix in the same account and Region. Pull through cache for Docker Hub cannot be set up without credentials. Putting the token in tasks or pods spreads the secret everywhere. Repository policies cannot reference Parameter Store values.",
+    "subtopic": "Amazon ECR pull through cache authentication",
+    "source": "https://docs.aws.amazon.com/AmazonECR/latest/userguide/pull-through-cache.html"
+  },
+  {
+    "id": "containers-065",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company's Amazon ECR repository was created with the default encryption settings. A new compliance rule requires that the images be encrypted with a customer managed AWS KMS key that the company can audit and disable. What should a solutions architect do?",
+    "options": [
+      "Edit the existing repository's encryption configuration to use the customer managed key",
+      "Create a new repository configured with KMS encryption and the customer managed key, then push the images to it and update image references",
+      "Enable default EBS encryption in the account so that ECR uses the customer managed key",
+      "Turn on enhanced scanning so that images are re-encrypted with the customer managed key"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "ECR encrypts images at rest with SSE-S3 by default and can use SSE-KMS with an AWS managed or customer managed key, but a repository's encryption configuration is set at creation and cannot be changed later, so a new repository is needed. EBS default encryption does not apply to ECR storage. Enhanced scanning finds vulnerabilities and does not change encryption.",
+    "subtopic": "Amazon ECR encryption",
+    "source": "https://docs.aws.amazon.com/AmazonECR/latest/userguide/encryption-at-rest.html"
+  },
+  {
+    "id": "containers-066",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Amazon ECS service on AWS Fargate receives its database password as an environment variable from AWS Secrets Manager through the secrets section of the container definition. After Secrets Manager rotated the password, the running tasks started failing to connect to the database. What should the company do so that tasks use the new password after each rotation?",
+    "options": [
+      "Nothing; ECS updates the environment variable inside running containers automatically",
+      "Move the password into the container image so that it is always available",
+      "Start new tasks after rotation, for example by updating the service with the force new deployment option",
+      "Reduce the Secrets Manager rotation interval so that the value changes more often"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "ECS injects secrets as environment variables only when the container starts, so a rotated value is picked up only by new tasks, which a forced new deployment of the service launches. Running containers are not updated automatically. Baking the password into the image exposes it and breaks rotation. Rotating more often makes the problem happen more often.",
+    "subtopic": "ECS secrets and rotation",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/secrets-envvar-secrets-manager.html"
+  },
+  {
+    "id": "containers-067",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "Two applications run as Amazon ECS services on AWS Fargate and share one Amazon EFS file system. Each application must be able to mount only its own directory, file access must be authorized with each service's task IAM role, and data must be encrypted in transit. Which configuration steps should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Place the two services in different subnets and use network ACLs to block the other application's directory",
+      "Create an EFS access point for each application with its own root directory and reference it in that application's task definition",
+      "Enable transit encryption and IAM authorization in the EFS volume configuration, and allow each task role to use only its own access point",
+      "Mount the file system root in both task definitions and set the container user to root",
+      "Attach an Amazon S3 bucket policy that limits each task role to its own prefix"
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "EFS access points enforce a root directory per application, and an ECS task definition can mount the file system through an access point with IAM authorization that uses the task role, which requires transit encryption to be enabled. Network ACLs cannot control access to directories. Mounting the root as root gives both applications full access. S3 bucket policies do not apply to EFS.",
+    "subtopic": "EFS access points for ECS",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specify-efs-config.html"
+  },
+  {
+    "id": "containers-068",
+    "topic": "containers",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A software company runs untrusted, customer-supplied code in containers on Amazon ECS. The security team wants every task to run in its own isolated environment that does not share a kernel, network interface, ephemeral storage, CPU, or memory with other tasks. Which option meets this requirement with the LEAST operational overhead?",
+    "options": [
+      "Run the tasks on the EC2 launch type with a distinctInstance placement constraint",
+      "Run the tasks on AWS Fargate",
+      "Run the tasks on the EC2 launch type in bridge network mode with separate Docker networks",
+      "Run all tasks on one large EC2 Dedicated Instance"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Fargate runs each task in its own hardware virtualization environment, so tasks do not share network interfaces, ephemeral storage, CPU, or memory, and there are no instances to manage; AWS recommends Fargate for strong task isolation. distinctInstance is based on desired status and can briefly place two running tasks on one instance, and it still requires instance management. Bridge networks and a shared Dedicated Instance keep tasks on the same kernel.",
+    "subtopic": "Fargate task isolation",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-placement-constraints.html"
+  },
+  {
+    "id": "containers-069",
+    "topic": "containers",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "An Amazon ECS cluster uses the EC2 launch type with an Auto Scaling group capacity provider. Average CPU and memory reservation across the instances is about 35%, and engineers adjust the instance count by hand. The company wants to run the same tasks on fewer instances automatically. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Use the binpack placement strategy on memory for the services",
+      "Use the spread placement strategy on instanceId for the services",
+      "Turn on managed scaling for the capacity provider with a target capacity of 100%",
+      "Add a distinctInstance placement constraint to every service",
+      "Attach a scheduled scaling action that adds instances every hour"
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "Binpack places tasks to leave the least unused CPU or memory, which minimizes the number of instances in use, and managed scaling with a target capacity of 100% lets ECS scale the Auto Scaling group in and out so that no idle spare instances are kept. Spreading by instance and distinctInstance spread tasks over more instances. Scheduled scale-out adds capacity regardless of need.",
+    "subtopic": "ECS cluster auto scaling and binpack",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/cluster-auto-scaling.html"
+  },
+  {
+    "id": "containers-070",
+    "topic": "containers",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company plans to move all workloads in its Amazon EKS cluster from EC2 managed node groups to AWS Fargate. Which of the following workloads will need to stay on EC2 nodes? (Select THREE.)",
+    "options": [
+      "A log collection agent deployed as a Kubernetes DaemonSet",
+      "A stateless REST API exposed through an Application Load Balancer with IP targets",
+      "A machine learning inference service that needs NVIDIA GPUs",
+      "A web application whose pods share an Amazon EFS file system",
+      "A database StatefulSet that stores its data on Amazon EBS volumes",
+      "A worker deployment scaled by the Horizontal Pod Autoscaler"
+    ],
+    "answer": [
+      0,
+      2,
+      4
+    ],
+    "explanation": "EKS on Fargate does not support DaemonSets, GPUs, or mounting Amazon EBS volumes to pods, so those workloads must stay on EC2 nodes. Fargate pods can sit behind Application Load Balancers and Network Load Balancers with IP targets, can mount Amazon EFS file systems, and can be scaled by the Horizontal Pod Autoscaler.",
+    "subtopic": "EKS on Fargate considerations",
+    "source": "https://docs.aws.amazon.com/eks/latest/userguide/fargate.html"
   }
 ]

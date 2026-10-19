@@ -141,11 +141,24 @@
     updateCounts();
   }
 
+  // Last question id per topic in the first bank release. Exams are dealt from those questions first,
+  // so adding questions only creates new exams and never reshuffles the ones already taken.
+  const FIRST_RELEASE = {
+    analytics: 45, cdn: 45, containers: 35, 'ec2-advanced': 40, ec2: 60, fundamentals: 45, 'ha-scaling': 55,
+    hybrid: 45, 'iam-org': 45, 'nosql-caching': 45, rds: 55, route53: 45, s3: 70, security: 45,
+    serverless: 75, storage: 45, 'vpc-advanced': 45, vpc: 45,
+  };
+  const inFirstRelease = q => Number(q.id.slice(q.id.lastIndexOf('-') + 1)) <= (FIRST_RELEASE[q.topic] || 0);
+
   // Fixed exams: each domain pool is shuffled with a stable seed and dealt out without overlap
   function buildExams() {
     const pools = {};
     DKEYS.forEach(d => {
-      pools[d] = shuffle(bank.questions.filter(q => q.domain === d).map(q => q.id).sort(), rng(hashStr('saa-exam-' + d)));
+      const ids = first => bank.questions.filter(q => q.domain === d && inFirstRelease(q) === first).map(q => q.id).sort();
+      pools[d] = [
+        ...shuffle(ids(true), rng(hashStr('saa-exam-' + d))),
+        ...shuffle(ids(false), rng(hashStr('saa-exam-v2-' + d))),
+      ];
     });
     const count = Math.min(...DKEYS.map(d => Math.floor(pools[d].length / DOMAINS[d].target)));
     bank.exams = [];
@@ -337,6 +350,7 @@
     return `<div class="explain ${answered ? (ok ? 'good' : 'bad') : ''}">
       <h4>${head} — answer: ${q.answer.map(a => LETTERS[a]).join(', ')}</h4>
       <p>${esc(q.explanation)}</p>
+      ${q.source ? `<a class="source" href="${esc(q.source)}" target="_blank" rel="noopener noreferrer">Source: AWS documentation ↗</a>` : ''}
     </div>`;
   }
 

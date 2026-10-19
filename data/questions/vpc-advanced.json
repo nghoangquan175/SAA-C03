@@ -875,5 +875,619 @@
     ],
     "explanation": "Centralized inbound and outbound endpoints with IP addresses in multiple AZs provide resilient hybrid resolution, RAM shares forwarding rules across accounts, and associating rules and private hosted zones with VPCs applies them where needed. Endpoints in every VPC with a single IP address increase cost and are not resilient to an AZ failure. The Amazon-provided DNS address cannot be reached from on-premises, and public hosted zones would expose internal records to the internet.",
     "subtopic": "Route 53 Resolver Endpoints"
+  },
+  {
+    "id": "vpc-advanced-046",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A security team investigates outbound connections to a suspicious IP address. The existing VPC flow log uses the default format, and records captured on the NAT gateway's network interface show only the NAT gateway's private IP address as the source, not the originating instance. Which action will let the team identify the originating instances for future traffic?",
+    "options": [
+      "Edit the existing flow log and add the pkt-srcaddr field to its record format.",
+      "Create a new flow log with a custom format that includes the pkt-srcaddr field, and delete the old flow log if it is no longer needed.",
+      "Change the existing flow log's maximum aggregation interval to 1 minute so that each source is recorded separately.",
+      "Enable Traffic Mirroring on the NAT gateway's network interface and send the mirrored packets to Amazon S3."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The pkt-srcaddr field records the packet-level original source address, which distinguishes the originating instance from an intermediate layer such as a NAT gateway network interface, but it is not part of the default format. A flow log's configuration and record format cannot be changed after creation, so a new flow log with a custom format is required. The aggregation interval does not change which addresses are recorded, and Traffic Mirroring sends copies to a network target such as an instance or load balancer, not to Amazon S3.",
+    "subtopic": "VPC Flow Logs",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-limitations.html"
+  },
+  {
+    "id": "vpc-advanced-047",
+    "topic": "vpc-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A network team operates a transit gateway with 40 VPC attachments and two VPN attachments. The team needs to see which attachments exchange the most traffic and how many packets are dropped because of missing routes or blackhole routes in the transit gateway. Which solution meets these requirements with the LEAST effort?",
+    "options": [
+      "Enable VPC Flow Logs on every subnet in all 40 VPCs and join the records in Amazon Athena.",
+      "Run Reachability Analyzer between every pair of attachments every hour.",
+      "Configure VPC Traffic Mirroring on the transit gateway attachments and analyze the mirrored packets.",
+      "Enable Transit Gateway Flow Logs on the transit gateway and publish them to Amazon S3."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Transit Gateway Flow Logs capture traffic going to and from a transit gateway, with fields such as the source and destination attachment IDs and counters for packets lost because of no route or a blackhole route, and they can be published to CloudWatch Logs, Amazon S3, or Firehose. VPC flow logs see only network interfaces in VPCs and would require joining data from 40 VPCs. Reachability Analyzer checks configuration paths rather than measuring traffic, and Traffic Mirroring copies packets from EC2 network interfaces, not from transit gateways.",
+    "subtopic": "Transit Gateway Flow Logs",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-flow-logs.html"
+  },
+  {
+    "id": "vpc-advanced-048",
+    "topic": "vpc-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses VPC Traffic Mirroring to copy traffic from 200 EC2 instances to a single intrusion detection system (IDS) instance. The IDS instance is a single point of failure and is overloaded, and the team only needs to analyze TCP traffic on port 443. Which solution addresses these issues?",
+    "options": [
+      "Use a fleet of IDS instances behind a Network Load Balancer with a UDP listener as the mirror target, and add a mirror filter that accepts only TCP port 443.",
+      "Replace Traffic Mirroring with VPC Flow Logs delivered to Amazon Data Firehose, and filter for port 443 in the delivery stream.",
+      "Create a separate mirror target for each IDS instance and attach all of the targets to every mirror session.",
+      "Increase the IDS instance size and enable packet truncation so that every packet is mirrored without filtering."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Traffic Mirroring targets can be a fleet of appliances behind a Network Load Balancer or Gateway Load Balancer with a UDP listener, which removes the single point of failure and scales, and mirror filters limit the copied traffic to the flows of interest. Flow logs contain only metadata, not packets. A mirror session links one source, one filter, and one target, and a larger single instance remains a single point of failure.",
+    "subtopic": "VPC Traffic Mirroring",
+    "source": "https://docs.aws.amazon.com/vpc/latest/mirroring/what-is-traffic-mirroring.html"
+  },
+  {
+    "id": "vpc-advanced-049",
+    "topic": "vpc-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "After a change to security groups and route tables, an application server can no longer reach a database in a peered VPC. The operations team wants to identify which configuration component blocks the path without generating any test traffic. Which tool should the team use?",
+    "options": [
+      "VPC Flow Logs with a 1-minute maximum aggregation interval",
+      "VPC Traffic Mirroring to a packet capture instance",
+      "Reachability Analyzer with the server as the source and the database as the destination",
+      "Network Access Analyzer with a scope that matches all internet gateway paths"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Reachability Analyzer builds a model of the network configuration, does not send packets, and identifies the blocking component, such as a security group, network ACL, or route table, when a destination is unreachable; it supports paths across VPC peering connections. Flow logs and Traffic Mirroring observe actual traffic and do not name the misconfigured component. Network Access Analyzer finds unintended access paths that match a scope rather than troubleshooting a specific failed path.",
+    "subtopic": "Reachability Analyzer",
+    "source": "https://docs.aws.amazon.com/vpc/latest/reachability/how-reachability-analyzer-works.html"
+  },
+  {
+    "id": "vpc-advanced-050",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A financial company must regularly demonstrate to auditors that only its internet-facing load balancers are reachable from internet gateways and that its production VPCs have no network paths to its development VPCs. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Run Reachability Analyzer between every pair of production and development instances.",
+      "Define Network Access Scopes in Network Access Analyzer and review the findings for paths that violate the requirements.",
+      "Enable VPC Flow Logs in all VPCs and alert on any accepted traffic between production and development.",
+      "Enable Amazon GuardDuty and review its findings for unauthorized network access."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Network Access Analyzer lets you express requirements such as network segmentation and internet accessibility as Network Access Scopes, and its findings list potential paths that violate them, which helps demonstrate compliance. Reachability Analyzer checks one source-destination path at a time, so covering every pair is heavy. Flow logs show only traffic that actually occurred, not potential paths, and GuardDuty detects threats rather than verifying network configuration.",
+    "subtopic": "Network Access Analyzer",
+    "source": "https://docs.aws.amazon.com/vpc/latest/network-access-analyzer/what-is-network-access-analyzer.html"
+  },
+  {
+    "id": "vpc-advanced-051",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Applications in a VPC send messages to Amazon SQS through an interface VPC endpoint, and the VPC has no internet access. The security team is concerned that a compromised workload could use credentials from an external AWS account to send data to that account's queues through the endpoint. Which control will prevent this?",
+    "options": [
+      "Restrict the endpoint's security group to allow inbound HTTPS only from the application subnets.",
+      "Add network ACL rules that deny traffic to SQS IP addresses that are used by other accounts.",
+      "Disable private DNS on the endpoint so that only approved applications can resolve the SQS hostname.",
+      "Attach an endpoint policy that allows SQS actions only by principals and on queues that belong to the company's accounts."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An endpoint policy is a resource-based policy on the VPC endpoint that controls which principals can use it and which resources they can access, so limiting it to the company's principals and queues blocks exfiltration to external queues. Security groups and network ACLs filter by IP address and port and cannot distinguish one account's SQS queues from another's. Disabling private DNS only changes the hostname clients must use and does not restrict access.",
+    "subtopic": "VPC Endpoint Policies",
+    "source": "https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints-access.html"
+  },
+  {
+    "id": "vpc-advanced-052",
+    "topic": "vpc-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A latency-sensitive client application runs in three Availability Zones and connects to a partner's endpoint service through an interface VPC endpoint that has network interfaces in all three zones. When the clients use the endpoint's Regional DNS name, many requests go to endpoint network interfaces in other zones. How can the company keep each client's traffic in its own Availability Zone?",
+    "options": [
+      "Configure each client to use the endpoint's zonal DNS name for its own Availability Zone.",
+      "Enable cross-zone load balancing on the interface endpoint's network interfaces.",
+      "Create a separate interface endpoint in each Availability Zone, each with private DNS enabled.",
+      "Add route table entries that send traffic for the endpoint service to the local endpoint network interface."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The Regional DNS name of an interface endpoint resolves to healthy endpoint network interfaces in different Availability Zones by using round robin, while zonal DNS names resolve to the network interface in a specific zone, so clients can keep traffic in their own zone. Interface endpoints have no cross-zone load balancing setting and are reached through DNS rather than route table entries. Multiple endpoints with private DNS for the same service would not give per-zone resolution.",
+    "subtopic": "Interface VPC Endpoints",
+    "source": "https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-share-your-services.html"
+  },
+  {
+    "id": "vpc-advanced-053",
+    "topic": "vpc-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A SaaS provider exposes its service through a VPC endpoint service backed by a Network Load Balancer that is enabled in only one Availability Zone. A customer wants to create interface endpoints in three Availability Zones and requires the service to remain available if one zone fails. What should the provider do?",
+    "options": [
+      "Enable cross-zone load balancing on the Network Load Balancer and keep it in a single Availability Zone.",
+      "Ask the customer to create three interface endpoints in the same subnet to provide redundancy.",
+      "Enable the Network Load Balancer in additional Availability Zones and register targets in each enabled zone.",
+      "Replace the Network Load Balancer with an Application Load Balancer as the endpoint service front end."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "An endpoint service is available only in the Availability Zones enabled for its Network Load Balancer, and consumers can create interface endpoints only in those zones, so AWS recommends enabling at least two zones with targets in each. Cross-zone load balancing does not help if the single zone that hosts the service fails. Endpoints in one subnet share one zone, and an endpoint service is fronted by a Network Load Balancer or Gateway Load Balancer, not an Application Load Balancer.",
+    "subtopic": "AWS PrivateLink",
+    "source": "https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-share-your-services.html"
+  },
+  {
+    "id": "vpc-advanced-054",
+    "topic": "vpc-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A provider hosts an internal API in us-east-1 and exposes it as a VPC endpoint service. Consumer VPCs in eu-west-1 must access the API privately. The provider does not want to deploy the API or a load balancer in eu-west-1, and the consumers want the LEAST operational overhead. Which solution meets these requirements?",
+    "options": [
+      "Peer each consumer VPC with the provider VPC by using inter-Region VPC peering and route traffic to the Network Load Balancer.",
+      "Add eu-west-1 as a supported Region for the endpoint service, and have consumers create interface endpoints that use us-east-1 as the service Region.",
+      "Create interface endpoints in eu-west-1 and point them at the us-east-1 endpoint service by using a Route 53 alias record.",
+      "Deploy an Application Load Balancer in eu-west-1 that forwards requests to the API over the internet."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS PrivateLink cross-Region access lets a provider host a service in one Region and make it available in a set of supported Regions, and consumers select the service Region when they create an interface endpoint. Peering every consumer VPC requires non-overlapping CIDRs and many routes and exposes more of the network. DNS alias records cannot connect an endpoint to a service in another Region, and forwarding over the internet does not keep traffic private.",
+    "subtopic": "AWS PrivateLink",
+    "source": "https://docs.aws.amazon.com/vpc/latest/privatelink/privatelink-share-your-services.html"
+  },
+  {
+    "id": "vpc-advanced-055",
+    "topic": "vpc-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has 12 application accounts in AWS Organizations. Each account has its own VPC with NAT gateways in three Availability Zones and a transit gateway attachment, and the applications are tightly interconnected within the same trust boundary. The company wants to reduce networking cost and the number of VPCs to manage while keeping separate accounts for billing and access control. Which solution meets these requirements?",
+    "options": [
+      "Replace the transit gateway with a full mesh of VPC peering connections between the 12 VPCs.",
+      "Move all applications into a single account and a single VPC and use tags for cost allocation.",
+      "Keep the 12 VPCs and replace their NAT gateways with NAT instances in each Availability Zone.",
+      "Create a central VPC in a networking account and share its subnets with the application accounts by using AWS RAM."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "VPC sharing lets accounts in the same organization launch their resources into centrally managed subnets, which reduces the number of VPCs, NAT gateways, and transit gateway attachments while each participant keeps its own account for billing and access control. Interconnected applications in the same trust boundary then use implicit routing inside the VPC. A peering mesh adds management overhead without removing NAT gateways, consolidating into one account removes account separation, and NAT instances add operational work.",
+    "subtopic": "VPC Sharing",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-sharing.html"
+  },
+  {
+    "id": "vpc-advanced-056",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A central networking team wants sole control of route tables, network ACLs, NAT gateways, and internet gateways. Application teams in separate AWS accounts in the same organization must launch their own EC2 instances and manage their own security groups in the same network. Which solution meets these requirements?",
+    "options": [
+      "Share subnets of a VPC owned by the networking account with the application accounts by using AWS RAM.",
+      "Create a VPC in each application account and use SCPs to block changes to route tables.",
+      "Attach each application account's VPC to a transit gateway owned by the networking account.",
+      "Create VPC peering connections from each application VPC to a networking VPC that owns the gateways."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "In a shared VPC, the owner creates and manages subnets, route tables, network ACLs, internet gateways, and NAT gateways, while participants can create their own resources such as network interfaces and security groups but cannot modify the owner's networking resources. With separate VPCs, the application accounts still own their gateways and route tables. Transit gateway attachments and VPC peering connect networks but do not give the networking team control of the application VPCs' routing, and peering does not allow use of the peer's gateways.",
+    "subtopic": "VPC Sharing",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-share-limitations.html"
+  },
+  {
+    "id": "vpc-advanced-057",
+    "topic": "vpc-advanced",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company uses VPC sharing. A networking account owns the VPC, its NAT gateways, and its interface endpoints, and several participant accounts run EC2 instances in the shared subnets. The finance team asks how charges are distributed. Which statements are correct? (Select TWO.)",
+    "options": [
+      "Participants pay the hourly and data processing charges for the NAT gateways that their instances use.",
+      "The VPC owner pays the hourly and data processing charges for the NAT gateways and interface endpoints.",
+      "The VPC owner pays for the EC2 instances that participants launch in the shared subnets.",
+      "Traffic between instances of different participant accounts in the same Availability Zone incurs data transfer charges.",
+      "Participants pay for their own EC2 instances and for inter-Availability Zone data transfer of their resources."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "In a shared VPC, each participant pays for its application resources, such as EC2 instances, and for its inter-Availability Zone data transfer, while the VPC owner pays hourly, data processing, and data transfer charges for NAT gateways, virtual private gateways, transit gateways, PrivateLink, and VPC endpoints. Data transfer within the same Availability Zone is free regardless of which accounts own the communicating resources.",
+    "subtopic": "VPC Sharing",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-share-billing.html"
+  },
+  {
+    "id": "vpc-advanced-058",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "Security groups in eight AWS accounts allow HTTPS from the same set of 15 partner CIDR blocks, and the list changes every month. Updating every security group manually has caused outages from missed changes. Which actions should the solutions architect take to reduce this effort? (Select TWO.)",
+    "options": [
+      "Create a customer-managed prefix list that contains the partner CIDR blocks and reference it in the security group rules.",
+      "Replace the security group rules with network ACL rules that reference the partners' domain names.",
+      "Share the prefix list with the other accounts by using AWS Resource Access Manager.",
+      "Reference an AWS-managed prefix list for the partners so that AWS keeps the ranges up to date.",
+      "Attach a VPC endpoint policy in each VPC that allows the partner CIDR blocks."
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "A customer-managed prefix list groups CIDR blocks so that security group rules reference the list, and when entries are added or removed every referencing rule uses the latest version. Prefix lists can be shared with other accounts through AWS RAM, so all eight accounts reference one list. AWS-managed prefix lists cover AWS service ranges and cannot be created or modified, network ACLs do not accept domain names, and endpoint policies control access through VPC endpoints rather than inbound HTTPS.",
+    "subtopic": "Managed Prefix Lists",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/managed-prefix-lists.html"
+  },
+  {
+    "id": "vpc-advanced-059",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company wants Amazon CloudFront to be the only entry point to an Application Load Balancer. The company moves the ALB to private subnets and creates a CloudFront VPC origin for it. The ALB must accept traffic only from the company's own CloudFront distributions. Which actions are required? (Select TWO.)",
+    "options": [
+      "Add a 0.0.0.0/0 route to the internet gateway in the private subnets' route table so that CloudFront can reach the ALB.",
+      "Ensure that the VPC that contains the ALB has an internet gateway attached.",
+      "Place a Gateway Load Balancer in front of the ALB to receive traffic from CloudFront.",
+      "Allow inbound traffic on the ALB's security group from the CloudFront-VPCOrigins-Service-SG security group.",
+      "Allow inbound traffic on the ALB's security group only from the CloudFront origin-facing managed prefix list."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "CloudFront VPC origins require an internet gateway attached to the VPC to denote that it can receive internet traffic, but the gateway is not used for routing to the private subnets, so no route changes are needed. Allowing inbound traffic from the service-managed CloudFront-VPCOrigins-Service-SG security group restricts access to the company's distributions, whereas the origin-facing prefix list allows traffic from any CloudFront distribution. Gateway Load Balancers cannot be VPC origins.",
+    "subtopic": "CloudFront VPC Origins",
+    "source": "https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins.html"
+  },
+  {
+    "id": "vpc-advanced-060",
+    "topic": "vpc-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company routes traffic between spoke VPCs through stateful firewall appliances in an inspection VPC attached to a transit gateway. The appliances run in two Availability Zones. Some connections fail because response traffic arrives at the appliance in a different Availability Zone than the request did. Which change will fix this?",
+    "options": [
+      "Enable appliance mode on all of the spoke VPC attachments.",
+      "Create a second transit gateway and attach the inspection VPC to both transit gateways.",
+      "Enable appliance mode support on the inspection VPC's transit gateway attachment.",
+      "Disable route propagation for the spoke VPC attachments in the transit gateway route tables."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With appliance mode enabled on the attachment of the VPC that contains the stateful appliance, the transit gateway uses a flow hash to pick one network interface in that VPC for the life of the flow and uses it for return traffic too, keeping both directions in the same Availability Zone. Without it, the transit gateway keeps traffic in the originating zone, which causes this asymmetry. Connecting multiple transit gateways to one appliance VPC does not guarantee flow stickiness, and route propagation does not affect zone selection.",
+    "subtopic": "Transit Gateway Appliance Mode",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html"
+  },
+  {
+    "id": "vpc-advanced-061",
+    "topic": "vpc-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A VPC has workloads in us-east-1a, us-east-1b, and us-east-1c. Its transit gateway VPC attachment was created with subnets in only us-east-1a and us-east-1b. Instances in us-east-1c have a route to the transit gateway but cannot reach other VPCs through it. What should the solutions architect do?",
+    "options": [
+      "Modify the transit gateway attachment to add a subnet in us-east-1c.",
+      "Add a static route for the us-east-1c subnets in the transit gateway route table.",
+      "Enable appliance mode on the attachment so that traffic can cross Availability Zones.",
+      "Create a second transit gateway and attach it by using a subnet in us-east-1c."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "When a VPC is attached to a transit gateway, you enable each Availability Zone by specifying one subnet, and only resources in zones that have an attachment subnet can reach the transit gateway. Adding a subnet in us-east-1c places a transit gateway network interface there and enables the zone. Transit gateway route table entries and appliance mode do not enable a missing zone, and a second transit gateway adds cost and complexity.",
+    "subtopic": "Transit Gateway Attachments",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html"
+  },
+  {
+    "id": "vpc-advanced-062",
+    "topic": "vpc-advanced",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A network team is designing VPC attachments for a new transit gateway and wants to follow AWS design best practices. Which actions should the team take? (Select TWO.)",
+    "options": [
+      "Place the transit gateway attachment network interfaces in the same subnets as the application instances.",
+      "Create a second transit gateway in the same Region as a standby for high availability.",
+      "Use a separate small subnet, such as a /28, in each Availability Zone for the transit gateway attachment.",
+      "Apply restrictive network ACLs to the transit gateway attachment subnets to filter inter-VPC traffic.",
+      "Keep the network ACL that is associated with the transit gateway attachment subnets open in both directions."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "AWS recommends a separate subnet with a small CIDR, such as /28, for each transit gateway VPC attachment and keeping the network ACL on those subnets open inbound and outbound, applying any network ACL filtering to the workload subnets instead. Sharing the attachment subnets with workloads removes this separation. A transit gateway is highly available by design, so an extra transit gateway is not needed for high availability.",
+    "subtopic": "Transit Gateway Attachments",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-best-design-practices.html"
+  },
+  {
+    "id": "vpc-advanced-063",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A security team detects a compromised workload in a VPC that uses the CIDR block 10.40.12.0/24 and is attached to a transit gateway. The team must immediately stop all other attached VPCs from sending traffic to that CIDR block through the transit gateway, without changing the route tables in each spoke VPC. Which action meets this requirement?",
+    "options": [
+      "Detach the internet gateway from the compromised VPC.",
+      "Add a blackhole route for 10.40.12.0/24 to the transit gateway route tables that the other attachments use.",
+      "Enable appliance mode on the compromised VPC's transit gateway attachment.",
+      "Delete the Transit Gateway Flow Logs subscription for the compromised VPC's attachment."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A transit gateway route table can contain a blackhole route that drops traffic matching the destination, and a static route takes priority over a propagated route for the same CIDR, so the other attachments can no longer reach the compromised VPC. Detaching the internet gateway does not affect transit gateway traffic. Appliance mode only controls Availability Zone selection, and flow logs only record traffic.",
+    "subtopic": "Transit Gateway Route Tables",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html"
+  },
+  {
+    "id": "vpc-advanced-064",
+    "topic": "vpc-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is migrating an analytics application that distributes data feeds to many receiver instances by using IP multicast. The senders and receivers run in several VPCs in the same Region that are already attached to an existing transit gateway that was created without multicast support. Which solution supports this requirement?",
+    "options": [
+      "Enable multicast on the VPC subnets and add 224.0.0.0/4 routes that target the internet gateway.",
+      "Create VPC peering connections between the VPCs and add multicast group routes to the peering connections.",
+      "Enable multicast on the existing transit gateway's default route table and propagate the group addresses.",
+      "Create a new transit gateway with multicast support, create a multicast domain, and register the senders and receivers as group sources and members."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Transit Gateway can route multicast traffic between subnets of attached VPCs and act as a multicast router, but a new transit gateway must be created to support multicast. Multicast domains define membership at the subnet level, and sources and members are registered statically or through IGMP. VPC subnets, internet gateways, and peering connections do not provide multicast routing, and multicast cannot be added to an existing transit gateway's route table.",
+    "subtopic": "Transit Gateway Multicast",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-multicast-overview.html"
+  },
+  {
+    "id": "vpc-advanced-065",
+    "topic": "vpc-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs third-party SD-WAN virtual appliances in a VPC and wants to connect them to its transit gateway with dynamic routing. The company wants high-performance tunnels and does not want to manage IPsec VPN connections between the appliances and the transit gateway. Which solution meets these requirements?",
+    "options": [
+      "Create a Transit Gateway Connect attachment that uses the VPC attachment as transport, and configure GRE tunnels with BGP peering to the appliances.",
+      "Create Site-to-Site VPN attachments from the transit gateway to the appliances' Elastic IP addresses with static routing.",
+      "Create a VPC peering connection between the appliance VPC and each spoke VPC and run BGP over the peering connections.",
+      "Place the appliances behind a Gateway Load Balancer and use its endpoints as transit gateway attachments."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A Transit Gateway Connect attachment connects a transit gateway to third-party virtual appliances such as SD-WAN appliances by using GRE tunnels for high performance and BGP for dynamic routing, with an existing VPC or Direct Connect attachment as the transport. Site-to-Site VPN uses IPsec, which the company wants to avoid, and static routing is not dynamic. VPC peering does not carry BGP sessions with AWS, and Gateway Load Balancer endpoints are not transit gateway attachment types.",
+    "subtopic": "Transit Gateway Connect",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-connect.html"
+  },
+  {
+    "id": "vpc-advanced-066",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company wants to inspect all traffic between VPCs attached to its transit gateway by using AWS Network Firewall. The team does not want to build or operate a separate inspection VPC with its own subnets and route tables, and stateful inspection must stay symmetric across Availability Zones. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Create an inspection VPC with firewall subnets in each Availability Zone, attach it to the transit gateway, and enable appliance mode on that attachment.",
+      "Deploy a Network Firewall in every spoke VPC and route each spoke's traffic through its local firewall endpoints.",
+      "Create the firewall as a transit gateway network function attachment and update the transit gateway route tables to send traffic to it.",
+      "Deploy third-party firewalls behind a Gateway Load Balancer in a shared services VPC and attach that VPC to the transit gateway."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With the Network Firewall integration for Transit Gateway, you select the transit gateway when creating the firewall and AWS provisions and manages the underlying resources as a network function attachment, which is created with appliance mode automatically enabled; you then route traffic to it in the transit gateway route tables. A self-built inspection VPC works but requires managing VPCs, subnets, and routes. Per-spoke firewalls multiply cost and rule management, and third-party appliances behind a Gateway Load Balancer add appliance operations.",
+    "subtopic": "AWS Network Firewall",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html"
+  },
+  {
+    "id": "vpc-advanced-067",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company hosts public web servers in two Availability Zones and deploys AWS Network Firewall with a firewall endpoint in a dedicated firewall subnet in each zone. Outbound traffic from the web subnets is already routed through the firewall. Inbound traffic from the internet must also be inspected before it reaches the web servers. Which routing change meets this requirement?",
+    "options": [
+      "Add a 0.0.0.0/0 route to the firewall endpoint in the firewall subnets' route tables.",
+      "Associate a route table with the internet gateway that routes each web subnet's CIDR block to the firewall endpoint in the same Availability Zone.",
+      "Replace the local route in the web subnets' route tables with a route to the internet gateway.",
+      "Associate a route table with the internet gateway that routes both web subnets' CIDR blocks to the firewall endpoint in the first Availability Zone."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "In the multi-zone Network Firewall architecture, a route table associated with the internet gateway sends traffic destined for each customer subnet to the firewall endpoint in the same Availability Zone, so inbound traffic is inspected and flows stay zonal. The firewall subnets must route 0.0.0.0/0 to the internet gateway, not to themselves. Sending both zones to one endpoint creates an AZ dependency and asymmetric paths, and the local route cannot be redirected to an internet gateway.",
+    "subtopic": "AWS Network Firewall",
+    "source": "https://docs.aws.amazon.com/network-firewall/latest/developerguide/arch-two-zone-igw.html"
+  },
+  {
+    "id": "vpc-advanced-068",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company has 800 remote employees who need secure access from their laptops to applications in private subnets of a VPC. The company wants a managed service that scales automatically, authenticates users with the existing Active Directory, and lets only members of specific AD groups reach specific networks. Which actions should the solutions architect take? (Select TWO.)",
+    "options": [
+      "Create an AWS Site-to-Site VPN connection to each employee's home router.",
+      "Deploy a bastion host in a public subnet and distribute SSH keys to the employees.",
+      "Create an AWS Client VPN endpoint that uses Active Directory authentication and associate it with subnets in the VPC.",
+      "Provision an AWS Direct Connect hosted connection for each remote employee.",
+      "Add Client VPN authorization rules that grant access to each network only for the required Active Directory groups."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "AWS Client VPN is a managed, client-based VPN that scales with the number of users, supports Active Directory authentication, and uses authorization rules to restrict which AD groups can access each network. Site-to-Site VPN and Direct Connect connect networks rather than individual laptops and do not scale to hundreds of home users. A bastion host with shared SSH keys is self-managed and does not use AD group-based network authorization.",
+    "subtopic": "AWS Client VPN",
+    "source": "https://docs.aws.amazon.com/vpn/latest/clientvpn-admin/what-is.html"
+  },
+  {
+    "id": "vpc-advanced-069",
+    "topic": "vpc-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company's AWS Client VPN endpoint routes all user traffic, including general internet browsing, through the VPN, which increases data transfer costs from AWS. Users need the VPN only to reach resources in the VPC. Which change will reduce these costs?",
+    "options": [
+      "Associate the Client VPN endpoint with subnets in fewer Availability Zones.",
+      "Add a NAT gateway to the associated subnets to carry the users' internet traffic.",
+      "Change the Client VPN endpoint to use UDP port 1194 instead of TCP port 443.",
+      "Enable split-tunnel on the Client VPN endpoint so that only traffic for routes in the endpoint route table uses the VPN."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "By default, a Client VPN endpoint routes all client traffic through the tunnel; with split-tunnel enabled, only traffic to destinations in the endpoint's route table uses the VPN, which reduces outgoing traffic from AWS and the related data transfer cost. Fewer subnet associations reduce availability without changing the traffic volume. A NAT gateway adds processing charges, and the port or protocol does not change how much traffic is sent through AWS.",
+    "subtopic": "AWS Client VPN",
+    "source": "https://docs.aws.amazon.com/vpn/latest/clientvpn-admin/split-tunnel-vpn.html"
+  },
+  {
+    "id": "vpc-advanced-070",
+    "topic": "vpc-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Applications in VPC A connect to an EC2 instance in peered VPC B by using the instance's public DNS hostname. The name resolves to the instance's public IP address, so the traffic does not use the peering connection. Both VPCs have DNS hostnames and DNS resolution enabled. How can the company make this traffic use private IP addresses over the peering connection without changing application code?",
+    "options": [
+      "Enable DNS resolution support for the VPC peering connection so that the public DNS hostname resolves to the private IP address.",
+      "Create a Route 53 public hosted zone record that maps the hostname to the instance's private IP address.",
+      "Add a route for the instance's public IP address that targets the peering connection in VPC A's route tables.",
+      "Configure VPC A's DHCP option set to use the Amazon DNS server of VPC B."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "By default, a public DNS hostname resolves to the public IP address even across a peering connection; enabling DNS resolution support for the peering connection makes it resolve to the instance's private IP address, which requires both VPCs to have DNS hostnames and DNS resolution enabled. A public hosted zone cannot override the AWS-provided hostname, and routes for public IP addresses cannot target a peering connection. Instances cannot query the Amazon DNS server in a peer VPC.",
+    "subtopic": "VPC Peering",
+    "source": "https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-dns.html"
+  },
+  {
+    "id": "vpc-advanced-071",
+    "topic": "vpc-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants to peer VPC A (10.1.0.0/16) with VPC B (10.2.0.0/16). VPC B also has an unused secondary CIDR block, 10.1.128.0/20, that was added for a cancelled project. The peering request fails. Workloads need to communicate only between the primary CIDR blocks. What should the solutions architect do?",
+    "options": [
+      "Create the peering connection and add routes only for the non-overlapping primary CIDR blocks.",
+      "Enable IPv6 on both VPCs and create the peering connection for IPv6 traffic only.",
+      "Disassociate the unused secondary CIDR block from VPC B and then create the peering connection.",
+      "Create two peering connections between the VPCs, one for each CIDR block of VPC B."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A VPC peering connection cannot be created if any IPv4 CIDR blocks of the two VPCs overlap, even if you intend to use only the non-overlapping blocks or only IPv6, so the unused overlapping secondary block must be removed first; secondary CIDR blocks can be disassociated, unlike the primary block. Only one peering connection can exist between two VPCs at the same time.",
+    "subtopic": "VPC Peering",
+    "source": "https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html"
+  },
+  {
+    "id": "vpc-advanced-072",
+    "topic": "vpc-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A cost review shows ongoing VPC Traffic Mirroring charges, although the mirror source instances from a completed security investigation were terminated last month. What should the solutions architect do to stop these charges?",
+    "options": [
+      "Delete the Network Load Balancer that was used as the mirror target, because charges are based on target hours.",
+      "Delete the traffic mirror sessions, because charges continue for each active session even after the source is terminated.",
+      "Remove the traffic mirror filters, because charges are based on the number of filter rules.",
+      "Disable VPC Flow Logs in the VPC, because Traffic Mirroring is billed through flow log subscriptions."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Traffic Mirroring is charged hourly for each active traffic mirror session, and the charges continue until the sessions are deleted, even if the source network interface is detached or its instance is stopped or terminated. Filters and flow logs do not drive Traffic Mirroring charges. Deleting a load balancer target removes its own charges but leaves the mirror sessions billing.",
+    "subtopic": "VPC Traffic Mirroring",
+    "source": "https://docs.aws.amazon.com/vpc/latest/mirroring/what-is-traffic-mirroring.html"
+  },
+  {
+    "id": "vpc-advanced-073",
+    "topic": "vpc-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A shared services VPC has an S3 gateway endpoint. Ten application VPCs are peered with the shared services VPC, and their private instances reach Amazon S3 in the same Region through their own NAT gateways. To cut NAT gateway data processing charges, a team proposes routing the application VPCs' S3 traffic through the peering connections to the shared gateway endpoint. What should the solutions architect recommend?",
+    "options": [
+      "Implement the proposal and add the S3 prefix list as a route that targets the peering connection in each application VPC.",
+      "Replace the shared gateway endpoint with S3 interface endpoints in each application VPC to avoid endpoint charges.",
+      "Implement the proposal and attach an endpoint policy that allows access from the application VPC CIDR blocks.",
+      "Create an S3 gateway endpoint in each application VPC, because peered VPCs cannot use another VPC's gateway endpoint."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "VPC peering does not support edge-to-edge routing, so resources in a peered VPC cannot use a gateway endpoint in the other VPC to reach Amazon S3. Gateway endpoints have no additional charge, so creating one in each application VPC removes the NAT gateway processing charges for S3 traffic. Interface endpoints add hourly and per-GB charges, and an endpoint policy cannot make an unsupported routing path work.",
+    "subtopic": "Gateway VPC Endpoints",
+    "source": "https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-basics.html"
+  },
+  {
+    "id": "vpc-advanced-074",
+    "topic": "vpc-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A solutions architect is designing a hub-and-spoke network with AWS Transit Gateway in one Region. A reviewer asks whether a second transit gateway is needed in the same Region for high availability. What should the solutions architect recommend?",
+    "options": [
+      "Deploy two transit gateways in the Region and attach every VPC to both for active-passive failover.",
+      "Deploy the transit gateway in two Availability Zones and configure a Route 53 health check for failover.",
+      "Use a single transit gateway, which is highly available by design, and enable multiple Availability Zones on each VPC attachment.",
+      "Use VPC peering as the primary path and the transit gateway only as a backup path."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS design best practices state that additional transit gateways are not needed for high availability because transit gateways are highly available by design, and AWS recommends enabling multiple Availability Zones on VPC attachments. Transit gateways are not deployed into zones or failed over with Route 53 health checks. Duplicating the hub or adding a peering mesh increases cost and complexity without improving availability.",
+    "subtopic": "AWS Transit Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-best-design-practices.html"
+  },
+  {
+    "id": "vpc-advanced-075",
+    "topic": "vpc-advanced",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company builds a centralized egress VPC that contains an internet gateway and NAT gateways, and attaches it and several spoke VPCs to a transit gateway. Spoke VPCs route 0.0.0.0/0 to the transit gateway, and the transit gateway route table sends 0.0.0.0/0 to the egress VPC attachment. Internet traffic from the spokes is being dropped. Which configurations should the solutions architect use in the egress VPC? (Select THREE.)",
+    "options": [
+      "Create the egress VPC's transit gateway attachment in the public subnets that contain the NAT gateways.",
+      "Create the egress VPC's transit gateway attachment in private subnets that are separate from the NAT gateway subnets.",
+      "Route 0.0.0.0/0 from the attachment subnets' route table to the NAT gateway in the same Availability Zone.",
+      "Enable appliance mode on the egress VPC attachment so that the NAT gateways can translate addresses.",
+      "Route the spoke VPC CIDR blocks from the attachment subnets' route table to the internet gateway.",
+      "Route the spoke VPC CIDR blocks from the NAT gateway subnets' route table to the transit gateway."
+    ],
+    "answer": [
+      1,
+      2,
+      5
+    ],
+    "explanation": "In the AWS centralized outbound pattern, the egress VPC attachment uses private subnets whose route table sends 0.0.0.0/0 to the NAT gateway, and the public NAT gateway subnets route the spoke CIDR blocks back to the transit gateway. If the attachment uses the public subnets, spoke traffic is sent straight to the internet gateway, which drops it because the instances have no public IP addresses. Appliance mode is for stateful appliances and does not perform translation, and spoke CIDRs must not be routed to the internet gateway.",
+    "subtopic": "Centralized Egress",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html"
   }
 ]

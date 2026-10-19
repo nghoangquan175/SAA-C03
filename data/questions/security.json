@@ -277,9 +277,9 @@
     "difficulty": 2,
     "question": "A CISO wants one place to view and prioritize findings from Amazon GuardDuty, Amazon Inspector, and Amazon Macie across 50 accounts and several Regions. The CISO also wants accounts checked continuously against the CIS AWS Foundations Benchmark. Which actions meet these requirements? (Select TWO.)",
     "options": [
-      "Enable AWS Security Hub with a delegated administrator account and cross-Region aggregation",
+      "Enable AWS Security Hub CSPM with a delegated administrator account and cross-Region aggregation",
       "Use Amazon Detective as the central dashboard for all findings",
-      "Enable the CIS AWS Foundations Benchmark standard in AWS Security Hub",
+      "Enable the CIS AWS Foundations Benchmark standard in AWS Security Hub CSPM",
       "Build a CloudWatch dashboard in each account that lists GuardDuty findings",
       "Run AWS Trusted Advisor checks and export them weekly"
     ],
@@ -287,8 +287,9 @@
       0,
       2
     ],
-    "explanation": "AWS Security Hub aggregates findings from GuardDuty, Inspector, Macie, and other services across accounts and Regions, and it runs automated checks against standards such as the CIS AWS Foundations Benchmark. Detective is for investigating findings, not aggregating them. Per-account CloudWatch dashboards and weekly Trusted Advisor exports are not centralized and do not cover CIS checks.",
-    "subtopic": "AWS Security Hub"
+    "explanation": "AWS Security Hub CSPM (the original Security Hub, now named Security Hub Cloud Security Posture Management) aggregates findings from GuardDuty, Inspector, Macie, and other services across accounts and Regions, and it runs automated checks against standards such as the CIS AWS Foundations Benchmark. Detective is for investigating findings, not aggregating them. Per-account CloudWatch dashboards and weekly Trusted Advisor exports are not centralized and do not cover CIS checks.",
+    "subtopic": "AWS Security Hub CSPM",
+    "source": "https://docs.aws.amazon.com/securityhub/latest/userguide/what-is-securityhub.html"
   },
   {
     "id": "security-016",
@@ -873,5 +874,619 @@
     ],
     "explanation": "Public ACM certificates used with integrated services such as ALB and CloudFront have no additional charge and renew automatically. Multi-year commercial certificates still cost money and need manual installation. A self-managed CA is not trusted by browsers, and AWS Private CA has charges and issues certificates that browsers do not trust by default.",
     "subtopic": "ACM public certificates"
+  },
+  {
+    "id": "security-046",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A security engineer created a customer managed AWS KMS key with a custom key policy that names only a key administrator role. A developer role in the same account has an IAM policy that allows kms:Decrypt on the key ARN, but every Decrypt call from the developer role fails with an AccessDenied error. Which change will allow the IAM policy to take effect?",
+    "options": [
+      "Attach an additional AWS managed IAM policy for KMS power users to the developer role",
+      "Enable automatic key rotation so that the IAM permissions are applied to the new key material",
+      "Add a key policy statement that gives the account principal (arn:aws:iam::<account-id>:root) access, which enables IAM policies to grant access to the key",
+      "Create a service control policy that explicitly allows kms:Decrypt for the developer role"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Unlike other resource policies, a KMS key policy does not automatically give permissions to the account, so IAM policies that allow access to a key are ineffective unless the key policy contains a statement that allows the account principal and thereby enables IAM policies. Adding more IAM policies does not help while the key policy blocks IAM delegation. Key rotation changes only key material, not permissions, and SCPs never grant permissions; they only limit them.",
+    "subtopic": "KMS key policies vs IAM policies",
+    "source": "https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html"
+  },
+  {
+    "id": "security-047",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company encrypts objects in an Amazon S3 bucket with SSE-KMS by using a customer managed key. The security team wants principals in the account to be able to use the key only when the request comes through Amazon S3 in the bucket's Region, so that nobody can call the KMS Decrypt API directly with ciphertext they have copied. Which solution meets this requirement?",
+    "options": [
+      "Add a kms:ViaService condition with the value s3.<region>.amazonaws.com to the key policy statement that grants use of the key",
+      "Enable S3 Bucket Keys so that only Amazon S3 can call AWS KMS for the bucket",
+      "Add a bucket policy condition that denies requests where aws:SecureTransport is false",
+      "Switch the bucket to the AWS managed key aws/s3 and add the users to its key policy"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The kms:ViaService condition key limits use of a KMS key to requests that come from specified AWS services, such as Amazon S3 in a given Region, so direct KMS calls do not match the statement. S3 Bucket Keys reduce KMS request volume but do not restrict who can call KMS directly. Enforcing TLS controls encryption in transit, not key usage paths, and the key policy of an AWS managed key cannot be edited.",
+    "subtopic": "KMS kms:ViaService condition",
+    "source": "https://docs.aws.amazon.com/kms/latest/developerguide/conditions-kms.html"
+  },
+  {
+    "id": "security-048",
+    "topic": "security",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company must share several Amazon EBS snapshots with an auditing partner's AWS account. The snapshots are currently encrypted with the default AWS managed key (aws/ebs). Which steps must the company take so that the partner can create volumes from the snapshots? (Select TWO.)",
+    "options": [
+      "Edit the key policy of the aws/ebs AWS managed key to allow the partner account",
+      "Copy the snapshots and re-encrypt the copies with a customer managed KMS key",
+      "Make the snapshots public so that the partner can copy them into its own account",
+      "Share the re-encrypted snapshots with the partner account and allow that account to use the customer managed key in the key policy",
+      "Export the aws/ebs key material and send it to the partner through a secure channel"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Snapshots encrypted with the default AWS managed key cannot be shared, so the company must copy them with a customer managed key, share the copies, and also share that key by allowing the partner account in its key policy. The key policy of an AWS managed key cannot be changed. Only unencrypted snapshots can be shared publicly, and KMS key material cannot be exported.",
+    "subtopic": "Sharing encrypted EBS snapshots",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-modifying-snapshot-permissions.html"
+  },
+  {
+    "id": "security-049",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A new compliance rule requires that the key material of all customer managed symmetric AWS KMS keys used by a payments application be rotated every 180 days. Applications must not need any changes, and the security team wants the LEAST operational overhead. What should a solutions architect do?",
+    "options": [
+      "Create a new KMS key every 180 days and use a scheduled Lambda function to repoint the key alias",
+      "Enable automatic key rotation with the default settings on each key",
+      "Replace the customer managed keys with AWS managed keys, which KMS rotates automatically",
+      "Enable automatic key rotation on each key with a custom rotation period of 180 days"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "AWS KMS automatic rotation supports a custom rotation period, so the keys can rotate every 180 days while keeping the same key ID and ARN, and KMS transparently uses the correct key material for decryption. Manual rotation with new keys and alias updates adds operational work. The default rotation period is 365 days, and AWS managed keys rotate yearly with no option to change the schedule.",
+    "subtopic": "KMS automatic rotation period",
+    "source": "https://docs.aws.amazon.com/kms/latest/developerguide/rotate-keys.html"
+  },
+  {
+    "id": "security-050",
+    "topic": "security",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A bank generates key material in its on-premises HSMs and wants to use it with an AWS KMS key that protects Amazon S3 and Amazon EBS data. The bank wants the ability to make the key unusable immediately during an incident and to restore it later. Which statements about KMS keys with imported key material are correct? (Select TWO.)",
+    "options": [
+      "The bank can delete the imported key material on demand, which makes the KMS key unusable, and can later reimport the same key material to restore it",
+      "AWS KMS keeps a durable backup of the imported key material, so the bank does not need to retain its own copy",
+      "The bank can enable automatic yearly rotation of the imported key material in AWS KMS",
+      "The bank can export the imported key material from AWS KMS whenever it needs a copy",
+      "The bank can set an expiration time on the imported key material when it imports it"
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "With imported key material, you can set an expiration time and delete the key material on demand, which makes the KMS key unusable until you reimport the same material, unlike scheduled key deletion, which is irreversible after the waiting period. The bank remains responsible for keeping the original key material for durability. Automatic rotation is supported only for keys whose material KMS generates, and key material cannot be exported from AWS KMS.",
+    "subtopic": "KMS imported key material",
+    "source": "https://docs.aws.amazon.com/kms/latest/developerguide/importing-keys.html"
+  },
+  {
+    "id": "security-051",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A regulator requires that the encryption keys protecting a company's data in Amazon S3 be stored and used only in a key manager that the company operates outside AWS. If the company revokes access, AWS must not be able to decrypt the data. The company still wants to use SSE-KMS with native AWS service integration. Which solution meets these requirements?",
+    "options": [
+      "Create KMS keys in an AWS KMS custom key store backed by an AWS CloudHSM cluster",
+      "Create KMS keys in an AWS KMS external key store that connects through an external key store proxy to the company's key manager",
+      "Import key material from the company's on-premises HSM into standard KMS keys",
+      "Use an AWS CloudHSM cluster in the company's VPC and perform client-side encryption"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An external key store is a KMS custom key store backed by an external key manager outside AWS, so cryptographic operations happen with key material that never leaves the customer's key manager, and revoking access makes the data undecryptable by AWS. A CloudHSM key store and CloudHSM client-side encryption both keep key material in HSMs inside AWS. Imported key material is a copy that KMS uses inside AWS.",
+    "subtopic": "KMS external key store",
+    "source": "https://docs.aws.amazon.com/kms/latest/developerguide/keystore-external.html"
+  },
+  {
+    "id": "security-052",
+    "topic": "security",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An administrator believes a customer managed AWS KMS key is no longer used and wants to remove it. However, the administrator is not certain that every workload has stopped using it, and the company must be able to recover quickly if something breaks. Which approach is SAFEST?",
+    "options": [
+      "Disable the key first and monitor AWS CloudTrail for attempts to use it before scheduling deletion",
+      "Schedule deletion with the minimum waiting period, because a deleted key can be restored for 30 days afterward",
+      "Delete the key immediately, because AWS KMS keeps backups of deleted keys",
+      "Remove every statement from the key policy so that no principal can use the key"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS recommends disabling a KMS key when you are unsure whether it is still needed, because a disabled key can be re-enabled, while a deleted key cannot be recovered after the 7 to 30 day waiting period ends. KMS never deletes a key immediately and keeps no backup after deletion. Removing all key policy statements can make the key unmanageable and require AWS Support to recover access.",
+    "subtopic": "Disabling vs deleting KMS keys",
+    "source": "https://docs.aws.amazon.com/kms/latest/developerguide/deleting-keys.html"
+  },
+  {
+    "id": "security-053",
+    "topic": "security",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A payment application stores its signing keys in an AWS CloudHSM cluster that contains a single HSM. The company wants cryptographic operations to continue if one HSM or one Availability Zone fails. What should a solutions architect do?",
+    "options": [
+      "Take more frequent backups of the cluster so that it can be restored faster",
+      "Replace the HSM with a larger HSM type that has more capacity",
+      "Add at least one more HSM to the cluster in a different Availability Zone",
+      "Create a second cluster in another Region and copy the keys to it manually each day"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS recommends at least two HSMs per cluster in different Availability Zones; CloudHSM synchronizes keys across the HSMs and the client load balances across them, so no single HSM is a point of failure. Backups still require a restore and cause downtime. A larger HSM is still a single point of failure, and manual cross-Region copies add operational effort without automatic failover.",
+    "subtopic": "CloudHSM high availability",
+    "source": "https://docs.aws.amazon.com/cloudhsm/latest/userguide/cluster-high-availability-load-balancing.html"
+  },
+  {
+    "id": "security-054",
+    "topic": "security",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs NGINX web servers on Amazon EC2 that must terminate TLS themselves. Company policy requires the TLS private keys to be kept in single-tenant HSMs that the company controls. TLS handshakes are consuming a large share of the servers' CPU. Which solution meets these requirements?",
+    "options": [
+      "Store the private keys in AWS Secrets Manager and cache them in memory on each server",
+      "Store the private keys as SecureString parameters in Parameter Store and move to larger instances",
+      "Use AWS KMS customer managed keys to hold the private keys and call KMS during each handshake",
+      "Configure SSL/TLS offload with AWS CloudHSM so the private keys stay in the HSMs and part of the TLS computation is offloaded"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "SSL/TLS offload with AWS CloudHSM stores the web server's private key in the HSMs and offloads part of the TLS computation from the web server, reducing CPU load while meeting the HSM requirement. Secrets Manager and Parameter Store keep key copies outside HSMs on the servers. AWS KMS is a multi-tenant service and is not the single-tenant HSM the policy requires.",
+    "subtopic": "CloudHSM SSL/TLS offload",
+    "source": "https://docs.aws.amazon.com/cloudhsm/latest/userguide/ssl-offload.html"
+  },
+  {
+    "id": "security-055",
+    "topic": "security",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A highly available order service retrieves Amazon RDS credentials from AWS Secrets Manager, which rotates the password with the single user rotation strategy. During each rotation, a small number of new connections are denied for a short time. The company wants applications to always receive a working set of credentials during rotation. What should a solutions architect do?",
+    "options": [
+      "Rotate the secret every hour so that each rotation finishes faster",
+      "Switch to the alternating users rotation strategy and provide a superuser secret that can clone the database user",
+      "Replicate the secret to a second Region and read the replica during rotation",
+      "Cache the secret in the application for 24 hours so that it ignores rotation events"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The alternating users strategy updates one of two database users at each rotation, so the previous credentials remain valid and applications that read the secret during rotation still get a working set; it needs a superuser secret to create the cloned user. Rotating more often increases the number of brief windows. A Regional replica holds the same credentials, and long caching would use outdated passwords after the single user is changed.",
+    "subtopic": "Secrets Manager rotation strategies",
+    "source": "https://docs.aws.amazon.com/secretsmanager/latest/userguide/rotation-strategy.html"
+  },
+  {
+    "id": "security-056",
+    "topic": "security",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An AWS Lambda function is invoked millions of times per day and calls the AWS Secrets Manager GetSecretValue API on every invocation to read database credentials. The company wants lower latency and fewer Secrets Manager API charges with the fewest code changes. What should a solutions architect recommend?",
+    "options": [
+      "Add the AWS Parameters and Secrets Lambda Extension and read the secret from its local cache",
+      "Store the database password as a plaintext Lambda environment variable",
+      "Increase the memory allocated to the function so that API calls complete faster",
+      "Replicate the secret to several Regions and choose a Region at random on each call"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The AWS Parameters and Secrets Lambda Extension keeps a local cache of secrets, with a default time to live of 300 seconds, so the function does not call Secrets Manager on every invocation, which gives faster responses and lower cost. Plaintext environment variables weaken security and break rotation. More memory does not reduce the number of API calls, and cross-Region calls add latency.",
+    "subtopic": "Secrets Manager caching",
+    "source": "https://docs.aws.amazon.com/lambda/latest/dg/with-secrets-manager.html"
+  },
+  {
+    "id": "security-057",
+    "topic": "security",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A secret in AWS Secrets Manager in Account A is encrypted with the AWS managed key aws/secretsmanager. An application role in Account B must read the secret value. Which actions are required? (Select THREE.)",
+    "options": [
+      "Attach a resource-based policy to the secret that allows the Account B role to call secretsmanager:GetSecretValue",
+      "Add the Account B role to the key policy of the aws/secretsmanager key",
+      "Re-encrypt the secret with a customer managed KMS key whose key policy allows the Account B role to use kms:Decrypt",
+      "Replicate the secret into Account B by using Secrets Manager multi-Region replication",
+      "Create a VPC peering connection between the two accounts' VPCs",
+      "Attach an IAM policy to the Account B role that allows GetSecretValue on the secret ARN and kms:Decrypt on the key"
+    ],
+    "answer": [
+      0,
+      2,
+      5
+    ],
+    "explanation": "Cross-account access to a secret requires a resource policy on the secret, an identity policy for the principal in the other account, and permission to use the KMS key. Because the AWS managed key aws/secretsmanager cannot be used for cross-account access, the secret must be encrypted with a customer managed key whose key policy allows the role. Replication copies secrets to other Regions, not accounts, and VPC peering does not grant API permissions.",
+    "subtopic": "Secrets Manager cross-account access",
+    "source": "https://docs.aws.amazon.com/secretsmanager/latest/userguide/auth-and-access_examples_cross.html"
+  },
+  {
+    "id": "security-058",
+    "topic": "security",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company imported a third-party TLS certificate into AWS Certificate Manager (ACM) for its Application Load Balancer because it uses an extended validation certificate from a specific vendor. Operations staff are worried about an outage when the certificate expires. Which solution provides an automated warning before expiration with the LEAST effort?",
+    "options": [
+      "Rely on ACM managed renewal to renew the imported certificate automatically",
+      "Run a cron job on an EC2 instance that checks the certificate expiration date with OpenSSL",
+      "Create an Amazon EventBridge rule for ACM Certificate Approaching Expiration events that notifies an Amazon SNS topic",
+      "Enable AWS Config so that it renews certificates that are close to expiration"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "ACM sends daily Certificate Approaching Expiration events to EventBridge for active certificates, starting 45 days before expiration for imported certificates, so a rule can notify an SNS topic or trigger automation to reimport. ACM does not renew imported certificates, so they must be reissued and reimported. A self-managed cron job adds operational work, and AWS Config does not renew certificates.",
+    "subtopic": "ACM imported certificate expiration",
+    "source": "https://docs.aws.amazon.com/acm/latest/userguide/supported-events.html"
+  },
+  {
+    "id": "security-059",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An online retailer's product pages are served through Amazon CloudFront. Competitors run scraping bots, and some of the bots do not identify themselves. Search engine crawlers must still be able to index the site. Which solution meets these requirements with the LEAST operational effort?",
+    "options": [
+      "Create an AWS WAF rate-based rule that blocks any IP address that sends more than 100 requests in 5 minutes",
+      "Create an AWS WAF geo match rule that blocks countries where the competitors are located",
+      "Subscribe to AWS Shield Advanced and ask the Shield Response Team to block the scrapers",
+      "Add the AWS WAF Bot Control managed rule group with the targeted protection level to the web ACL"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "AWS WAF Bot Control labels self-identifying bots, verifies desirable bots such as search engines, and its targeted protection level uses techniques such as browser interrogation and fingerprinting to detect bots that do not identify themselves. A simple rate limit can block legitimate crawlers and miss slow, distributed scrapers. Geo blocking is easy to bypass, and Shield Advanced is focused on DDoS protection rather than scraper management.",
+    "subtopic": "AWS WAF Bot Control",
+    "source": "https://docs.aws.amazon.com/waf/latest/developerguide/waf-bot-control.html"
+  },
+  {
+    "id": "security-060",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A mobile app uses an Amazon Cognito user pool for sign-up and sign-in. Attackers are sending large numbers of sign-up requests from known malicious IP addresses. The company wants to apply rate limiting and IP reputation rules directly to the Cognito endpoints without building a proxy. What should a solutions architect do?",
+    "options": [
+      "Place an Amazon API Gateway REST API in front of Cognito and forward all authentication calls through it",
+      "Associate an AWS WAF web ACL with the Cognito user pool",
+      "Add network ACL rules to the VPC that hosts the Cognito user pool",
+      "Create an AWS Firewall Manager security group policy for the user pool"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS WAF can protect Amazon Cognito user pools as a Regional resource, so a web ACL with rate-based rules and managed IP reputation rules can be associated directly with the user pool. Building an API Gateway proxy adds work and does not stop direct calls to Cognito. Cognito user pools are not deployed in a customer VPC, and security group policies do not apply to them.",
+    "subtopic": "AWS WAF with Cognito user pools",
+    "source": "https://docs.aws.amazon.com/waf/latest/developerguide/how-aws-waf-works-resources.html"
+  },
+  {
+    "id": "security-061",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An engineer created an AWS WAF web ACL in the eu-central-1 Region to protect an Amazon CloudFront distribution, but the distribution does not appear in the list of resources that can be associated with the web ACL. What is the reason?",
+    "options": [
+      "Web ACLs for CloudFront must be created in the Global (CloudFront) scope, which uses the US East (N. Virginia) Region",
+      "CloudFront distributions can be protected only by AWS Shield, not by AWS WAF",
+      "The web ACL must be created in the same Region as the distribution's origin",
+      "AWS Firewall Manager must be enabled before any web ACL can be associated with CloudFront"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS WAF resources for CloudFront distributions, including web ACLs, rule groups, and IP sets, must be created in US East (N. Virginia), which some interfaces show as Global (CloudFront). AWS WAF does support CloudFront distributions. The origin Region does not matter for this association, and Firewall Manager is optional.",
+    "subtopic": "AWS WAF scope for CloudFront",
+    "source": "https://docs.aws.amazon.com/waf/latest/developerguide/how-aws-waf-works-resources.html"
+  },
+  {
+    "id": "security-062",
+    "topic": "security",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A news site behind Amazon CloudFront is hit by HTTP request floods during major events. The current custom rate-based rules react slowly and must be retuned by hand. The company wants AWS-managed protection that detects application-layer DDoS attacks within seconds and challenges suspicious clients while letting legitimate readers continue. Which solution should a solutions architect recommend?",
+    "options": [
+      "Enable the legacy Shield Advanced automatic application layer DDoS mitigation feature on the distribution",
+      "Write additional rate-based rules for each URI path and review the thresholds every week",
+      "Add the AWS WAF Anti-DDoS managed rule group to the web ACL and enable its challenge rules",
+      "Associate Route 53 health checks with the distribution for Shield health-based detection"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Since March 2026, the AWS WAF Anti-DDoS managed rule group is the default solution for HTTP request floods; it detects and mitigates attacks within seconds and can use the Challenge action so legitimate browsers proceed. It supersedes the legacy Shield Advanced Layer 7 automatic mitigation, which reacts in minutes and is available to new customers only through AWS Support. Hand-tuned rate rules add work, and health-based detection improves detection accuracy but does not mitigate traffic by itself.",
+    "subtopic": "AWS WAF Anti-DDoS managed rule group",
+    "source": "https://docs.aws.amazon.com/waf/latest/developerguide/ddos-automatic-app-layer-response.html"
+  },
+  {
+    "id": "security-063",
+    "topic": "security",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company has 15 accounts in one organization in AWS Organizations with consolidated billing. It wants AWS Shield Advanced protection for internet-facing resources in all accounts but is concerned that the subscription fee will be charged 15 times. Which statement about Shield Advanced pricing is correct?",
+    "options": [
+      "Only one account in the organization can subscribe, so all public resources must be moved into that account",
+      "Each linked account pays its own monthly subscription fee, so the company should protect only its most critical account",
+      "The company should rely on Shield Standard plus AWS Firewall Manager, which provide the same features at no cost",
+      "The monthly subscription fee is charged once to the payer account, and AWS WAF requests for protected resources are included up to a monthly limit"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Shield Advanced bills the monthly fee once per payer account when it owns the linked accounts, so subscribing additional accounts in the organization does not multiply the fee, and the subscription includes AWS WAF usage for protected resources up to 50 billion requests per month. It requires a 1-year commitment. Any number of accounts can subscribe, and Shield Standard does not include features such as the Shield Response Team or DDoS cost protection.",
+    "subtopic": "Shield Advanced pricing",
+    "source": "https://aws.amazon.com/shield/pricing/"
+  },
+  {
+    "id": "security-064",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company lets customers upload files to an Amazon S3 bucket. Every new object must be scanned for malware before a downstream processing application is allowed to read it. The company does not want to build or run scanning infrastructure. Which solution meets these requirements?",
+    "options": [
+      "Enable Amazon GuardDuty Malware Protection for S3 on the bucket with object tagging, and allow the processing role to read only objects tagged as clean",
+      "Run an Amazon Macie sensitive data discovery job on the bucket every hour",
+      "Enable Amazon Inspector scanning for the S3 bucket",
+      "Create an AWS Config rule that marks objects as noncompliant when they contain malware"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "GuardDuty Malware Protection for S3 automatically scans newly uploaded objects, can tag each object with the scan result, and supports tag-based access control so only clean objects are readable. Macie finds sensitive data rather than malware. Inspector scans EC2, ECR images, and Lambda functions, and AWS Config evaluates resource configurations, not object contents.",
+    "subtopic": "GuardDuty Malware Protection for S3",
+    "source": "https://docs.aws.amazon.com/guardduty/latest/ug/gdu-malware-protection-s3.html"
+  },
+  {
+    "id": "security-065",
+    "topic": "security",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company runs Amazon Aurora PostgreSQL databases and an Amazon EKS cluster on EC2 worker nodes. It already uses Amazon GuardDuty foundational threat detection. It now wants to detect brute-force or anomalous logins to the databases and suspicious behavior inside containers, such as unexpected process execution. Which GuardDuty protection plans should it enable? (Select TWO.)",
+    "options": [
+      "S3 Protection",
+      "RDS Protection",
+      "Malware Protection for S3",
+      "Runtime Monitoring for Amazon EKS",
+      "Lambda Protection"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "GuardDuty RDS Protection profiles login activity for Aurora and RDS databases to detect anomalous or brute-force logins, and Runtime Monitoring uses a security agent to observe OS-level events such as process execution, file access, and network connections on EKS, ECS on Fargate, and EC2. S3 Protection and Malware Protection for S3 focus on S3 data access and uploaded objects. Lambda Protection monitors network activity from Lambda functions.",
+    "subtopic": "GuardDuty protection plans",
+    "source": "https://docs.aws.amazon.com/guardduty/latest/ug/rds-protection.html"
+  },
+  {
+    "id": "security-066",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs an approved vulnerability scanner on a few EC2 instances. Amazon GuardDuty generates Recon:EC2/Portscan findings for these instances every day, and the findings flood the SIEM through AWS Security Hub CSPM and Amazon EventBridge. The company wants to stop this noise without reducing GuardDuty coverage for other instances. What should a solutions architect do?",
+    "options": [
+      "Disable GuardDuty in the Region where the scanner instances run",
+      "Add the scanner instances' IP addresses to a GuardDuty threat list",
+      "Create a GuardDuty suppression rule that matches the Recon:EC2/Portscan finding type and the scanner instances' AMI ID or tag",
+      "Run a daily Lambda function that deletes the scanner findings from GuardDuty"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A suppression rule automatically archives new findings that match the filter, and suppressed findings are not sent to Security Hub CSPM, Amazon S3, Detective, or EventBridge, while other findings are unaffected. Disabling GuardDuty removes all coverage. A threat list identifies known malicious IP addresses, which is the opposite of the goal, and a deletion script runs after the findings have already been sent.",
+    "subtopic": "GuardDuty suppression rules",
+    "source": "https://docs.aws.amazon.com/guardduty/latest/ug/findings_suppression-rule.html"
+  },
+  {
+    "id": "security-067",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A serverless company wants to continuously scan the application package dependencies of its AWS Lambda functions for known software vulnerabilities (CVEs) and to rescan the functions automatically when new CVEs are published. It does not want to install agents. Which service should it use?",
+    "options": [
+      "Amazon GuardDuty Lambda Protection",
+      "Amazon Inspector Lambda standard scanning",
+      "Amazon Macie automated sensitive data discovery",
+      "AWS Trusted Advisor security checks"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Amazon Inspector Lambda standard scanning scans application dependencies in Lambda functions and layers for package vulnerabilities, scanning on deployment and update and rescanning when a relevant new CVE is added. GuardDuty Lambda Protection detects threats from network activity, not package vulnerabilities. Macie discovers sensitive data in S3, and Trusted Advisor provides best-practice checks rather than CVE scanning.",
+    "subtopic": "Amazon Inspector for Lambda",
+    "source": "https://docs.aws.amazon.com/inspector/latest/user/scanning-lambda.html"
+  },
+  {
+    "id": "security-068",
+    "topic": "security",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A media company has 5,000 Amazon S3 general purpose buckets holding several petabytes of data. The privacy team wants continuous, broad visibility into which buckets are likely to contain sensitive data, but scanning every object regularly would be too expensive. Which solution is MOST cost-effective?",
+    "options": [
+      "Run monthly Amazon Macie sensitive data discovery jobs that analyze every object in every bucket",
+      "Enable Amazon GuardDuty S3 Protection on all buckets",
+      "Use Amazon Athena to run regular expression queries across all objects",
+      "Enable Amazon Macie automated sensitive data discovery for the account"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Macie automated sensitive data discovery continually evaluates the bucket inventory and uses sampling to select representative objects, giving broad visibility into data sensitivity without analyzing every object. Full discovery jobs on all objects every month cost far more. GuardDuty S3 Protection monitors access activity rather than content, and Athena regular expression scans would be expensive and unreliable for unstructured files.",
+    "subtopic": "Macie automated sensitive data discovery",
+    "source": "https://docs.aws.amazon.com/macie/latest/user/discovery-asdd.html"
+  },
+  {
+    "id": "security-069",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security team uses an AWS Security Hub CSPM administrator account for 60 member accounts. As findings are ingested, the team wants to automatically raise the severity to CRITICAL for findings on resources in production accounts and set informational findings to a SUPPRESSED workflow status. The team does not want to write code. What should a solutions architect do?",
+    "options": [
+      "Create Security Hub CSPM automation rules in the administrator account",
+      "Create an EventBridge rule that invokes a Lambda function to call BatchUpdateFindings",
+      "Deploy an AWS Config conformance pack that changes finding severities",
+      "Disable the security controls that produce informational findings in each member account"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Security Hub CSPM automation rules, created in the administrator account, update or suppress findings that match defined criteria in near real time across the administrator and member accounts, for example by changing severity or workflow status. An EventBridge and Lambda solution needs custom code. Conformance packs evaluate configuration compliance, and disabling controls stops checks entirely rather than adjusting findings.",
+    "subtopic": "Security Hub CSPM automation rules",
+    "source": "https://docs.aws.amazon.com/securityhub/latest/userguide/automation-rules.html"
+  },
+  {
+    "id": "security-070",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A compliance team needs a single, read-only view of AWS Config resource configurations and rule compliance across 40 accounts and four Regions in an organization in AWS Organizations. Auditors must not be able to change anything in the source accounts. Which solution meets these requirements?",
+    "options": [
+      "Deploy the same AWS Config rules to every account and review each account's Config console",
+      "Create an AWS Config aggregator in a central account that uses the organization as its source",
+      "Create Security Hub CSPM automation rules that copy Config findings to the central account",
+      "Create an AWS CloudTrail organization trail and query it with Amazon Athena"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An AWS Config aggregator collects configuration and compliance data from all accounts in an organization and multiple Regions into one aggregator account, provides a read-only view, and adds no extra cost. Reviewing each console is not a single view. Automation rules modify findings rather than aggregate Config data, and CloudTrail records API activity, not resource compliance status.",
+    "subtopic": "AWS Config aggregators",
+    "source": "https://docs.aws.amazon.com/config/latest/developerguide/aggregate-data.html"
+  },
+  {
+    "id": "security-071",
+    "topic": "security",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A development account runs many short-lived resources such as EC2 Spot Instances, Amazon EMR jobs, and Auto Scaling groups, and AWS Config costs are high because of the constant configuration changes. The team only needs a daily view of resource state in this account and does not use AWS Firewall Manager. Which actions will reduce AWS Config costs? (Select TWO.)",
+    "options": [
+      "Switch the configuration recorder to continuous recording for all resource types",
+      "Change the recording frequency of the configuration recorder to daily recording",
+      "Create an AWS Config aggregator in the account",
+      "Add more periodic AWS Config rules to evaluate the ephemeral resources",
+      "Exclude the ephemeral resource types from recording in the configuration recorder"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "Daily recording delivers a configuration item for the latest state over a 24-hour period only when it changed, which lowers the number of recorded configuration changes and cost, and excluding ephemeral resource types avoids recording their constant churn. Continuous recording records every change and costs more. An aggregator does not change recording volume, and additional rules add evaluation charges.",
+    "subtopic": "AWS Config recording cost",
+    "source": "https://docs.aws.amazon.com/config/latest/developerguide/select-resources.html"
+  },
+  {
+    "id": "security-072",
+    "topic": "security",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company stores application data in Amazon S3 and Amazon DynamoDB. Under the AWS shared responsibility model, which tasks are the company's responsibility? (Select TWO.)",
+    "options": [
+      "Patching the operating system of the servers that run DynamoDB",
+      "Maintaining physical security at the data centers that host the services",
+      "Managing its data, including choosing the encryption options",
+      "Operating the platform software that runs Amazon S3",
+      "Using IAM to grant least-privilege permissions to the data"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "For abstracted services such as S3 and DynamoDB, AWS operates the infrastructure layer, the operating system, and the platforms, while customers manage their data, including encryption options, and use IAM tools to apply appropriate permissions. Physical data center security, server operating systems, and service platform software are AWS responsibilities.",
+    "subtopic": "Shared responsibility for abstracted services",
+    "source": "https://aws.amazon.com/compliance/shared-responsibility-model/"
+  },
+  {
+    "id": "security-073",
+    "topic": "security",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup needs its Amazon DynamoDB tables to be encrypted at rest. It has no requirement to manage key policies or audit key usage, and it wants the lowest cost. Which encryption option should it choose?",
+    "options": [
+      "A customer managed AWS KMS key",
+      "The AWS managed key aws/dynamodb",
+      "The default AWS owned key",
+      "Client-side encryption with keys stored in AWS CloudHSM"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "DynamoDB encrypts all data at rest, and the default AWS owned key is offered at no additional charge. AWS managed keys and customer managed keys incur AWS KMS charges, which are only worth paying when the company needs key control or auditing. CloudHSM adds significant hourly cost and client-side complexity.",
+    "subtopic": "DynamoDB encryption key options",
+    "source": "https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/EncryptionAtRest.html"
+  },
+  {
+    "id": "security-074",
+    "topic": "security",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A web application runs on a fleet of EC2 instances, and each instance terminates HTTPS with its own copy of a certificate. Renewing certificates on every instance is error-prone, and TLS processing uses instance CPU. The company wants to terminate TLS in one place and stop managing certificates on the instances. Which solution meets these requirements?",
+    "options": [
+      "Use a Network Load Balancer with a TCP listener on port 443 that passes encrypted traffic to the instances",
+      "Store the certificate in AWS Secrets Manager and copy it to each instance with a user data script",
+      "Use a Gateway Load Balancer to decrypt the traffic before it reaches the instances",
+      "Use an Application Load Balancer HTTPS listener with a certificate from AWS Certificate Manager"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An ALB HTTPS listener uses a server certificate, such as one from ACM, to terminate the client connection and decrypt requests before sending them to the targets, so the instances no longer handle certificates or TLS for client traffic. A TCP listener on an NLB passes encrypted traffic through, so instances still decrypt it. Copying certificates from Secrets Manager keeps the per-instance management, and a Gateway Load Balancer is for third-party appliances.",
+    "subtopic": "TLS termination on ALB with ACM",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/create-https-listener.html"
+  },
+  {
+    "id": "security-075",
+    "topic": "security",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A B2B SaaS application authenticates users with an Amazon Cognito user pool. Several enterprise customers want their employees to sign in with their own corporate identity providers, which support SAML 2.0 or OpenID Connect. The application backend should continue to validate a single token format. Which solution meets these requirements?",
+    "options": [
+      "Create IAM users for each customer's employees and map them to user pool groups",
+      "Add the customers' SAML and OIDC identity providers to the user pool so that federated users receive user pool tokens",
+      "Enable unauthenticated guest access in a Cognito identity pool for the customers' employees",
+      "Connect each customer's directory to the application by using AWS Directory Service AD Connector"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Cognito user pools can federate with SAML 2.0 and OIDC identity providers, and Amazon Cognito issues its own user pool tokens to federated users so the backend can standardize on one set of tokens. IAM users are for access to AWS, not application end users. Guest access gives no authentication, and AD Connector does not federate customers' SAML or OIDC providers into the application.",
+    "subtopic": "Cognito user pool federation",
+    "source": "https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-identity-federation.html"
   }
 ]

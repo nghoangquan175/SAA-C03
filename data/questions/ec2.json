@@ -787,8 +787,9 @@
     "answer": [
       0
     ],
-    "explanation": "Standard Reserved Instances provide a larger discount than Convertible Reserved Instances and can be listed on the Reserved Instance Marketplace if they are no longer needed. Convertible Reserved Instances can be exchanged but cannot be sold on the Marketplace. Savings Plans cannot be cancelled or resold. Capacity Reservations can be cancelled but provide no billing discount by themselves.",
-    "subtopic": "Reserved Instances"
+    "explanation": "Standard Reserved Instances provide a larger discount than Convertible Reserved Instances and can be listed on the Reserved Instance Marketplace if they are no longer needed. Convertible Reserved Instances can be exchanged but cannot be sold on the Marketplace. Savings Plans cannot be resold or cancelled on notice; only a small, recently purchased plan can be returned within 7 days of purchase. Capacity Reservations can be cancelled but provide no billing discount by themselves.",
+    "subtopic": "Reserved Instances",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-market-general.html"
   },
   {
     "id": "ec2-042",
@@ -1164,5 +1165,617 @@
     ],
     "explanation": "By default the root EBS volume has DeleteOnTermination set to true, so it is deleted when the instance terminates; setting the attribute to false keeps the volume after termination. Termination protection would block the batch instances from being terminated at all. Stop protection only blocks stops. Multi-Attach shares a volume between instances and does not control deletion on termination.",
     "subtopic": "DeleteOnTermination"
+  },
+  {
+    "id": "ec2-061",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company discovers that a 500 GiB data volume attached to a production EC2 instance was created unencrypted before the company enabled EBS encryption by default. Compliance now requires this data to be encrypted at rest with a customer managed AWS KMS key. Which approach meets this requirement?",
+    "options": [
+      "Create a snapshot of the volume, copy the snapshot with encryption enabled and the customer managed key specified, create a new volume from the encrypted copy, and replace the original volume with it",
+      "Use Elastic Volumes to modify the Encrypted attribute of the volume while it remains attached to the instance",
+      "Change the default KMS key for EBS encryption by default to the customer managed key so that existing volumes are re-encrypted automatically",
+      "Create an AMI of the instance and turn on encryption in the AMI launch permissions before relaunching the instance"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "An existing unencrypted volume cannot be encrypted in place, so the supported path is to snapshot it, create an encrypted copy of the snapshot (or an encrypted volume from it) with the chosen KMS key, and swap in the new volume. Elastic Volumes changes size, type, and performance, not encryption. Encryption by default and its default key apply only to newly created volumes and snapshot copies and have no effect on existing volumes. AMI launch permissions control sharing, not encryption.",
+    "subtopic": "Encrypting an existing EBS volume",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/encryption-examples.html"
+  },
+  {
+    "id": "ec2-062",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company encrypts its EBS volumes in eu-west-1 with a single-Region customer managed KMS key. For disaster recovery, daily snapshots must be copied to eu-central-1 and must be restorable there even if eu-west-1 is completely unavailable. Which approach meets these requirements?",
+    "options": [
+      "Copy the snapshots to eu-central-1 and keep them encrypted with the eu-west-1 key, which EBS calls across Regions during a restore",
+      "Copy the snapshots to eu-central-1 and specify a KMS key that exists in eu-central-1 to encrypt the copies",
+      "Decrypt the snapshots before copying them, then enable EBS encryption by default in eu-central-1 so that restored volumes are encrypted",
+      "Share the snapshots with a second account and grant that account access to the eu-west-1 key in the key policy"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "When an encrypted snapshot is copied to another Region, the copy is encrypted with a KMS key that you specify in the destination Region (or the default EBS key there), so restores in eu-central-1 depend only on KMS in eu-central-1. A single-Region key cannot be used from another Region, so relying on the eu-west-1 key would fail during a Regional outage. Snapshots cannot be decrypted in place, and copies of encrypted snapshots are always encrypted. Sharing with another account does not move the data to another Region. Note that the first cross-Region copy is a full copy, which adds storage cost.",
+    "subtopic": "Cross-Region snapshot copy",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-copy-snapshot.html"
+  },
+  {
+    "id": "ec2-063",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A brokerage must retain EBS snapshots of its trading database for 7 years in a write-once-read-many (WORM) state to satisfy regulators. After the retention is set, no user, including administrators with full IAM permissions, may delete the snapshots or shorten the retention period. Which solution meets these requirements?",
+    "options": [
+      "Create a Recycle Bin retention rule for EBS snapshots with the maximum retention period",
+      "Attach an IAM policy that denies ec2:DeleteSnapshot to every user and role in the account",
+      "Lock the snapshots with EBS snapshot lock in compliance mode for the required duration",
+      "Lock the snapshots with EBS snapshot lock in governance mode for the required duration"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "In compliance mode, once any cooling-off period ends, a locked snapshot cannot be unlocked or deleted and its lock duration can only be increased, regardless of IAM permissions, which provides WORM retention. Governance mode allows users with the right permissions to unlock the snapshot or change the lock. An IAM deny policy can be removed by an administrator. Recycle Bin only keeps snapshots for a limited time after they are deleted and does not prevent deletion.",
+    "subtopic": "EBS snapshot lock",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/snapshot-lock-concepts.html"
+  },
+  {
+    "id": "ec2-064",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A security team must make sure that nobody in a production account can share EBS snapshots or AMIs publicly, and any snapshots that were already shared publicly by mistake must stop being publicly accessible. Private sharing with specific partner accounts must keep working. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Create Recycle Bin retention rules for EBS snapshots and AMIs",
+      "Enable block public access for EBS snapshots in block all sharing mode in each Region that the account uses",
+      "Lock all snapshots with EBS snapshot lock in governance mode",
+      "Create an Amazon Data Lifecycle Manager policy that copies snapshots to a separate backup account",
+      "Enable block public access for AMIs in each Region that the account uses"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "Block public access for snapshots in block all sharing mode prevents new public sharing and makes already public snapshots private, while still allowing private sharing; it is a Regional, account-level setting. It does not stop public sharing of EBS-backed AMIs, so block public access for AMIs must also be enabled in each Region (existing public AMIs stay public and must be made private separately). Recycle Bin, snapshot lock, and Data Lifecycle Manager copies protect against deletion or loss, not against public sharing.",
+    "subtopic": "Block public access for snapshots and AMIs",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/block-public-access-snapshots.html"
+  },
+  {
+    "id": "ec2-065",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company wants users in all of its AWS accounts to be able to discover and launch only AMIs published by Amazon or by the company's central image account. AMIs from any other publisher must not appear in the EC2 console or in API results. The company wants to preview the impact on existing workloads before enforcing the control, and it must apply the control across all accounts and Regions in its organization. Which solution meets these requirements?",
+    "options": [
+      "Enable block public access for AMIs in every account and Region by using a declarative policy",
+      "Deploy the approved-amis-by-id AWS Config rule to every account by using a conformance pack",
+      "Share the approved AMIs with the organization and remove launch permissions from all other public AMIs",
+      "Configure Allowed AMIs criteria that allow the amazon alias and the image account ID, start in audit mode, and then enable the setting across accounts and Regions with a declarative policy"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Allowed AMIs limits which public or shared AMIs are discoverable and usable in an account based on criteria such as AMI providers, offers an audit mode to preview which AMIs would be affected, and can be applied across accounts and Regions through an AWS Organizations declarative policy. Block public access for AMIs only stops the account from making its own AMIs public. An AWS Config rule detects noncompliant instances after launch but does not hide AMIs. A company cannot change the launch permissions of AMIs that other publishers own.",
+    "subtopic": "Allowed AMIs",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-allowed-amis.html"
+  },
+  {
+    "id": "ec2-066",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company recently required IMDSv2 on all EC2 instances. Since then, applications that run in Docker containers on the instances can no longer obtain the instance role credentials, and their AWS SDK calls time out. Applications that run directly on the host operating system still work. Which change will resolve the issue while keeping IMDSv2 required?",
+    "options": [
+      "Increase the instance metadata PUT response hop limit to 2",
+      "Set HttpTokens to optional on the instances that run containers",
+      "Pass the instance role to each container through the instance user data",
+      "Add an outbound security group rule that allows traffic to 169.254.169.254"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "With IMDSv2, the response to the token PUT request is limited by the hop limit, and traffic from a container counts as an additional network hop, so with the default hop limit of 1 the containers never receive a token; raising the hop limit to 2 fixes this while IMDSv2 stays required. Setting HttpTokens to optional re-enables IMDSv1 and weakens SSRF protection. User data cannot attach a role to a container. The failure is caused by the hop limit, not by a security group rule.",
+    "subtopic": "IMDSv2 hop limit",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html"
+  },
+  {
+    "id": "ec2-067",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company is moving an application to Amazon EC2. Under the AWS shared responsibility model, which tasks are the company's responsibility? (Select TWO.)",
+    "options": [
+      "Installing updates and security patches for the guest operating system on the instances",
+      "Patching the hypervisor that runs on the underlying hosts",
+      "Maintaining the physical security of the data centers that house the hosts",
+      "Configuring the security groups that are attached to the instances",
+      "Replacing failed hardware components in the physical hosts"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Amazon EC2 is infrastructure as a service, so the customer manages the guest operating system, including updates and security patches, any application software, and the configuration of security groups. AWS operates the host operating system and virtualization layer and is responsible for the physical facilities and hardware.",
+    "subtopic": "Shared responsibility for EC2",
+    "source": "https://aws.amazon.com/compliance/shared-responsibility-model/"
+  },
+  {
+    "id": "ec2-068",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company has enabled EBS encryption by default, and new volumes are encrypted with the AWS managed key aws/ebs. A new policy requires all new volumes to be encrypted with a customer managed KMS key whose key policy is controlled by the security team, without asking developers to change their launch templates. What should a solutions architect do?",
+    "options": [
+      "Edit the key policy of the aws/ebs key so that only the security team can administer it",
+      "Change the default encryption key for EBS encryption by default in each Region to the customer managed key",
+      "Disable encryption by default and require developers to select the customer managed key for every volume",
+      "Re-encrypt every existing volume in place with the customer managed key"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "EBS encryption by default uses a per-Region default key that can be changed from aws/ebs to a customer managed key, after which new volumes are encrypted with that key without any change to launch templates. AWS managed keys are controlled by AWS, so their key policies are not customer editable. Disabling encryption by default relies on every developer choosing the right key. The KMS key of an existing encrypted volume cannot be changed in place; a new key can be applied only through a snapshot copy.",
+    "subtopic": "EBS default KMS key",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html"
+  },
+  {
+    "id": "ec2-069",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company takes a daily snapshot of a 2 TiB EBS volume and has kept every snapshot for two years. To reduce costs, an engineer proposes deleting all snapshots older than 30 days. A team lead worries that the remaining snapshots will be unusable because snapshots are incremental. Which statement is correct?",
+    "options": [
+      "The oldest snapshot holds the full copy of the volume, so it must always be kept for later snapshots to be restorable",
+      "Deleting an older snapshot also deletes every later snapshot that references its data",
+      "Each remaining snapshot can still restore the complete volume, because data that later snapshots reference is retained when an earlier snapshot is deleted",
+      "The snapshots must first be converted to full snapshots by enabling Fast Snapshot Restore before older snapshots can be deleted"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "EBS snapshot deletion removes only data referenced exclusively by the deleted snapshot; data still referenced by later snapshots is preserved, so only the most recent snapshot is needed to create a full volume. Deleting older snapshots never deletes later snapshots, and there is no need to keep the first snapshot. Fast Snapshot Restore only speeds up volume initialization. Because referenced data is kept, savings may be smaller than expected.",
+    "subtopic": "Incremental snapshot deletion",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-deleting-snapshot.html"
+  },
+  {
+    "id": "ec2-070",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a stateful application on EC2 instances that each have a root volume and three data volumes. For disaster recovery, the company needs a launchable image of each instance tagged dr=true every 12 hours, copies of those images in a second Region, and automatic removal of images and their snapshots after 7 days in both Regions. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "An Amazon Data Lifecycle Manager EBS snapshot policy that targets only the data volumes and enables cross-Region copy",
+      "A Recycle Bin retention rule for AMIs with a 7-day retention period in both Regions",
+      "An EC2 Image Builder pipeline that rebuilds the server from a recipe every 12 hours",
+      "An Amazon Data Lifecycle Manager EBS-backed AMI policy that targets the dr=true tag, with 7-day age-based retention and a cross-Region copy rule"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A Data Lifecycle Manager AMI policy creates AMIs of tagged instances, including all attached volumes, on a schedule, copies them to up to three other Regions with their own retention, and deregisters expired AMIs while deleting their backing snapshots. A snapshot policy for data volumes does not produce a launchable image. Image Builder builds new images from a recipe and does not capture the running state of the application. Recycle Bin keeps deleted resources and does not create or copy images.",
+    "subtopic": "Data Lifecycle Manager AMI policies",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/ami-policy.html"
+  },
+  {
+    "id": "ec2-071",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A research team runs a long simulation on a Spot Instance and writes checkpoints to the instance's EBS root volume. If the instance is interrupted, the team wants the same instance and its EBS volume to be preserved so that the job resumes automatically on that instance when Spot capacity returns. Which configuration meets this requirement?",
+    "options": [
+      "Use a persistent Spot Instance request with the interruption behavior set to stop",
+      "Use a one-time Spot Instance request with the interruption behavior set to terminate and DeleteOnTermination set to false",
+      "Enable termination protection on the Spot Instance",
+      "Use a Spot Fleet with the request type set to request and the lowest-price allocation strategy"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Setting the Spot interruption behavior to stop keeps the instance and its EBS volumes, and with a persistent request Amazon EC2 restarts the stopped instance when capacity is available for the same instance type and Availability Zone; only EBS storage is billed while it is stopped. The stop behavior requires a persistent request, or the maintain type for a fleet, so a one-time request or a fleet of type request does not qualify. Terminating creates a new instance on relaunch, and termination protection does not prevent Spot interruptions.",
+    "subtopic": "Spot interruption behavior",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/interruption-behavior.html"
+  },
+  {
+    "id": "ec2-072",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company plans to use an EBS volume with Multi-Attach enabled to give a clustered application on several EC2 instances shared block storage. Which statements about this design are correct? (Select TWO.)",
+    "options": [
+      "The volume can be a gp3 volume as long as all of the instances are built on the Nitro System",
+      "The instances can be spread across multiple Availability Zones to increase availability",
+      "The application should use a cluster-aware file system, because standard file systems such as XFS and EXT4 are not designed for simultaneous access from multiple instances",
+      "The Multi-Attach volume can also be used as the boot volume of each instance",
+      "An issue at the EBS infrastructure layer makes the volume unavailable to all attached instances, so the volume remains a single point of failure"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Multi-Attach requires a clustered file system or application-level write coordination because standard file systems are not built for concurrent multi-host access, and an EBS infrastructure issue affects every attached instance, so the shared volume is still a single point of failure. Multi-Attach is supported only on io1 and io2 volumes, only for Nitro-based instances in the same Availability Zone (up to 16), and Multi-Attach volumes cannot be boot volumes.",
+    "subtopic": "EBS Multi-Attach limitations",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-volumes-multi.html"
+  },
+  {
+    "id": "ec2-073",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a stateless application on Nitro-based EC2 instances in an Auto Scaling group. Several times, an attached EBS volume stopped completing I/O while the instance still passed its system and instance status checks, and the application hung until an engineer replaced the instance manually. The company wants such instances to be detected and replaced automatically. Which solution meets this requirement?",
+    "options": [
+      "Create a CloudWatch alarm on the VolumeQueueLength metric with an EC2 reboot action",
+      "Configure the Auto Scaling group to use attached EBS status checks, which report StatusCheckFailed_AttachedEBS, to mark impaired instances unhealthy and replace them",
+      "Create a CloudWatch alarm on StatusCheckFailed_System with the EC2 recover action",
+      "Enable Fast Snapshot Restore on the snapshots that the volumes are created from"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Attached EBS status checks detect when EBS volumes attached to a Nitro-based instance are unreachable or cannot complete I/O, and an Auto Scaling group can be configured to use this check to replace the affected instance. The system status check passed in this scenario, so a recover action on StatusCheckFailed_System would not trigger. A queue length alarm with a reboot is an indirect signal and a reboot may not clear an EBS impairment. Fast Snapshot Restore only affects volume initialization after a restore.",
+    "subtopic": "Attached EBS status checks",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-system-instance-status-check.html"
+  },
+  {
+    "id": "ec2-074",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs several single-instance internal tools on EBS-backed, current-generation EC2 instances that have no instance store volumes. The company wants each instance to recover automatically from an underlying host hardware failure while keeping its instance ID and IP addresses, with no additional cost and without creating per-instance CloudWatch alarms. What should a solutions architect do?",
+    "options": [
+      "Create a CloudWatch alarm for each instance on StatusCheckFailed_Instance with the reboot action",
+      "Place each instance in its own Auto Scaling group with a desired capacity of 1",
+      "Keep simplified automatic recovery, which is enabled by default on supported instances, turned on",
+      "Enable stop protection so that AWS migrates the instance instead of stopping it during a host failure"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Simplified automatic recovery is enabled by default when supported instances are launched, costs nothing extra, and moves an instance to new hardware after a system status check failure while preserving its instance ID, IP addresses, and attached EBS volumes. A reboot action on the instance status check addresses operating system problems, not host failures. An Auto Scaling group replaces the instance with a new instance ID. Stop protection only blocks StopInstances requests.",
+    "subtopic": "Simplified automatic recovery",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-recover.html"
+  },
+  {
+    "id": "ec2-075",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A platform team deregisters AMIs frequently as part of image rotation. Twice this year, an AMI that production launch templates still referenced was deregistered by mistake. The team wants every EBS-backed AMI in the Region to be recoverable for 14 days after deregistration, except AMIs tagged lifecycle=temporary, which can be removed immediately. Which solution meets these requirements?",
+    "options": [
+      "Set a deprecation time of 14 days on every AMI",
+      "Create a tag-level Recycle Bin retention rule that targets AMIs tagged lifecycle=temporary",
+      "Copy every AMI to a second Region and delete the copies after 14 days",
+      "Create a Region-level Recycle Bin retention rule for EBS-backed AMIs with a 14-day retention period and an exclusion tag of lifecycle=temporary"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A Region-level Recycle Bin retention rule applies to all resources of the chosen type in the Region, including untagged ones, and exclusion tags remove specific resources from protection, so deregistered AMIs can be restored for 14 days. A tag-level rule for the temporary tag would protect exactly the wrong AMIs. Deprecation only hides an AMI from default listings and does not stop deregistration. Copying to another Region adds cost and does not restore the original AMI ID.",
+    "subtopic": "Recycle Bin for AMIs",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/recycle-bin-concepts.html"
+  },
+  {
+    "id": "ec2-076",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs an application on an EC2 instance with a single EBS data volume. The team assumes that AWS automatically backs up the volume so that it can be restored in another Availability Zone. Which statement about protecting this data is correct?",
+    "options": [
+      "AWS does not automatically back up EBS volumes, so the company should create regular snapshots, which are replicated across all Availability Zones in the Region and can be restored to any of them",
+      "EBS volumes are synchronously replicated to a second Availability Zone, so no additional backup is required",
+      "EBS snapshots are stored in an S3 bucket in the customer's account, so S3 Cross-Region Replication protects them automatically",
+      "EBS volumes are automatically mirrored to instance store volumes, which survive an Availability Zone failure"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS does not back up EBS volumes automatically; customers must take snapshots manually or with Data Lifecycle Manager or AWS Backup. Snapshot data is replicated across all Availability Zones in the Region, so a volume can be restored in any AZ. An EBS volume is replicated only within its own Availability Zone. Snapshots are stored in S3 buckets that customers cannot access directly, so S3 replication features do not apply, and instance store is ephemeral host storage.",
+    "subtopic": "EBS snapshots for backup",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-snapshots.html"
+  },
+  {
+    "id": "ec2-077",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company serves an already trained large language model for a customer support chatbot. It wants high inference throughput at the lowest cost per inference on Amazon EC2. Which instance family should a solutions architect recommend?",
+    "options": [
+      "P5 instances with high-end NVIDIA GPUs that are typically used for large-scale model training",
+      "Inf2 instances powered by AWS Inferentia2 accelerators",
+      "Trn1 instances powered by AWS Trainium accelerators",
+      "X2idn memory-intensive instances without accelerators"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Inf2 instances use AWS Inferentia2 chips that are purpose-built for deep learning inference, and AWS positions them as the lowest-cost EC2 option for generative AI inference. Trn1 instances use Trainium chips designed for training. P5 GPU instances are powerful but expensive for serving an already trained model. X2idn instances provide large memory but no ML accelerators.",
+    "subtopic": "Accelerated computing for inference",
+    "source": "https://aws.amazon.com/ec2/instance-types/inf2/"
+  },
+  {
+    "id": "ec2-078",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A gaming company runs dedicated multiplayer game servers and an ad-serving engine. Both workloads are limited by CPU performance and need only modest memory and no local storage. Which EC2 instance family is the MOST appropriate?",
+    "options": [
+      "Memory optimized (R family)",
+      "Storage optimized (I family)",
+      "Compute optimized (C family)",
+      "Burstable performance (T family) in standard credit mode"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Compute optimized C instances are designed for compute-intensive applications such as dedicated gaming servers, ad server engines, batch processing, and high performance web servers. R instances add memory that these workloads do not need, and I instances add fast local storage. Burstable T instances in standard mode are throttled to their baseline once CPU credits run out, which suits low average utilization rather than sustained CPU load.",
+    "subtopic": "Compute optimized instances",
+    "source": "https://docs.aws.amazon.com/ec2/latest/instancetypes/co.html"
+  },
+  {
+    "id": "ec2-079",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A 200 GiB gp2 volume hosts a small database. During a nightly batch, performance is good for about the first 30 minutes, and then I/O latency rises sharply. CloudWatch shows the BurstBalance metric dropping to zero and IOPS falling to about 600. The company wants a consistent 3,000 IOPS at the lowest cost, without downtime. What should a solutions architect do?",
+    "options": [
+      "Increase the gp2 volume to 1,000 GiB so that its baseline performance reaches 3,000 IOPS",
+      "Change the volume to io2 with 3,000 provisioned IOPS",
+      "Take a snapshot of the volume and enable Fast Snapshot Restore on it",
+      "Use Elastic Volumes to change the volume type to gp3, which provides a baseline of 3,000 IOPS regardless of size"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A gp2 volume earns a baseline of 3 IOPS per GiB, which is 600 IOPS at 200 GiB, and it can burst to 3,000 IOPS only while I/O credits last, as tracked by BurstBalance. gp3 includes a consistent 3,000 IOPS baseline independent of size at a lower price per GiB than gp2, and Elastic Volumes can change the type without detaching the volume. Growing gp2 to 1,000 GiB works but pays for five times the storage. io2 costs more for the same IOPS, and Fast Snapshot Restore only affects initialization of restored volumes.",
+    "subtopic": "gp2 burst credits",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html"
+  },
+  {
+    "id": "ec2-080",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a containerized batch platform on an EC2 Fleet that mixes On-Demand and Spot Instances. The fleet lists four instance types explicitly, which limits the Spot capacity it can use, and engineers must edit the configuration whenever AWS releases a new instance generation. Each node needs 8 to 16 vCPUs and at least 32 GiB of memory. Which change meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Use attribute-based instance type selection and specify the vCPU and memory requirements in the fleet configuration",
+      "Add a launch template override for every current instance type that meets the requirements",
+      "Standardize on a single instance type and purchase a Compute Savings Plan for it",
+      "Switch the fleet to Dedicated Instances so that capacity is reserved for the platform"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "With attribute-based instance type selection, the fleet chooses any instance types that match the specified vCPU and memory ranges, which widens the set of Spot capacity pools and automatically includes newer instance generations as they are released. Maintaining an override per instance type is the manual approach the team wants to avoid. A single instance type reduces Spot flexibility, and Dedicated Instances change tenancy without reserving capacity.",
+    "subtopic": "Attribute-based instance type selection",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-attribute-based-instance-type-selection.html"
+  },
+  {
+    "id": "ec2-081",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An AI startup needs 16 GPU instances for a 10-day model fine-tuning run that starts in three weeks. The instances must be placed close together with low-latency networking, the capacity must be guaranteed for the whole run, and the startup does not want a 1-year commitment. Which option meets these requirements?",
+    "options": [
+      "Spot Instances requested through a Spot Fleet with the capacity-optimized allocation strategy",
+      "Amazon EC2 Capacity Blocks for ML reserved for the required dates",
+      "A 1-year EC2 Instance Savings Plan for the GPU instance family",
+      "Regional Reserved Instances for the GPU instance type"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Capacity Blocks for ML reserve GPU-based instances for a future start date, up to eight weeks ahead, for short durations such as days or weeks, and the instances are placed close together in EC2 UltraClusters for low-latency networking. Spot Instances provide no capacity guarantee and can be interrupted. Savings Plans and Reserved Instances require 1-year or 3-year commitments, and neither Savings Plans nor regional Reserved Instances reserve capacity.",
+    "subtopic": "Capacity Blocks for ML",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-capacity-blocks.html"
+  },
+  {
+    "id": "ec2-082",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An engineer increased the provisioned IOPS of an attached io2 volume 20 minutes ago, and the volume modification is still in progress. Load tests now show that the volume also needs more capacity, but the engineer's request to increase the volume size is rejected. What is the MOST likely reason?",
+    "options": [
+      "io2 volumes do not support size increases while they are attached to an instance",
+      "The instance must be stopped before a volume can be modified a second time",
+      "A new modification can be requested only after the previous modification of the volume reaches the completed state",
+      "The size and the IOPS of a volume cannot both be changed within the same calendar day"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With Elastic Volumes, a new modification for a volume can be started only after the previous one has reached the completed state, and a volume can be modified up to four times in a rolling 24-hour period. io2 volumes can grow while attached, and supported instances do not need to be stopped. Size and IOPS can both be changed, either together or in successive completed modifications.",
+    "subtopic": "Elastic Volumes limits",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-modify-volume.html"
+  },
+  {
+    "id": "ec2-083",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An engineering firm wants to run graphics-intensive 3D visualization and rendering applications on EC2 and stream them to remote designers. Which instance family is designed for this kind of workload?",
+    "options": [
+      "Inf family powered by AWS Inferentia",
+      "Hpc family for high performance computing",
+      "R family for memory optimized workloads",
+      "G family for graphics-intensive workloads"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "In EC2 naming, the G series denotes graphics-intensive accelerated computing instances with GPUs suited to 3D visualization, rendering, and graphics streaming. Inf instances accelerate machine learning inference, Hpc instances target tightly coupled HPC simulations, and R instances add memory without GPUs.",
+    "subtopic": "Accelerated computing for graphics",
+    "source": "https://docs.aws.amazon.com/ec2/latest/instancetypes/instance-type-names.html"
+  },
+  {
+    "id": "ec2-084",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs a Linux-based Java web application on m6i instances. The application and all of its dependencies are available for both x86 and Arm architectures. The company wants to lower its compute cost without reducing performance and with minimal changes. Which option should a solutions architect recommend?",
+    "options": [
+      "Move the application to comparable AWS Graviton-based instances, such as the M7g family",
+      "Move the application to EC2 Dedicated Hosts",
+      "Move the application to x86 instances with the n suffix for enhanced networking",
+      "Move the application to storage optimized I-family instances"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS Graviton-based instances, identified by the g in names such as M7g, are built on Arm-based AWS processors and are positioned by AWS as offering the best price performance in EC2 at a lower cost than comparable x86 instances, so a workload that already runs on Arm can move with little effort. Dedicated Hosts increase cost. Network-optimized and storage optimized instances add capabilities that the application does not need.",
+    "subtopic": "AWS Graviton",
+    "source": "https://aws.amazon.com/ec2/graviton/"
+  },
+  {
+    "id": "ec2-085",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An internal web application runs on a t3.large instance that is configured in standard credit mode. Its CPU utilization averages about 12% per day, but unpredictable spikes several times a day need full CPU for up to an hour, and users notice slowdowns when the CPU credits run out. Which option is the MOST cost-effective way to provide consistent performance?",
+    "options": [
+      "Replace the instance with an m5.large fixed-performance instance",
+      "Switch the instance to unlimited mode, because surplus credits are charged only if average CPU utilization over 24 hours exceeds the baseline",
+      "Replace the instance with a t3.2xlarge instance in standard credit mode",
+      "Add a second t3.large instance in standard mode behind an Application Load Balancer"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "In unlimited mode, a burstable instance can keep bursting after its credits are exhausted, and additional charges apply only when its average CPU utilization over 24 hours exceeds the baseline, which is 30% for a t3.large; at about 12% average there is no extra charge. An m5.large has a higher hourly price for the same performance. A larger T instance or a second instance increases the hourly cost to buy headroom that unlimited mode provides at no extra charge here.",
+    "subtopic": "Burstable unlimited mode",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances-unlimited-mode-concepts.html"
+  },
+  {
+    "id": "ec2-086",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company purchased 1-year Standard Reserved Instances with regional scope for m6i.xlarge Linux instances with default tenancy in us-east-1. Which statements about these Reserved Instances are correct? (Select TWO.)",
+    "options": [
+      "The discount applies to matching usage in any Availability Zone in us-east-1",
+      "The Reserved Instances reserve m6i.xlarge capacity in every Availability Zone in us-east-1",
+      "The Reserved Instances can be exchanged for r6i Reserved Instances at any time",
+      "The discount can apply to other sizes in the m6i family, such as m6i.2xlarge, through instance size flexibility",
+      "The discount also applies to m6i usage in us-west-2"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Regional Reserved Instances apply their discount to matching usage in any Availability Zone of the Region and, for Linux with default tenancy, across sizes in the same instance family through instance size flexibility. Regional Reserved Instances do not reserve capacity; only zonal Reserved Instances do. Standard Reserved Instances cannot be exchanged (only Convertible Reserved Instances can), and Reserved Instances apply only in the Region where they were purchased.",
+    "subtopic": "Regional vs zonal Reserved Instances",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/reserved-instances-scope.html"
+  },
+  {
+    "id": "ec2-087",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a critical application on 40 c6i.4xlarge Linux instances in us-east-1a, and a Compute Savings Plan covers this usage. During a recent scaling event, replacement launches failed with insufficient capacity errors. The company needs assured capacity for the 40 instances in that Availability Zone for the next several months while still paying discounted rates. Which solution meets these requirements MOST cost-effectively?",
+    "options": [
+      "Purchase 3-year zonal Reserved Instances for the 40 instances in addition to the Savings Plan",
+      "Convert the Compute Savings Plan to an EC2 Instance Savings Plan so that it reserves capacity",
+      "Create an On-Demand Capacity Reservation for 40 c6i.4xlarge instances in us-east-1a and keep the Savings Plan, which continues to apply to the reserved usage",
+      "Request Spot Instances with a maximum price equal to the On-Demand price"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "On-Demand Capacity Reservations reserve capacity in a specific Availability Zone with no term commitment, and although they give no discount on their own, they can be combined with Savings Plans or regional Reserved Instances to receive discounted rates. Savings Plans do not reserve capacity and cannot be converted. Adding 3-year zonal Reserved Instances creates an unnecessary long commitment on top of the existing plan. Spot Instances provide no capacity assurance.",
+    "subtopic": "Capacity Reservations with Savings Plans",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-capacity-reservations.html"
+  },
+  {
+    "id": "ec2-088",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Two years ago a company purchased 3-year Convertible Reserved Instances for c5 instances in eu-west-1. The company has since migrated the workload to Graviton-based c7g instances in the same Region. How can the company keep receiving a Reserved Instance discount for the new instances?",
+    "options": [
+      "Sell the Convertible Reserved Instances on the Reserved Instance Marketplace and buy new Reserved Instances for c7g",
+      "Modify the Reserved Instances to move them to a different Region where c5 instances are still used",
+      "Cancel the Convertible Reserved Instances and request a prorated refund",
+      "Exchange the Convertible Reserved Instances for c7g Convertible Reserved Instances of equal or greater value"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Convertible Reserved Instances can be exchanged for Convertible Reserved Instances with a different instance family, operating system, or tenancy, as long as the new reservation is of equal or greater value, paying any true-up cost; the end date stays the same. Convertible Reserved Instances cannot be sold on the Reserved Instance Marketplace, exchanges cannot move a reservation to another Region, and reservations cannot be cancelled for a refund.",
+    "subtopic": "Convertible Reserved Instance exchange",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-convertible-exchange.html"
+  },
+  {
+    "id": "ec2-089",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company hibernates a large development instance every evening and resumes it every morning to save money. Which statements describe how the company is billed while the instance is hibernated? (Select TWO.)",
+    "options": [
+      "Instance usage is billed at a reduced hibernation rate of 10% of the On-Demand price",
+      "Storage for the attached EBS volumes, including the RAM contents saved on the root volume, is billed",
+      "No instance usage charges accrue while the hibernated instance is in the stopped state",
+      "Data transfer charges apply when the RAM contents are written to the EBS root volume",
+      "A per-GiB hourly hibernation fee applies to the amount of RAM saved"
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "While a hibernated instance is in the stopped state, there are no instance usage charges, but the EBS volumes, including the space that stores the RAM contents, continue to be billed as storage. AWS does not charge data transfer for writing RAM to the root volume, and there is no reduced hibernation rate or separate hibernation fee.",
+    "subtopic": "Hibernation billing",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Hibernate.html"
+  },
+  {
+    "id": "ec2-090",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company's bill shows high charges for public IPv4 addresses. The account has 120 EC2 instances with auto-assigned public IPv4 addresses that are used only by administrators for SSH, and 25 Elastic IP addresses that are allocated but not associated with any resource. Which actions will reduce these charges? (Select TWO.)",
+    "options": [
+      "Convert the auto-assigned public IPv4 addresses to Elastic IP addresses, which are free while associated with a running instance",
+      "Enable detailed monitoring so that idle public IPv4 addresses are released automatically",
+      "Release the Elastic IP addresses that are not associated with any resource",
+      "Launch the instances in a cluster placement group so that they share a single public IPv4 address",
+      "Remove the public IPv4 addresses from the instances and give administrators SSH access through an EC2 Instance Connect Endpoint"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "AWS charges for every public IPv4 address, including addresses on running instances and Elastic IP addresses, whether associated or not, so releasing unused Elastic IP addresses and removing public addresses that are not needed reduces the bill. An EC2 Instance Connect Endpoint provides SSH to instances that have no public IP address. Converting to Elastic IP addresses does not avoid the charge, and detailed monitoring and placement groups have no effect on public IPv4 addressing.",
+    "subtopic": "Public IPv4 address charges",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-ip-addressing.html"
   }
 ]

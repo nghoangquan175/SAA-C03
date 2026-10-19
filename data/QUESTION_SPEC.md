@@ -29,6 +29,9 @@ Field rules:
 - `difficulty`: 1 (recall/basic), 2 (typical exam), 3 (hard, subtle trade-off). Aim ~20% / 55% / 25%.
 - `explanation`: 2–5 sentences. Explain the correct answer and why the distractors are wrong. Plain text, no markdown.
 - `subtopic`: short label of the lesson/concept it tests (e.g. "NAT Gateway", "S3 Lifecycle").
+- `source` (optional, required for new questions): the AWS documentation page that backs the correct answer,
+  `https://docs.aws.amazon.com/...` (preferred) or an official `https://aws.amazon.com/...` page such as a service FAQ.
+  The app links to it under the explanation. Every fact the question relies on must be on that page or in AWS docs.
 
 Style rules (match the real exam):
 - Mostly scenario-based: "A company ... The company needs ... Which solution will meet these requirements?" with

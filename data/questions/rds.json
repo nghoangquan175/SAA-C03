@@ -1065,5 +1065,621 @@
     ],
     "explanation": "For OS maintenance on Multi-AZ deployments, RDS patches the standby, fails over to it, and then patches the former primary, so downtime is limited to the failover. Patching both at once would cause a full outage, maintenance is not deferred forever, and read replicas are not used as failover targets for maintenance.",
     "subtopic": "Multi-AZ Maintenance"
+  },
+  {
+    "id": "rds-056",
+    "topic": "rds",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A retail company runs its order system on an Amazon Aurora MySQL cluster. Analysts need to run complex SQL analytics on the order data in Amazon Redshift in near real time after each transaction is committed. The data engineering team does not want to build or maintain ETL pipelines. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Schedule an AWS Glue job every 15 minutes to extract changed rows from Aurora and load them into Amazon Redshift.",
+      "Create an Aurora zero-ETL integration with the Amazon Redshift data warehouse as the target.",
+      "Export Aurora cluster snapshots to Amazon S3 every hour and query the files with Amazon Redshift Spectrum.",
+      "Run an AWS DMS replication instance with a full load and change data capture task that targets Amazon Redshift."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An Aurora zero-ETL integration is a fully managed pipeline that replicates data and schema changes from the Aurora cluster into Amazon Redshift in near real time, so no ETL code or pipeline has to be maintained. A scheduled Glue job and a DMS task are pipelines the team must build, size, and operate. Hourly snapshot exports do not provide near real-time data.",
+    "subtopic": "Aurora Zero-ETL Integration",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/zero-etl.html"
+  },
+  {
+    "id": "rds-057",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A bank runs an Amazon Aurora PostgreSQL global database with the primary cluster in us-east-1 and a secondary cluster in us-west-2. Regulators require the bank to move its primary database to the other Region every quarter to prove that disaster recovery procedures work. All clusters are healthy during these exercises, and no committed transactions may be lost. What should the solutions architect do?",
+    "options": [
+      "Detach the secondary cluster from the global database and point the application at its new cluster endpoint.",
+      "Run a global database failover with the allow-data-loss option to promote the us-west-2 cluster.",
+      "Restore the latest cluster snapshot in us-west-2 and create a new global database from the restored cluster.",
+      "Perform a global database switchover that makes the us-west-2 cluster the new primary cluster."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A switchover (previously called managed planned failover) is designed for planned operations such as regional rotation on a healthy global database; Aurora waits for the secondary to be fully synchronized before promoting it, so the RPO is 0 and the replication topology is kept. A failover with allow-data-loss is for unplanned outages and can lose unreplicated transactions. Detaching a cluster breaks the global topology and stops replication immediately, and restoring a snapshot is slow and loses all changes since the snapshot.",
+    "subtopic": "Aurora Global Database Switchover",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database-disaster-recovery.html"
+  },
+  {
+    "id": "rds-058",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses an Amazon Aurora MySQL global database. After a recent cross-Region failover test, engineers had to update the connection strings of dozens of microservices to point at the cluster endpoint of the newly promoted primary cluster. The company wants future switchovers and failovers to require no connection string changes. What should the solutions architect recommend?",
+    "options": [
+      "Configure the microservices to connect to the Aurora Global Database writer endpoint.",
+      "Create a custom endpoint in each Region that contains the writer instance of the primary cluster.",
+      "Create an Amazon Route 53 alias record that always points to the us-east-1 cluster endpoint.",
+      "Configure each microservice to use the instance endpoint of the current writer DB instance."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The Aurora Global Database writer endpoint handles reads and writes like a cluster endpoint, and Aurora automatically repoints it to the cluster endpoint of the new primary cluster after a switchover or failover, so applications keep the same connection string. Custom endpoints are scoped to instances in a single cluster and do not follow the primary role across Regions. A static Route 53 record and an instance endpoint both keep pointing at the old Region or old writer until someone changes them.",
+    "subtopic": "Aurora Global Database Writer Endpoint",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Overview.Endpoints.html"
+  },
+  {
+    "id": "rds-059",
+    "topic": "rds",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A software company runs 40 Amazon Aurora PostgreSQL clusters for development and QA. Each cluster is used for a few hours on some days and is completely idle the rest of the time. Developers can tolerate a delay of about 15 seconds on their first connection after an idle period. The company wants to minimize compute costs with the LEAST operational effort. Which solution will meet these requirements?",
+    "options": [
+      "Write an AWS Lambda function that stops every cluster each evening and starts it again each morning.",
+      "Change the clusters to the Aurora I/O-Optimized storage configuration to remove charges while they are idle.",
+      "Use Aurora Serverless v2 instances with a minimum capacity of 0 ACUs so idle instances pause automatically.",
+      "Purchase reserved DB instances for the smallest instance class that each cluster can run on."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Setting the minimum capacity of an Aurora Serverless v2 cluster to 0 ACUs turns on automatic pause and resume: instances pause after a period with no connections, are not charged for instance capacity while paused, and resume automatically (typically in about 15 seconds) when a connection arrives. A stop/start schedule needs custom code and does not match irregular usage. I/O-Optimized only changes I/O pricing, and reserved instances still bill for idle hours.",
+    "subtopic": "Aurora Serverless v2 Auto-Pause",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html"
+  },
+  {
+    "id": "rds-060",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A solutions architect is choosing between an Amazon RDS for PostgreSQL Multi-AZ DB instance deployment and a Multi-AZ DB cluster deployment. Which statements are correct? (Select TWO.)",
+    "options": [
+      "A Multi-AZ DB cluster has one writer DB instance and two readable reader DB instances in three separate Availability Zones.",
+      "The standby in a Multi-AZ DB instance deployment can serve read-only queries through a reader endpoint.",
+      "A Multi-AZ DB cluster replicates asynchronously, so a commit never waits for acknowledgment from a reader.",
+      "A Multi-AZ DB cluster typically has lower write latency than a Multi-AZ DB instance deployment.",
+      "A Multi-AZ DB instance deployment keeps the primary and the standby in the same Availability Zone to reduce latency."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "A Multi-AZ DB cluster has a writer and two reader DB instances in three Availability Zones; the readers serve read traffic and are failover targets, and AWS states the deployment typically has lower write latency than a Multi-AZ DB instance deployment. The standby of a Multi-AZ DB instance deployment cannot serve reads and is placed in a different Availability Zone. Multi-AZ DB clusters use semisynchronous replication, which requires acknowledgment from at least one reader before a change is committed.",
+    "subtopic": "Multi-AZ DB Instance vs Multi-AZ DB Cluster",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/multi-az-db-clusters-concepts.html"
+  },
+  {
+    "id": "rds-061",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company wants to stop administrators from accidentally deleting a production Amazon RDS for MySQL DB instance. If the instance is ever deleted on purpose, the company still wants to be able to restore the data later. Which actions should the solutions architect take? (Select TWO.)",
+    "options": [
+      "Enable Multi-AZ so that the standby instance remains running if the primary instance is deleted.",
+      "Turn on deletion protection for the DB instance.",
+      "Increase the backup retention period to 35 days, which blocks delete requests during that period.",
+      "Attach a resource policy to the DB subnet group that denies the rds:DeleteDBInstance action.",
+      "Create a final DB snapshot and choose to retain automated backups whenever the instance is deleted."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "With deletion protection turned on, a DB instance cannot be deleted until the setting is turned off. When an instance is deleted, taking a final snapshot and retaining automated backups preserves the ability to restore the data later. Deleting a Multi-AZ instance deletes its standby too, the backup retention period does not block deletion, and DB subnet groups do not support resource policies.",
+    "subtopic": "Deletion Protection and Final Snapshots",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html"
+  },
+  {
+    "id": "rds-062",
+    "topic": "rds",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company keeps 2 years of order data in an Amazon RDS for PostgreSQL database. Once a month the finance team wants to run ad hoc SQL analytics on a copy of the data. The analytics must not add load to the production database, and the company does not want to run another database server for this purpose. Which solution is the MOST cost-effective?",
+    "options": [
+      "Create a read replica and keep it running so the finance team can query it each month.",
+      "Restore the monthly snapshot to a new DB instance, run the queries, and then delete the instance.",
+      "Create an Aurora clone of the RDS for PostgreSQL database each month for the finance team.",
+      "Export the monthly DB snapshot to Amazon S3 in Apache Parquet format and query it with Amazon Athena."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "RDS can export snapshot data to Amazon S3 in compressed Apache Parquet format in the background without affecting the running database, and the files can be queried directly with Athena, so no database server is needed. A read replica or a restored DB instance is another server to pay for and manage. Aurora cloning works only for Aurora DB clusters, not RDS for PostgreSQL DB instances.",
+    "subtopic": "Snapshot Export to Amazon S3",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ExportSnapshot.html"
+  },
+  {
+    "id": "rds-063",
+    "topic": "rds",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A review of the AWS bill shows new Amazon RDS Extended Support charges for several RDS for MySQL DB instances that still run a major engine version that has passed its RDS end of standard support date. The company wants to stop these charges. What should the solutions architect do?",
+    "options": [
+      "Upgrade the DB instances to a major engine version that is still under RDS standard support.",
+      "Convert the DB instances to Multi-AZ deployments so that extended support is included.",
+      "Enable storage autoscaling on the DB instances so they qualify for standard support.",
+      "Turn off automatic minor version upgrades on the DB instances."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "RDS Extended Support lets a database keep running a major engine version past the RDS end of standard support date for an additional cost; the way to stop paying is to upgrade to a major version that is under standard support. Multi-AZ, storage autoscaling, and minor version upgrade settings do not change the support status of the major version.",
+    "subtopic": "RDS Extended Support",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/extended-support.html"
+  },
+  {
+    "id": "rds-064",
+    "topic": "rds",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A team plans to use IAM database authentication for an Amazon RDS for PostgreSQL DB instance. Which statements about this feature are correct? (Select TWO.)",
+    "options": [
+      "IAM database authentication is available for every RDS engine, including RDS for Oracle and RDS for SQL Server.",
+      "Each authentication token that RDS generates has a lifetime of 15 minutes.",
+      "The application must attach a new authentication token to every SQL statement in the session.",
+      "AWS CloudTrail records every generate-db-auth-token call so security teams can audit token creation.",
+      "Network traffic to and from the database is encrypted by using SSL/TLS."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "IAM database authentication uses short-lived tokens generated with Signature Version 4 that are valid for 15 minutes, and traffic is encrypted with SSL/TLS. It works with MariaDB, MySQL, and PostgreSQL, not every engine. The token is used only to authenticate when the connection is opened and does not affect the session afterward, and AWS documents that CloudTrail does not log generate-db-auth-token calls.",
+    "subtopic": "IAM Database Authentication",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html"
+  },
+  {
+    "id": "rds-065",
+    "topic": "rds",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is migrating a Microsoft SQL Server database to Amazon RDS for SQL Server. Employees must sign in to the database with their existing on-premises Active Directory accounts by using Windows Authentication. Which solution will meet this requirement?",
+    "options": [
+      "Use AD Connector to forward authentication requests from the DB instance to the on-premises domain.",
+      "Enable IAM database authentication and map each employee to an IAM user.",
+      "Join the DB instance to an AWS Managed Microsoft AD directory that has a forest trust with the on-premises Active Directory.",
+      "Store each employee's database password in AWS Secrets Manager and rotate it every 30 days."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "RDS for SQL Server supports Windows Authentication by joining the DB instance to an AWS Directory Service for Microsoft Active Directory (AWS Managed Microsoft AD) domain; a one-way or two-way forest trust lets users from the on-premises Active Directory sign in. AWS documents that RDS does not support AD Connector for this purpose. IAM database authentication is not available for SQL Server, and Secrets Manager passwords are not Windows Authentication.",
+    "subtopic": "Windows Authentication for RDS for SQL Server",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_SQLServerWinAuth.html"
+  },
+  {
+    "id": "rds-066",
+    "topic": "rds",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must migrate several databases of different sizes to Amazon Aurora PostgreSQL by using AWS DMS with a full load followed by ongoing replication. The team does not know how much replication capacity each migration needs and does not want to size, patch, or manage replication instances. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Use AWS DMS Serverless replications, which automatically provision and scale replication capacity.",
+      "Create one large DMS replication instance sized for the biggest database and run every task on it.",
+      "Use AWS DataSync to copy the database files and then start the Aurora cluster on the copied files.",
+      "Run open-source replication tools on an EC2 Auto Scaling group in the target VPC."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS DMS Serverless analyzes the source and automatically provisions and scales replication capacity, removing replication instance tasks such as capacity estimation, provisioning, and engine patching. A single large replication instance must still be sized and managed. DataSync copies files and cannot load data into Aurora, and self-managed tools add the most operational work.",
+    "subtopic": "AWS DMS Serverless",
+    "source": "https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Serverless.html"
+  },
+  {
+    "id": "rds-067",
+    "topic": "rds",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A news website uses an Amazon Aurora MySQL cluster. Read traffic varies widely during the day, and the operations team adds and removes Aurora Replicas by hand. The company wants the number of replicas to change automatically with the read load. What should the solutions architect configure?",
+    "options": [
+      "Aurora Serverless v2 for the writer DB instance only",
+      "A Multi-AZ DB cluster deployment with two readable standby instances",
+      "RDS storage autoscaling with a maximum storage threshold",
+      "Aurora Auto Scaling with a target tracking policy on average reader CPU utilization"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Aurora Auto Scaling uses a target tracking scaling policy, for example on the average CPU utilization of the readers, to add or remove Aurora Replicas between a minimum and maximum count; applications should use the reader endpoint to reach new replicas. Scaling the writer does not add read capacity on replicas, a Multi-AZ DB cluster is an RDS deployment type with a fixed number of readers, and storage autoscaling grows storage, not compute.",
+    "subtopic": "Aurora Auto Scaling",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Integrating.AutoScaling.html"
+  },
+  {
+    "id": "rds-068",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a production Amazon Aurora PostgreSQL cluster that contains only a single writer DB instance. During a recent instance failure, the database was unavailable for almost 10 minutes while Aurora recreated the instance. The company wants failover to complete in well under a minute. What should the solutions architect do?",
+    "options": [
+      "Enable Backtrack on the cluster so that it can rewind after an instance failure.",
+      "Increase the writer's instance size so that it restarts faster after a failure.",
+      "Add at least one Aurora Replica in a different Availability Zone to act as a failover target.",
+      "Enable cross-Region automated backup replication for the cluster."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "When a cluster has no Aurora Replicas, Aurora must recreate the primary instance, which typically takes less than 10 minutes; with a replica, Aurora promotes it and service is typically restored in less than 60 seconds. Placing replicas in other Availability Zones also protects against an AZ outage. Backtrack is an Aurora MySQL feature for undoing data changes, and instance size or backups do not provide a failover target.",
+    "subtopic": "Aurora Failover and Replicas",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Concepts.AuroraHighAvailability.html"
+  },
+  {
+    "id": "rds-069",
+    "topic": "rds",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Aurora MySQL cluster uses Aurora Serverless v2 for its writer and for one reader that is the planned failover target. During a test, the writer had scaled up to 64 ACUs, but after failover the promoted reader was running at low capacity and the application slowed down until it scaled up. How should the solutions architect fix this?",
+    "options": [
+      "Move the reader into the same Availability Zone as the writer.",
+      "Give the reader a failover priority of tier 0 or 1 so that its capacity scales together with the writer.",
+      "Place Amazon RDS Proxy in front of the cluster so it caches query results during failover.",
+      "Switch the cluster to Aurora I/O-Optimized so the reader keeps the writer's buffer cache."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Aurora Serverless v2 readers in promotion tiers 0 and 1 scale to keep their capacity in sync with the writer, so they are ready to take over the full workload after failover. Readers in tiers 2-15 scale independently based on their own load. Same-AZ placement reduces resilience, RDS Proxy does not cache query results, and the storage configuration does not affect instance capacity.",
+    "subtopic": "Aurora Serverless v2 Failover Tiers",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html"
+  },
+  {
+    "id": "rds-070",
+    "topic": "rds",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company wants to move an application from Microsoft SQL Server to Amazon Aurora PostgreSQL to remove SQL Server licensing costs. The application uses T-SQL and SQL Server client drivers, and the team wants to minimize code changes. Which solution should the solutions architect recommend?",
+    "options": [
+      "Run SQL Server on Amazon EC2 instances launched from License Included AMIs.",
+      "Use Amazon RDS Custom for SQL Server with Bring Your Own Media.",
+      "Use Aurora MySQL with the binary log format set to ROW.",
+      "Use Babelfish for Aurora PostgreSQL so that the application connects over the TDS protocol."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Babelfish for Aurora PostgreSQL adds an endpoint that understands the SQL Server wire protocol (TDS) and commonly used T-SQL, so applications built for SQL Server can work with Aurora PostgreSQL with few code changes and without changing drivers. The EC2 and RDS Custom options still run licensed SQL Server, and Aurora MySQL does not accept T-SQL or TDS connections.",
+    "subtopic": "Babelfish for Aurora PostgreSQL",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/babelfish.html"
+  },
+  {
+    "id": "rds-071",
+    "topic": "rds",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Amazon RDS for MySQL DB instance uses 300 GiB of General Purpose SSD (gp2) storage, which provides a baseline of 900 IOPS. The workload now needs a steady 3,000 IOPS, and the team is considering growing the volume to 1,000 GiB only to raise the baseline, although the data will stay under 300 GiB. Which solution is the MOST cost-effective?",
+    "options": [
+      "Modify the storage to General Purpose SSD (gp3), which provides a baseline of 3,000 IOPS at this volume size.",
+      "Increase the gp2 volume to 1,000 GiB so that its baseline rises to 3,000 IOPS.",
+      "Change the storage to Provisioned IOPS SSD (io2 Block Express) with 3,000 provisioned IOPS.",
+      "Enable storage autoscaling so that RDS adds IOPS when the workload needs them."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "gp3 storage decouples performance from capacity and includes a baseline of 3,000 IOPS and 125 MiB/s, so the instance gets the required IOPS without buying unused storage. gp2 baseline IOPS scale at 3 IOPS per GiB, so the team would pay for 700 GiB it does not need. Provisioned IOPS storage charges for the provisioned IOPS, and storage autoscaling only adds capacity when free space runs low.",
+    "subtopic": "RDS gp3 Storage",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Storage.html"
+  },
+  {
+    "id": "rds-072",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An operations team must be notified within minutes whenever an Amazon RDS for MariaDB DB instance fails over or reboots so the team can check application health. Which solution meets this requirement with the LEAST effort?",
+    "options": [
+      "Turn on Enhanced Monitoring and review the operating system process list each morning.",
+      "Use RDS event notifications through an Amazon EventBridge rule or an RDS event subscription that publishes to an Amazon SNS topic.",
+      "Search AWS CloudTrail logs every hour for API calls that indicate a failover.",
+      "Enable Performance Insights with a 7-day retention period."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Amazon RDS emits events for state changes such as failover and reboot and delivers them to EventBridge in near real time; an EventBridge rule or an RDS event subscription can send them to Amazon SNS for notification. Enhanced Monitoring and Performance Insights show performance data, not alerts on events. Polling CloudTrail is manual and slow, and automatic failovers are not API calls made by users.",
+    "subtopic": "RDS Event Notifications",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/working-with-events.html"
+  },
+  {
+    "id": "rds-073",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A developer accidentally deleted thousands of rows from a table in an Amazon Aurora PostgreSQL cluster 20 minutes ago. Automated backups are retained for 7 days. A team lead asks to rewind the existing cluster in place by using Aurora Backtrack. What should the solutions architect do?",
+    "options": [
+      "Enable Backtrack on the cluster now and backtrack it to 25 minutes ago.",
+      "Restore the cluster to a point in time just before the deletion as a new DB cluster, and then recover the rows from it.",
+      "Promote an Aurora Replica, because replicas apply changes after a 30-minute delay.",
+      "Fail over the cluster so that the writer moves to an instance that still has the old data."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Backtrack is available only for Aurora MySQL, and it can only be enabled when a cluster is created or restored, so it cannot help this Aurora PostgreSQL cluster. Point-in-time restore from automated backups creates a new DB cluster at the chosen time, from which the deleted rows can be copied back. Aurora Replicas share the same cluster volume, so neither promoting a replica nor failing over brings back deleted data.",
+    "subtopic": "Aurora Point-in-Time Restore vs Backtrack",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraMySQL.Managing.Backtrack.html"
+  },
+  {
+    "id": "rds-074",
+    "topic": "rds",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An application uses a connection pool that opens 50 long-lived connections to the reader endpoint of an Amazon Aurora MySQL cluster at startup. During a traffic spike, the team added two Aurora Replicas, but the new replicas received almost no queries while the original replicas stayed overloaded. What is the MOST likely reason?",
+    "options": [
+      "New replicas must be added to a custom endpoint before the reader endpoint can route to them.",
+      "Aurora Replicas begin serving reads only after the next cluster maintenance window.",
+      "The new replicas were given a failover priority tier that excludes them from the reader endpoint.",
+      "The reader endpoint balances connections, not individual queries, so the existing pooled connections stay on the original replicas."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "The Aurora reader endpoint balances each new connection among the available replicas; it does not balance individual queries. Long-lived pooled connections opened before the new replicas existed keep sending queries to the original replicas until connections are recycled, so the pool should periodically open new connections (or use an RDS Proxy reader endpoint). Replicas are added to the reader endpoint automatically, serve reads as soon as they are available, and failover tiers do not exclude them.",
+    "subtopic": "Aurora Reader Endpoint Behavior",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Endpoints.Reader.html"
+  },
+  {
+    "id": "rds-075",
+    "topic": "rds",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs an Amazon Aurora PostgreSQL cluster in a shared-services VPC. A new application that runs on EC2 instances in a different VPC in the same Region must reach the database with connection pooling. The security team does not allow the database or any proxy to be publicly accessible. Which solution will meet these requirements?",
+    "options": [
+      "Create an RDS Proxy for the cluster and add a proxy endpoint in the application's VPC that uses that VPC's subnets and security groups.",
+      "Create an RDS Proxy, make it publicly accessible, and restrict it with a security group.",
+      "Make the Aurora cluster publicly accessible and allow only the application's Elastic IP addresses.",
+      "Create a gateway VPC endpoint for Amazon RDS in the application's VPC."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "RDS Proxy supports cross-VPC endpoints: the proxy stays in the database VPC, and an additional proxy endpoint is created in the application VPC with that VPC's subnets and security groups, providing private connection pooling. An RDS Proxy cannot be publicly accessible, making the cluster public violates the requirement, and gateway VPC endpoints exist only for Amazon S3 and DynamoDB.",
+    "subtopic": "RDS Proxy Cross-VPC Endpoints",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/rds-proxy-endpoints.html"
+  },
+  {
+    "id": "rds-076",
+    "topic": "rds",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs Amazon RDS for PostgreSQL production DB instances on the db.r6i instance class and expects to resize them several times within that instance class over the next 3 years. It wants Reserved DB instance discounts to keep applying after each resize. Which approach meets this requirement?",
+    "options": [
+      "Purchase Reserved DB instances for db.r6id.large so they can apply to any r6 instance class variant.",
+      "Purchase db.r6i Reserved DB instances in the same Region, because size flexibility applies the discount across db.r6i sizes for RDS for PostgreSQL.",
+      "Purchase RDS for SQL Server License Included Reserved DB instances, which are the only size-flexible type.",
+      "Purchase the Reserved DB instances in a cheaper Region, because the discount follows the instance to any Region."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Size-flexible Reserved DB instances apply automatically across all sizes of the same instance class type in the same Region and engine for RDS for PostgreSQL, MySQL, MariaDB, Db2, and Oracle BYOL, using normalized units. They do not apply across different class types such as db.r6id, size flexibility does not apply to SQL Server or Oracle License Included, and reservations are tied to a Region.",
+    "subtopic": "RDS Reserved Instance Size Flexibility",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithReservedDBInstances.html"
+  },
+  {
+    "id": "rds-077",
+    "topic": "rds",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company wants its analytics AWS account to create a fast, storage-efficient copy of a production Amazon Aurora MySQL cluster that is owned by a different account. The production cluster is encrypted with the default AWS managed key for RDS (aws/rds). Which steps are required? (Select THREE.)",
+    "options": [
+      "Share the aws/rds key with the analytics account by editing its key policy.",
+      "Re-create the production cluster with a customer managed KMS key by copying a snapshot with that key and restoring it.",
+      "Export the cluster to Amazon S3 and grant the analytics account read access to the bucket.",
+      "Share the cluster with the analytics account by using AWS Resource Access Manager (AWS RAM).",
+      "Enable Backtrack on the production cluster so that the analytics account can rewind its clone.",
+      "Add the analytics account to the key policy of the customer managed KMS key."
+    ],
+    "answer": [
+      1,
+      3,
+      5
+    ],
+    "explanation": "Cross-account Aurora cloning uses AWS RAM to share the cluster, after which the other account creates a copy-on-write clone. A cluster encrypted with the default RDS key cannot be cloned cross-account, so it must first be re-created with a customer managed key (snapshot copy with the new key, then restore), and that key must be shared with the other account through its key policy. The AWS managed aws/rds key cannot be shared, and an S3 export is not a clone.",
+    "subtopic": "Cross-Account Aurora Cloning",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Managing.Clone.Cross-Account.html"
+  },
+  {
+    "id": "rds-078",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs Amazon RDS for MySQL with automated backups enabled. The business asks how much recent data could be lost if the team must recover from logical corruption by using point-in-time restore. Which statement is correct?",
+    "options": [
+      "Only daily snapshots are kept, so up to 24 hours of changes can be lost.",
+      "Point-in-time restore can return the database only to the exact time of a manual snapshot.",
+      "RDS uploads transaction logs to Amazon S3 every 5 minutes, so the latest restorable time is typically within the last 5 minutes.",
+      "Point-in-time restore overwrites the existing DB instance in place, so no data is lost."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "RDS uploads transaction logs for DB instances to Amazon S3 every five minutes, so a point-in-time restore can usually go to within about the last 5 minutes (the LatestRestorableTime) anywhere in the retention period. Restores are not limited to snapshot times, and a point-in-time restore always creates a new DB instance rather than overwriting the source.",
+    "subtopic": "Point-in-Time Recovery RPO",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_PIT.html"
+  },
+  {
+    "id": "rds-079",
+    "topic": "rds",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company moved all of its Amazon Aurora PostgreSQL clusters to Aurora I/O-Optimized. Six months later, cost reports show that one reporting cluster performs very little I/O; under Aurora Standard pricing, its I/O charges would be about 5% of its total Aurora spend. What should the solutions architect recommend for this cluster?",
+    "options": [
+      "Keep Aurora I/O-Optimized, because it is always the cheaper configuration for clusters with low I/O.",
+      "Add Aurora Replicas so that the I/O charges are spread across more DB instances.",
+      "Switch the cluster's storage configuration to Aurora Standard.",
+      "Convert the cluster to an RDS for PostgreSQL Multi-AZ DB cluster to remove I/O charges."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS recommends Aurora I/O-Optimized when I/O spending is 25% or more of total Aurora spending and Aurora Standard when it is less than 25%, so this low-I/O cluster should move to Aurora Standard; switching from I/O-Optimized to Standard is allowed at any time. Adding replicas adds instance cost, and migrating to a different engine deployment is unnecessary effort.",
+    "subtopic": "Aurora Standard vs I/O-Optimized",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Overview.StorageReliability.html"
+  },
+  {
+    "id": "rds-080",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A manufacturer runs a packaged application whose vendor requires installing a third-party agent and changing operating system settings on the Microsoft SQL Server database host. The company wants AWS to automate backups and point-in-time recovery and does not want to take on all database administration itself. Which solution meets these requirements?",
+    "options": [
+      "Amazon RDS for SQL Server with a custom option group",
+      "Babelfish for Aurora PostgreSQL",
+      "SQL Server on Amazon EC2 managed with AWS Systems Manager",
+      "Amazon RDS Custom for SQL Server"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "RDS Custom for SQL Server gives privileged access to the database and the underlying operating system so customers can install agents and customize the host, while AWS still automates tasks such as automated backups and point-in-time recovery. Standard RDS does not allow host access, Babelfish changes the database engine, and SQL Server on EC2 leaves all database management to the customer.",
+    "subtopic": "RDS Custom for SQL Server",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-custom.html"
+  },
+  {
+    "id": "rds-081",
+    "topic": "rds",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A Java application connects to an Amazon RDS for MySQL Multi-AZ DB cluster through the cluster endpoint. After a failover that RDS reported as complete within 35 seconds, the application kept failing to connect for a long time until the JVM was restarted. What should the solutions architect do to prevent this?",
+    "options": [
+      "Set the JVM DNS cache TTL (networkaddress.cache.ttl) to 60 seconds or less so the application resolves the endpoint's new IP address.",
+      "Connect to the instance endpoint of the writer DB instance instead of the cluster endpoint.",
+      "Increase the backup retention period so that failovers complete faster.",
+      "Turn off semisynchronous replication to shorten the failover time."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Failover changes the DNS record behind the endpoint to point to the promoted reader, but some JVM configurations cache DNS lookups indefinitely, so the application keeps using the old IP address. AWS recommends a JVM TTL of no more than 60 seconds. Instance endpoints do not follow the writer role, backup retention does not affect failover, and replication mode is not a customer setting for this problem.",
+    "subtopic": "Failover and DNS Caching",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/multi-az-db-clusters-concepts-failover.html"
+  },
+  {
+    "id": "rds-082",
+    "topic": "rds",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company has AWS Lambda functions that query an Amazon RDS for MySQL DB instance in private subnets. The company wants to pool database connections, avoid storing database passwords in function code or configuration, and keep the database and proxy private. Which actions should the solutions architect take? (Select THREE.)",
+    "options": [
+      "Make the RDS Proxy publicly accessible so that the functions can reach it without VPC configuration.",
+      "Store the database password in Lambda environment variables encrypted with the default key.",
+      "Create an RDS Proxy in the database's VPC that retrieves the database credentials from AWS Secrets Manager.",
+      "Enable Multi-AZ on the DB instance so that each function gets its own standby connection.",
+      "Configure the functions to authenticate to the proxy by using IAM authentication.",
+      "Attach the functions to subnets in the VPC and allow their security group in the proxy's security group."
+    ],
+    "answer": [
+      2,
+      4,
+      5
+    ],
+    "explanation": "RDS Proxy pools connections, can retrieve database credentials from Secrets Manager, and can require IAM authentication from clients, so no password lives in the functions. The proxy must be in the same VPC as the database and cannot be publicly accessible, so the functions must be connected to the VPC and allowed by the proxy's security group. Environment variable passwords and Multi-AZ standbys do not meet the requirements.",
+    "subtopic": "RDS Proxy with Lambda",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-proxy.html"
+  },
+  {
+    "id": "rds-083",
+    "topic": "rds",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Amazon RDS for PostgreSQL primary DB instance uses Provisioned IOPS SSD storage to meet strict OLTP latency targets. The company is adding two read replicas for internal reports, where some latency variation is acceptable. The company wants to minimize the cost of the replicas. What should the solutions architect do?",
+    "options": [
+      "Keep Provisioned IOPS storage on the replicas, because a read replica must use the same storage type as its source.",
+      "Use General Purpose SSD (gp3) storage for the read replicas, because a replica's storage type is independent of the primary's.",
+      "Replace the read replicas with the Multi-AZ standby, which has no storage charges.",
+      "Configure the read replicas with magnetic storage to get the lowest price per GiB."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "For MySQL, MariaDB, and PostgreSQL, the storage type of a read replica is independent of the primary, and AWS gives the example of using General Purpose SSD on replicas of a Provisioned IOPS primary to reduce costs, accepting that replica performance may differ. A Multi-AZ standby cannot serve reads, and magnetic storage is deprecated and no longer offered for new DB instances.",
+    "subtopic": "Read Replica Storage Choices",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Storage.html"
+  },
+  {
+    "id": "rds-084",
+    "topic": "rds",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs Amazon RDS for Oracle Enterprise Edition under the Bring Your Own License model. Auditors require that selected sensitive columns be encrypted by the database engine itself, in addition to storage-level encryption, so that data files and backups are protected. Which solution meets this requirement?",
+    "options": [
+      "Enable RDS encryption at rest with a customer managed KMS key and make no other changes.",
+      "Set the rds.force_ssl parameter to 1 in the DB parameter group.",
+      "Add the TDE option to a custom option group, associate it with the DB instance, and use TDE column encryption.",
+      "Enable Database Activity Streams so that the sensitive columns are encrypted."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "RDS for Oracle supports Oracle Transparent Data Encryption (TDE), which is enabled by adding the TDE option to an option group (supported only for the BYOL model); TDE column encryption encrypts individual sensitive data elements inside the database, and RDS manages the Oracle wallet and master key. Note that the TDE option is permanent once associated. RDS encryption at rest alone works at the storage level, rds.force_ssl is a PostgreSQL parameter for encryption in transit, and Database Activity Streams monitor activity rather than encrypt data.",
+    "subtopic": "Oracle Transparent Data Encryption",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Appendix.Oracle.Options.AdvSecurity.html"
+  },
+  {
+    "id": "rds-085",
+    "topic": "rds",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "An EC2-hosted reporting service must connect to an Amazon RDS for MySQL DB instance as the database user report_ro by using IAM database authentication. IAM database authentication is already enabled on the DB instance. Which additional steps are required? (Select TWO.)",
+    "options": [
+      "Attach an IAM policy to the EC2 instance role that allows rds-db:connect on the dbuser ARN for report_ro on that DB instance.",
+      "Grant the instance role the rds:ModifyDBInstance permission so that it can request authentication tokens.",
+      "Add the instance role ARN as the source of an inbound rule in the DB security group.",
+      "Create the report_ro database user so that it is identified with AWSAuthenticationPlugin.",
+      "Store the report_ro password in AWS Secrets Manager and reference the secret in the IAM policy."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "IAM database authentication needs an IAM policy that allows the rds-db:connect action on the ARN arn:aws:rds-db:region:account:dbuser:DbiResourceId/db-user-name, and a database account created with IDENTIFIED WITH AWSAuthenticationPlugin for MySQL. ModifyDBInstance is unrelated to connecting, security group rules use CIDRs or security groups rather than IAM roles, and no password is used with IAM authentication.",
+    "subtopic": "IAM Database Authentication Setup",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.IAMPolicy.html"
   }
 ]

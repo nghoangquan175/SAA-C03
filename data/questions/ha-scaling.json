@@ -1069,5 +1069,617 @@
     ],
     "explanation": "Spot Instances offer large discounts for fault-tolerant, stateless workloads, and diversifying instance types improves availability of Spot capacity. Scheduled actions reduce idle capacity at night when demand is predictable. Longer cooldowns risk performance problems without reducing idle cost, ALBs do not charge for cross-zone traffic, and Dedicated Hosts are more expensive.",
     "subtopic": "ASG Cost Optimization"
+  },
+  {
+    "id": "ha-scaling-056",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company is deploying a public web application on EC2 instances behind an internet-facing Application Load Balancer in a new VPC. The instances must not have public IP addresses, and the application must stay available if one Availability Zone fails. Which combination of actions will meet these requirements? (Select TWO.)",
+    "options": [
+      "Create the load balancer with a subnet in a single Availability Zone and rely on cross-zone load balancing for redundancy.",
+      "Create the load balancer in public subnets in at least two Availability Zones.",
+      "Launch the instances in private subnets in at least two Availability Zones and register them with the load balancer's target group.",
+      "Assign an Elastic IP address to each instance so that the load balancer can reach it.",
+      "Create the load balancer in private subnets and attach the internet gateway directly to the load balancer."
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "An Application Load Balancer requires subnets in at least two Availability Zones, and the nodes of an internet-facing load balancer have public IP addresses, so it belongs in public subnets. Load balancers reach targets by their private IP addresses, so the instances can stay in private subnets spread across AZs. A single-AZ load balancer is not allowed for an ALB and would not survive an AZ failure, Elastic IPs on instances are unnecessary and expose them, and an internet gateway attaches to a VPC, not to a load balancer.",
+    "subtopic": "Internet-facing Load Balancer Placement",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html"
+  },
+  {
+    "id": "ha-scaling-057",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company's website runs behind an Application Load Balancer that has an HTTPS listener on port 443. Some users still type http:// URLs and reach the site over plain HTTP on port 80. The company wants every request to use HTTPS with the LEAST operational overhead. What should a solutions architect do?",
+    "options": [
+      "Remove the port 80 listener and add a security group rule that answers port 80 requests with a redirect message.",
+      "Configure the port 80 listener with a redirect action that returns HTTP 301 to HTTPS on port 443 and keeps the original host, path, and query.",
+      "Add code to every web server that detects plain HTTP requests and returns a redirect to the HTTPS URL.",
+      "Configure the port 80 listener with a fixed-response action that returns HTTP 200 and a link to the HTTPS site."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An ALB redirect action can send HTTP requests to HTTPS as a permanent (HTTP 301) redirect while reusing the original host, path, and query with the #{host}, #{path}, and #{query} keywords, with no application changes. Security groups only allow traffic and cannot generate HTTP responses, and removing the listener simply breaks those users. Changing every server adds work, and a fixed 200 response with a link does not redirect the browser automatically.",
+    "subtopic": "ALB Redirect Actions",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/rule-action-types.html"
+  },
+  {
+    "id": "ha-scaling-058",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A retailer serves its website and its native mobile app from the same domain through one Application Load Balancer. The mobile app sends a custom header, X-Client-Type: mobile, with every request. The company wants mobile requests to go to a separate fleet that is optimized for the mobile API, without changing any URLs or adding another load balancer. Which solution meets these requirements?",
+    "options": [
+      "Add a listener rule with a path-pattern condition of /mobile/* that forwards to the mobile target group.",
+      "Enable sticky sessions on the target group so that mobile clients stay on the mobile fleet.",
+      "Add a listener rule with an http-header condition that matches X-Client-Type set to mobile and forwards to the mobile target group.",
+      "Create a Route 53 geolocation record that sends mobile users to a second Application Load Balancer."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Application Load Balancer listener rules support http-header conditions on standard or custom header names, so requests carrying X-Client-Type: mobile can be forwarded to their own target group. A path-based rule would require the app to change its URLs. Stickiness only keeps a client on a target after it is chosen and does not select a fleet by client type, and geolocation routing works on user location and needs a second load balancer.",
+    "subtopic": "ALB Header-Based Routing",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/rule-condition-types.html"
+  },
+  {
+    "id": "ha-scaling-059",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Application Load Balancer HTTPS listener has these rules: priority 5 forwards requests whose path matches /api/* to target group API, priority 10 forwards requests whose host header is admin.example.com to target group ADMIN, and the default rule forwards to target group WEB. A request arrives for https://admin.example.com/api/orders. Which target group receives the request?",
+    "options": [
+      "ADMIN, because host-based conditions always take precedence over path-based conditions.",
+      "WEB, because a request that matches more than one rule is handled by the default rule.",
+      "Both API and ADMIN, because the load balancer sends a copy of the request to every matching target group.",
+      "API, because rules are evaluated from the lowest priority value and the first matching rule is applied."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A listener evaluates its rules in priority order from the lowest value to the highest and performs the actions of the first rule whose conditions match, so the priority 5 path rule wins. The default rule is evaluated last and is used only when no other rule matches. There is no built-in precedence of host conditions over path conditions, and a load balancer does not duplicate requests to several target groups.",
+    "subtopic": "ALB Rule Priority",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-rules.html"
+  },
+  {
+    "id": "ha-scaling-060",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company exposes a web application through an internet-facing Application Load Balancer. The /admin/* pages must be reachable only from the corporate office range 203.0.113.0/24, while the rest of the site stays public. The company wants to enforce this at the load balancer without changing the application. Which configuration meets these requirements?",
+    "options": [
+      "Add a rule with priority 10 that matches path /admin/* and source IP 203.0.113.0/24 and forwards to the application, and a rule with priority 20 that matches path /admin/* and returns a fixed 403 response.",
+      "Restrict the load balancer's security group so that it accepts inbound HTTPS only from 203.0.113.0/24.",
+      "Add a rule that matches path /admin/* and redirects every request to the corporate VPN portal.",
+      "Add network ACL rules to the load balancer subnets that deny requests for /admin/* from other IP addresses."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Listener rules are evaluated in priority order, so office requests match the first rule (path plus source-ip condition) and are forwarded, while all other /admin/* requests fall through to the second rule, whose fixed-response action returns a 4XX code. Restricting the security group would block the public part of the site as well. A redirect does not stop anyone from requesting the admin pages, and network ACLs filter only by IP, protocol, and port and cannot see URL paths.",
+    "subtopic": "ALB Source IP Conditions",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/rule-condition-types.html"
+  },
+  {
+    "id": "ha-scaling-061",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup runs a customer portal on EC2 instances behind an Application Load Balancer. Customers must sign in with their Google or Facebook accounts before they reach the portal, and the developers do not want to write any authentication code. Which solution meets these requirements?",
+    "options": [
+      "Attach an IAM policy to the target group that allows access only to Google and Facebook principals.",
+      "Add an authenticate-cognito action to the HTTPS listener rule that uses an Amazon Cognito user pool federated with Google and Facebook, followed by a forward action.",
+      "Associate an AWS WAF web ACL with the load balancer that checks for Google and Facebook session cookies.",
+      "Configure the HTTP listener on port 80 with an authenticate-oidc action that points directly to Google."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Application Load Balancers can authenticate users through social identity providers such as Google, Facebook, and Amazon by using Amazon Cognito user pools, and then forward authenticated requests to targets, so no code is needed. Authenticate actions are supported only on HTTPS listeners, so a port 80 HTTP listener cannot use them. IAM policies on target groups do not authenticate end users, and AWS WAF filters requests but does not perform user sign-in.",
+    "subtopic": "ALB Authentication with Cognito",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html"
+  },
+  {
+    "id": "ha-scaling-062",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application behind an Application Load Balancer builds in-memory caches during its first few minutes after start-up. When the Auto Scaling group adds instances, the new targets immediately receive a full share of requests and respond slowly, which causes timeouts. The target group uses the round robin routing algorithm. Which change will reduce these timeouts?",
+    "options": [
+      "Increase the deregistration delay of the target group to 900 seconds.",
+      "Enable duration-based sticky sessions so that existing users stay on warmed-up targets.",
+      "Enable slow start mode on the target group with a duration that covers the cache warm-up time.",
+      "Reduce the health check interval so that new targets are marked healthy sooner."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With slow start mode, a newly healthy target receives a linearly increasing share of requests during the configured duration (30 to 900 seconds) before it gets a full share, giving it time to warm up. Slow start works with round robin but cannot be combined with the least outstanding requests or weighted random algorithms. Deregistration delay affects targets that are leaving, stickiness does not limit how many new sessions reach a new target, and faster health checks would send traffic to cold targets even sooner.",
+    "subtopic": "ALB Slow Start",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-target-group-attributes.html"
+  },
+  {
+    "id": "ha-scaling-063",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A reporting API behind an Application Load Balancer receives a mix of requests. Most finish in milliseconds, but some generate large reports that take 20 to 30 seconds. With the default routing configuration, some targets pile up long-running requests and slow down while others are nearly idle. Which change will distribute the load more evenly?",
+    "options": [
+      "Enable cross-zone load balancing on the Application Load Balancer.",
+      "Enable slow start mode on the target group.",
+      "Replace the Application Load Balancer with a Network Load Balancer that uses a TCP listener.",
+      "Change the target group's routing algorithm to least outstanding requests."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "The least outstanding requests algorithm sends each request to the target with the fewest in-progress requests, which suits workloads whose requests vary in complexity. Round robin, the default, ignores how busy each target is. Cross-zone load balancing is always on at the ALB level already, slow start only affects newly registered targets, and a Network Load Balancer hashes connections without considering outstanding requests.",
+    "subtopic": "ALB Routing Algorithms",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/edit-target-group-attributes.html"
+  },
+  {
+    "id": "ha-scaling-064",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company is creating a new internet-facing Network Load Balancer for a TCP service on EC2 instances. Only a list of partner CIDR ranges may reach the service, and the instances must accept traffic only when it comes through the load balancer, even though client IP preservation is enabled. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Associate a security group with the Network Load Balancer when it is created, allowing the listener port only from the partner CIDR ranges.",
+      "Create the Network Load Balancer without security groups and associate one later, after testing is complete.",
+      "In the instance security group, allow the service port and the health check port from the Network Load Balancer's security group.",
+      "In the instance security group, allow the service port only from the Elastic IP addresses of the Network Load Balancer.",
+      "Add network ACL rules to the instance subnets that allow traffic only from the Network Load Balancer's private IP addresses."
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "Security groups can be associated with a Network Load Balancer only when it is created; if it is created without one, none can be added later. Referencing the load balancer's security group in the targets' security group lets traffic arrive through the NLB, even with client IP preservation enabled, while blocking direct access. With client IP preservation, packets arrive with the client's source IP, so rules based on the NLB's Elastic IPs or private IPs would not match.",
+    "subtopic": "NLB Security Groups",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-security-groups.html"
+  },
+  {
+    "id": "ha-scaling-065",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a TCP-based licensing service on EC2 instances in a shared services VPC. A Network Load Balancer in a separate ingress VPC forwards traffic to the instances, which are registered as IP targets and reached through a transit gateway. The service must log each client's original IP address. Which solution meets this requirement?",
+    "options": [
+      "Enable proxy protocol version 2 on the target group and update the service to read the client address from the proxy protocol header.",
+      "Enable client IP preservation on the target group so the instances see the client source IP addresses.",
+      "Configure the service to log the X-Forwarded-For header that the Network Load Balancer adds to each connection.",
+      "Enable cross-zone load balancing so that the client IP address is carried through to the targets."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Client IP preservation is not supported when targets are reached through a transit gateway, and it is disabled by default for TCP IP targets. In that case AWS recommends enabling proxy protocol v2, which prepends a header containing the original source address that the application parses. X-Forwarded-For is an HTTP header added by Application Load Balancers, not by a TCP Network Load Balancer, and cross-zone load balancing has no effect on source addresses.",
+    "subtopic": "NLB Proxy Protocol v2",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/network/edit-target-group-attributes.html"
+  },
+  {
+    "id": "ha-scaling-066",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A SaaS provider runs a multi-tenant HTTP API behind an internal Application Load Balancer that uses path-based rules to route requests to several microservices. Customers in other AWS accounts must reach the API privately through AWS PrivateLink, and the provider wants to keep its existing path-based routing. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Replace the Application Load Balancer with a Network Load Balancer and recreate the path-based rules on its TCP listener.",
+      "Create a Network Load Balancer with a TCP listener that forwards to an alb-type target group containing the existing Application Load Balancer, and create a VPC endpoint service from the Network Load Balancer.",
+      "Create VPC peering connections to every customer VPC and share the Application Load Balancer's DNS name.",
+      "Place a Gateway Load Balancer in front of the Application Load Balancer and share the Gateway Load Balancer endpoint service with customers."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An Application Load Balancer can be registered as the target of a Network Load Balancer, which combines the ALB's layer 7 routing with NLB features such as static IP addresses and AWS PrivateLink endpoint services. A Network Load Balancer alone cannot route on URL paths. Peering with every customer VPC does not scale and breaks with overlapping CIDR ranges, and Gateway Load Balancers are designed to insert network appliances, not to publish APIs.",
+    "subtopic": "ALB as NLB Target",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/network/application-load-balancer-target.html"
+  },
+  {
+    "id": "ha-scaling-067",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company must inspect all inbound internet traffic to web servers in a VPC by using third-party firewall appliances that sit behind a Gateway Load Balancer in a security VPC. A Gateway Load Balancer endpoint has been created in its own subnet in the application VPC. How should routing be configured so that traffic from the internet is inspected before it reaches the web servers and responses are inspected before they leave?",
+    "options": [
+      "In the web subnet route table, route 0.0.0.0/0 to the internet gateway, and add a route for the security VPC CIDR that targets the Gateway Load Balancer.",
+      "In the endpoint subnet route table, route 0.0.0.0/0 to the web servers, and attach the internet gateway directly to the Gateway Load Balancer.",
+      "In the route table associated with the internet gateway, route the web subnet CIDR to the endpoint; in the web subnet route table, route 0.0.0.0/0 to the endpoint; in the endpoint subnet route table, route 0.0.0.0/0 to the internet gateway.",
+      "Place a NAT gateway in front of the web servers and route its traffic to the Gateway Load Balancer endpoint by using a managed prefix list as the destination."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Inbound traffic is steered with a route table associated with the internet gateway that sends traffic for the application subnet to the Gateway Load Balancer endpoint. The application subnet sends all outbound traffic to the endpoint, and the endpoint subnet returns inspected outbound traffic to the internet gateway. The endpoint, not the Gateway Load Balancer itself, is the route target in the application VPC, an internet gateway cannot be attached to a load balancer, and a prefix list cannot be used as a destination for routes that target a Gateway Load Balancer endpoint.",
+    "subtopic": "Gateway Load Balancer Routing",
+    "source": "https://docs.aws.amazon.com/vpc/latest/privatelink/vpce-gateway-load-balancer.html"
+  },
+  {
+    "id": "ha-scaling-068",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is migrating a web application from its data center to Amazon EC2. The data center is connected to the VPC by AWS Direct Connect. During the migration, the company wants a single Application Load Balancer to send 80 percent of requests to the existing on-premises servers and 20 percent to the new EC2 instances, and then shift traffic gradually. Which solution meets these requirements?",
+    "options": [
+      "Register the on-premises servers by instance ID in the same target group as the EC2 instances.",
+      "Create a lambda target group whose function proxies each request to the data center.",
+      "Register the on-premises servers' public IP addresses in an ip target group and use path-based rules to split traffic.",
+      "Create an ip target group with the on-premises servers' private IP addresses and a second target group for the EC2 instances, and use a forward action with weighted target groups."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Target groups of type ip can contain RFC 1918 addresses of on-premises resources reached over Direct Connect or Site-to-Site VPN, and a forward action can split traffic between weighted target groups and be adjusted over time. Instance IDs work only for EC2 instances, and publicly routable IP addresses cannot be registered as targets. A Lambda proxy adds cost and latency, and path-based rules do not split traffic by percentage.",
+    "subtopic": "ALB IP Targets for Hybrid Migration",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-target-groups.html"
+  },
+  {
+    "id": "ha-scaling-069",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company runs 12 small containerized web services on Amazon ECS with the EC2 launch type and bridge network mode. Each service has its own Application Load Balancer, and the company wants several tasks of the same service to run on one container instance. The company needs to reduce costs. Which combination of actions will meet these requirements? (Select TWO.)",
+    "options": [
+      "Create one Network Load Balancer per service to reduce per-request charges.",
+      "Use a single Application Load Balancer with path-based listener rules that forward to a separate target group for each service.",
+      "Assign a fixed host port of 80 to every task so the load balancer can always reach it.",
+      "Set the host port to 0 in the task definitions so that ECS uses dynamic host port mapping and registers each task's port with the target group.",
+      "Run one container instance per task so that every task has its own IP address."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "One Application Load Balancer can route to many services through listener rules, with a separate target group for each service, which removes 11 load balancers. Dynamic host port mapping (host port 0) registers each task as an instance ID and port pair, so multiple tasks of the same service can run on one container instance. A fixed host port allows only one such task per instance, one NLB per service keeps the same number of load balancers, and one instance per task wastes capacity.",
+    "subtopic": "ALB with ECS Dynamic Port Mapping",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/alb.html"
+  },
+  {
+    "id": "ha-scaling-070",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company deploys new AMIs to an Auto Scaling group behind an Application Load Balancer by starting an instance refresh. During the last release, a faulty AMI caused a spike in HTTP 5XX errors, and engineers had to restore the previous version by hand. The company wants future instance refreshes to revert automatically when errors rise. Which combination of steps will meet this requirement? (Select TWO.)",
+    "options": [
+      "Increase the health check grace period so that faulty instances are replaced more slowly.",
+      "Configure the group to use the $Latest launch template version so that a rollback picks the previous version.",
+      "Enable auto rollback and start the refresh with a desired configuration that references a specific numbered launch template version.",
+      "Enable scale-in protection on the instances that were launched from the previous AMI.",
+      "Specify a CloudWatch alarm on a load balancer 5XX error metric in the instance refresh settings."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "With auto rollback enabled, Amazon EC2 Auto Scaling reverses an instance refresh if it fails or if a specified CloudWatch alarm, such as one on HTTPCode_ELB_5XX_Count, enters the ALARM state. Rollback requires a desired configuration and is not available when the group uses the $Latest or $Default launch template version. A longer grace period or scale-in protection does not restore the previous configuration.",
+    "subtopic": "Instance Refresh Auto Rollback",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/instance-refresh-rollback.html"
+  },
+  {
+    "id": "ha-scaling-071",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs an API on an Auto Scaling group that has only four instances, and it starts an instance refresh every week to apply patched AMIs. During each refresh, Auto Scaling terminates an instance before its replacement is ready, and the other three instances are briefly overloaded. The company wants capacity never to drop below four in-service instances during replacements, without permanently running extra instances. What should a solutions architect configure?",
+    "options": [
+      "An instance maintenance policy that uses launch before terminating, with a minimum healthy percentage of 100 percent and a maximum healthy percentage above 100 percent.",
+      "A permanent increase of the group's minimum and desired capacity to five instances.",
+      "A longer health check grace period so that instances are replaced more slowly.",
+      "Scale-in protection on all instances in the group during the refresh."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "An instance maintenance policy controls replacement events such as instance refreshes and health check replacements. With launch before terminating (minimum healthy 100 percent, maximum healthy above 100 percent), a new instance is provisioned and ready before an existing one is terminated, so capacity stays at four and only briefly exceeds it. Permanently running five instances adds ongoing cost, the grace period only delays health checks on new instances, and scale-in protection does not create replacement capacity.",
+    "subtopic": "Instance Maintenance Policy",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/instance-maintenance-policy-overview-and-considerations.html"
+  },
+  {
+    "id": "ha-scaling-072",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An application in an Auto Scaling group has an internal watchdog that detects when a background worker thread stalls, even though the instance and its load balancer health check endpoint still respond normally. The company wants Auto Scaling to replace such instances automatically. What is the simplest solution?",
+    "options": [
+      "Have the watchdog reboot the instance by calling the EC2 RebootInstances API.",
+      "Have the watchdog move the instance into the Standby state.",
+      "Have the watchdog call the Auto Scaling SetInstanceHealth API to mark the instance as Unhealthy.",
+      "Have the watchdog deregister the instance from the load balancer's target group."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Custom health checks let an application report its own status: marking an instance Unhealthy with SetInstanceHealth (set-instance-health) causes Amazon EC2 Auto Scaling to replace it. Rebooting keeps the same possibly broken instance, Standby removes the instance from service without replacing it, and deregistering it from the target group only stops traffic while the instance keeps running in the group.",
+    "subtopic": "Custom Health Checks",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/set-up-a-custom-health-check.html"
+  },
+  {
+    "id": "ha-scaling-073",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "An Auto Scaling group runs at its maximum capacity of 20 instances across three Availability Zones. One Availability Zone had insufficient capacity for several hours, so Auto Scaling launched instances in the other two. No instance maintenance policy is configured. Which statements describe what Amazon EC2 Auto Scaling does when the Availability Zone recovers? (Select TWO.)",
+    "options": [
+      "It terminates instances in the overpopulated Availability Zones first and then launches replacements, so capacity briefly drops below 20.",
+      "It launches new instances in the recovered Availability Zone before it terminates instances in the other Availability Zones.",
+      "It never rebalances on its own; an administrator must start an instance refresh to move instances.",
+      "It can temporarily exceed the maximum capacity by 10 percent or one instance, whichever is greater, while it rebalances.",
+      "It waits for the next scale-in event and then removes instances only from the overpopulated Availability Zones."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "When an Availability Zone recovers, Auto Scaling automatically rebalances by launching instances in the zone with the fewest instances before terminating instances elsewhere, so availability is not compromised. Because the group is at its maximum, it can temporarily exceed the maximum by 10 percent or one instance, whichever is greater, while rebalancing. It does not terminate first, it does not need an instance refresh, and it does not wait for a scale-in event.",
+    "subtopic": "AZ Rebalancing",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/auto-scaling-benefits.html"
+  },
+  {
+    "id": "ha-scaling-074",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A team is trying a new launch template version in a production Auto Scaling group. If the group scales in during the trial, the team wants the newest instances, which run the configuration under test, to be removed first so that the proven instances keep serving traffic. Which termination policy meets this requirement?",
+    "options": [
+      "OldestLaunchTemplate",
+      "NewestInstance",
+      "OldestInstance",
+      "ClosestToNextInstanceHour"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The NewestInstance termination policy terminates the newest instances first, which AWS describes as useful when testing a new configuration that you do not want to keep in production. Auto Scaling still balances Availability Zones before applying any termination policy. OldestLaunchTemplate and OldestInstance would remove the proven instances first, and ClosestToNextInstanceHour optimizes for hourly billing rather than configuration.",
+    "subtopic": "ASG Termination Policies",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-termination-policies.html"
+  },
+  {
+    "id": "ha-scaling-075",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a quorum-based distributed database on EC2 instances in an Auto Scaling group across three Availability Zones. The cluster must always keep the same number of nodes in each Availability Zone. If launches fail in one zone, the group must keep retrying in that zone instead of placing the node in another zone. Which configuration meets this requirement?",
+    "options": [
+      "Set the Availability Zone distribution strategy to balanced best effort.",
+      "Enable Capacity Rebalancing on the Auto Scaling group.",
+      "Set the termination policy to OldestInstance.",
+      "Set the Availability Zone distribution strategy to balanced only."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "With the balanced only distribution strategy, Auto Scaling keeps an equal number of instances in each enabled zone and continues trying to launch in a zone where launches fail, which AWS recommends for quorum-based workloads. Balanced best effort launches the instance in another healthy zone when a zone fails, which would break the equal spread. Capacity Rebalancing handles Spot interruption risk, and a termination policy only affects which instances are removed during scale in.",
+    "subtopic": "ASG AZ Distribution Strategy",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-availability-zone-balanced.html"
+  },
+  {
+    "id": "ha-scaling-076",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a fault-tolerant CI build fleet in an Auto Scaling group that uses Spot Instances. The group lists three specific instance types and often reports insufficient capacity. The company wants the group to consider every current and future instance type with 4 to 8 vCPUs and at least 16 GiB of memory without maintaining a list, while avoiding unusually expensive types. Which solution meets these requirements?",
+    "options": [
+      "Use attribute-based instance type selection in a mixed instances policy with vCPU and memory ranges, and keep price protection enabled.",
+      "Add every matching instance type to the mixed instances policy by hand and review the list each quarter.",
+      "Switch to one larger instance type and set a Spot maximum price equal to the On-Demand price.",
+      "Keep the three instance types and change the Spot allocation strategy to lowest-price."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Attribute-based instance type selection lets you specify requirements such as vCPU and memory ranges, so the group can launch from many Spot pools and automatically use newer instance types as they are released. Price protection, enabled by default, excludes instance types priced above a threshold. A hand-maintained list adds effort, a single instance type reduces Spot capacity options, and lowest-price with only three types does not address capacity shortages.",
+    "subtopic": "Attribute-Based Instance Type Selection",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/create-asg-instance-type-requirements.html"
+  },
+  {
+    "id": "ha-scaling-077",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A rendering company runs an Auto Scaling group with a mixed instances policy that includes c6i.2xlarge (8 vCPUs), c6i.4xlarge (16 vCPUs), and c6i.8xlarge (32 vCPUs). Its job scheduler needs about 256 vCPUs at peak. Desired capacity is set to 32 instances, so the group sometimes launches far more vCPUs than needed when it picks the larger types. How should the company configure the group so that it pays only for the compute it needs?",
+    "options": [
+      "Set an On-Demand base capacity of 32 instances.",
+      "Use the NewestInstance termination policy so that larger instances are removed first.",
+      "Assign instance weights proportional to vCPU count, such as 8, 16, and 32, and set the desired capacity in the same units, such as 256.",
+      "Enable Capacity Rebalancing so that smaller instances replace larger ones."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "By default every instance type counts as one unit toward desired capacity regardless of size. With instance weights, each type contributes its number of units, so a desired capacity of 256 vCPU units is met by any mix of types; AWS also recommends attribute-based selection with a desired capacity type of vCPUs for the same result. An On-Demand base only sets the purchase option, termination policies only decide which instances are removed, and Capacity Rebalancing responds to Spot interruption risk.",
+    "subtopic": "Instance Weighting",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-mixed-instances-groups-instance-weighting.html"
+  },
+  {
+    "id": "ha-scaling-078",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Auto Scaling group uses a warm pool of stopped instances because each instance needs 15 minutes to initialize. Traffic rises and falls several times a day. Every time the group scales in, Auto Scaling terminates the instances and then launches and fully initializes new instances to refill the warm pool, which wastes compute time and slows the next scale-out. Which change addresses this?",
+    "options": [
+      "Change the warm pool instance state from Stopped to Running.",
+      "Configure an instance reuse policy so that instances return to the warm pool on scale in instead of being terminated.",
+      "Increase the scaling cooldown of the group to 30 minutes.",
+      "Set the minimum size of the warm pool to zero."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "By default, Auto Scaling terminates instances on scale in and launches new ones into the warm pool. An instance reuse policy returns already configured instances to the warm pool instead, avoiding repeated initialization. Running warm pool instances add compute charges, a longer cooldown only delays scaling, and a minimum warm pool size of zero does not stop instances from being terminated.",
+    "subtopic": "Warm Pool Instance Reuse",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-warm-pools.html"
+  },
+  {
+    "id": "ha-scaling-079",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a TCP service behind a Network Load Balancer in three Availability Zones. An Auto Scaling group keeps the same number of healthy targets in each zone. After an engineer turned on cross-zone load balancing, the bill showed new inter-AZ data transfer charges, and performance did not improve. What is the MOST cost-effective action?",
+    "options": [
+      "Replace the Network Load Balancer with an Application Load Balancer, which has no inter-AZ charges.",
+      "Move all targets into one Availability Zone so that no traffic crosses zones.",
+      "Enable client IP preservation on the target group.",
+      "Turn off cross-zone load balancing and keep enough targets in each Availability Zone."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Cross-zone load balancing is off by default for Network Load Balancers, and turning it on adds EC2 data transfer charges for traffic sent across zones. With targets evenly balanced, each node can serve its own zone, so turning it off removes the charge without hurting distribution. An ALB does not support a raw TCP service, a single-AZ design removes fault tolerance, and client IP preservation does not affect data transfer charges.",
+    "subtopic": "NLB Cross-Zone Costs",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/network/edit-target-group-attributes.html"
+  },
+  {
+    "id": "ha-scaling-080",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Auto Scaling group uses a simple scaling policy that adds two instances when average CPU utilization exceeds 70 percent, with the default cooldown. During sudden traffic surges, CPU stays above 90 percent for several minutes after the first scale-out because the group waits before adding more capacity. Which change will make the group respond faster?",
+    "options": [
+      "Replace the simple scaling policy with a target tracking or step scaling policy.",
+      "Increase the default cooldown to 600 seconds.",
+      "Set the health check grace period to 0 seconds.",
+      "Add a scheduled action that adds one instance every 5 minutes."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "After a simple scaling activity, the group waits for the cooldown period (300 seconds by default) before simple scaling policies can act again. Target tracking and step scaling policies can start another scale-out immediately and rely on instance warmup instead, and AWS recommends them over simple scaling. A longer cooldown makes the delay worse, the grace period controls health checks rather than scaling, and fixed scheduled additions ignore actual demand.",
+    "subtopic": "Scaling Cooldowns",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-scaling-cooldowns.html"
+  },
+  {
+    "id": "ha-scaling-081",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company exposes an API to IoT devices through an Application Load Balancer. Each device has an X.509 client certificate issued by the company's private certificate authority. The company wants the load balancer to reject connections from devices that do not present a valid certificate, so that backend services do not have to validate certificates themselves. What should a solutions architect do?",
+    "options": [
+      "Enable mutual TLS in passthrough mode so that the load balancer forwards the certificate chain to the targets.",
+      "Add an AWS WAF rule that blocks requests without a client certificate header.",
+      "Enable mutual TLS in verify mode on the HTTPS listener and associate a trust store that contains the CA certificate bundle.",
+      "Replace the load balancer with a Network Load Balancer TCP listener and let the targets request client certificates."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "In mutual TLS verify mode, the Application Load Balancer performs X.509 client certificate authentication against a trust store of CA certificates while negotiating TLS, so untrusted clients are rejected before reaching the targets. Passthrough mode sends the certificate chain to the targets without verifying it, leaving validation to the application. AWS WAF does not perform TLS client authentication, and a TCP passthrough design moves certificate validation back to the backend.",
+    "subtopic": "ALB Mutual TLS",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/mutual-authentication.html"
+  },
+  {
+    "id": "ha-scaling-082",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A compliance audit requires that a public Application Load Balancer accept only TLS 1.2 and TLS 1.3 connections from clients. TLS is terminated at the load balancer. Which action meets this requirement with the LEAST effort?",
+    "options": [
+      "Create a custom security policy on the load balancer that removes the TLS 1.0 and TLS 1.1 protocols.",
+      "Select a predefined security policy that supports only TLS 1.2 and TLS 1.3, such as ELBSecurityPolicy-TLS13-1-2-2021-06, on the HTTPS listener.",
+      "Add security group rules to the load balancer that block TLS 1.0 and TLS 1.1 handshakes.",
+      "Configure the target instances to reject TLS 1.0 and TLS 1.1 connections."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An HTTPS listener uses a security policy that defines the TLS protocols and ciphers it negotiates, and AWS provides predefined policies that allow only TLS 1.2 and TLS 1.3. Application Load Balancers do not support custom security policies. Security groups cannot inspect TLS versions, and because TLS terminates at the load balancer, settings on the targets do not control the client-facing protocol.",
+    "subtopic": "ALB Security Policies",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/describe-ssl-policies.html"
+  },
+  {
+    "id": "ha-scaling-083",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A security team needs detailed records of the requests sent to an internet-facing Application Load Balancer, including client IP addresses, request paths, latencies, and response codes, and wants to query the records with SQL. Which solution meets these requirements?",
+    "options": [
+      "Enable VPC Flow Logs on the load balancer subnets and query them with Amazon Athena.",
+      "Enable AWS CloudTrail data events for Elastic Load Balancing.",
+      "Enable detailed CloudWatch metrics for the load balancer and target groups.",
+      "Enable access logs for the load balancer to an Amazon S3 bucket and query them with Amazon Athena."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "ALB access logs, which are disabled by default, record each request's time, client IP address, latencies, request path, and server responses in compressed files in Amazon S3, and Athena can query them with SQL. Flow logs capture IP-level traffic without HTTP paths or status codes. CloudTrail records API calls made to the Elastic Load Balancing service, not client requests, and CloudWatch metrics are aggregates rather than per-request records.",
+    "subtopic": "ALB Access Logs",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html"
+  },
+  {
+    "id": "ha-scaling-084",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "An internal application behind an Application Load Balancer uses an authenticate-oidc action. The application reads the user identity from headers that the load balancer adds and uses it for authorization decisions. A security review warns that anyone who can reach the targets directly could forge these headers. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Allow inbound traffic to the targets only from the load balancer's security group.",
+      "Have the application trust the x-amzn-oidc-identity header, because the load balancer signs it.",
+      "Move the authenticate-oidc action to an HTTP listener so that the headers are not encrypted.",
+      "Enable access logs so that the load balancer rejects requests with forged headers.",
+      "Have the application verify the signature of the x-amzn-oidc-data JWT and check that its signer field matches the load balancer's ARN."
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "The load balancer signs only the x-amzn-oidc-data header, so the application must verify its signature and confirm that the signer field contains the expected ALB ARN before trusting the claims. AWS also recommends that targets accept traffic only from the load balancer by referencing its security group. The x-amzn-oidc-identity and x-amzn-oidc-accesstoken headers are unsigned, authenticate actions are supported only on HTTPS listeners, and access logs do not block requests.",
+    "subtopic": "ALB OIDC Claims Verification",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html"
+  },
+  {
+    "id": "ha-scaling-085",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company is building a real-time chat application on EC2 instances. Browsers connect over HTTPS and then upgrade to WebSocket connections, and the company also wants path-based routing for its REST endpoints on the same domain. Which load balancer should a solutions architect choose?",
+    "options": [
+      "Application Load Balancer",
+      "Gateway Load Balancer",
+      "Classic Load Balancer",
+      "Network Load Balancer with a UDP listener"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Application Load Balancers support HTTP/2 and connection upgrades from HTTP to WebSockets, and they provide path-based routing with listener rules. Gateway Load Balancers insert network appliances, Classic Load Balancers have no path-based routing, and a UDP listener cannot carry HTTPS or WebSocket traffic, which runs over TCP.",
+    "subtopic": "ALB WebSockets and HTTP/2",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/how-elastic-load-balancing-works.html"
   }
 ]

@@ -875,5 +875,619 @@
     ],
     "explanation": "A quota request template in Service Quotas automatically submits the configured increase requests for new accounts created in the organization, and CloudWatch alarms on quota utilization give early warning for quotas that are still approaching their limits. Trusted Advisor reports on service limits but does not raise them. SCPs restrict permissions and cannot change quotas, and the management account has quotas like any other account and should not run workloads.",
     "subtopic": "Service Quotas"
+  },
+  {
+    "id": "fundamentals-046",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company's architecture board wants each product team to assess its workloads against AWS best practices for reliability, security, cost, and the other framework pillars, record the results at major milestones, and receive a prioritized list of issues to fix. The company wants to do this without building its own questionnaire or paying for an additional tool. Which solution meets these requirements?",
+    "options": [
+      "Enable AWS Trusted Advisor checks in each account and export the results to a shared spreadsheet every quarter.",
+      "Enable AWS Config conformance packs in each account and review the compliance dashboard before each release.",
+      "Define each workload in the AWS Well-Architected Tool, answer the pillar questions, and use the generated improvement plan.",
+      "Run AWS Resilience Hub assessments for every workload and use the results as the review for all six pillars."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "The AWS Well-Architected Tool reviews workloads against the six pillars of the framework (and optional lenses), lets teams record reviews at milestones, produces an improvement plan with a prioritized list of issues, and has no additional charge. Trusted Advisor runs automated account checks rather than a structured workload review. Config conformance packs evaluate resource configurations, not architecture practices, and Resilience Hub focuses on resilience targets such as RTO and RPO rather than all six pillars.",
+    "subtopic": "AWS Well-Architected Tool",
+    "source": "https://aws.amazon.com/well-architected-tool/faqs/"
+  },
+  {
+    "id": "fundamentals-047",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A solutions architect is reviewing a workload against the reliability pillar of the AWS Well-Architected Framework. Which practices are design principles of the reliability pillar? (Select TWO.)",
+    "options": [
+      "Automatically recover from failure by monitoring key indicators and triggering automation when a threshold is breached.",
+      "Scale vertically by replacing several small resources with one large resource to reduce the number of components.",
+      "Manage infrastructure changes through manual approval and manual execution to avoid automation errors.",
+      "Test recovery procedures by simulating failures to validate how the workload fails and recovers.",
+      "Provision for the expected peak load in advance so that capacity limits are never a concern."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "The reliability pillar's design principles include automatically recovering from failure, testing recovery procedures, scaling horizontally to increase aggregate availability, stopping guessing capacity, and managing change through automation. Replacing many small resources with one large one creates a larger single point of failure, which is the opposite of scaling horizontally. Manual changes contradict managing change through automation, and fixed peak provisioning is the capacity guessing that the framework advises against.",
+    "subtopic": "Well-Architected Reliability Pillar",
+    "source": "https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/design-principles.html"
+  },
+  {
+    "id": "fundamentals-048",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An operations team is often surprised when AWS schedules maintenance on the Amazon EC2 instances that run its order-processing fleet. The team wants to be notified automatically and to run a remediation workflow, such as draining and replacing affected instances, as soon as AWS publishes a scheduled change that affects the account. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Write a script that polls the public AWS service status web page every 5 minutes and parses it for maintenance notices.",
+      "Create an Amazon EventBridge rule that matches AWS Health events and targets an SNS topic and an AWS Lambda function.",
+      "Create a CloudWatch alarm on the StatusCheckFailed_System metric of each instance with an SNS notification action.",
+      "Enable AWS CloudTrail data events and search the trail for scheduled maintenance entries every hour."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS Health publishes account-specific events, including scheduled changes to resources such as EC2 instances, and EventBridge rules can route those events to targets such as SNS for notification and Lambda for automated remediation. Polling a public status page misses account-specific events and adds maintenance work. A status check alarm fires only after an impairment occurs, not when maintenance is scheduled, and CloudTrail records API calls rather than AWS Health notifications.",
+    "subtopic": "AWS Health Dashboard",
+    "source": "https://docs.aws.amazon.com/health/latest/ug/cloudwatch-events-health.html"
+  },
+  {
+    "id": "fundamentals-049",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has 200 AWS accounts in AWS Organizations with all features enabled. A central operations team works from a dedicated operations member account and must see which accounts are affected by AWS operational issues and upcoming scheduled changes, without being given access to the management account. Which solution meets these requirements?",
+    "options": [
+      "Create an IAM role in every member account and have the operations team switch into each account to check its AWS Health Dashboard.",
+      "Create a multi-Region organization trail and have the operations team search it for AWS Health events from all accounts.",
+      "Deploy an AWS Config aggregator in the operations account and query it for operational issues affecting each account.",
+      "Enable the AWS Health organizational view from the management account and register the operations account as a delegated administrator for AWS Health."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "AWS Health organizational view aggregates Health events across all accounts in an organization, and AWS recommends delegating access to a member account so operations teams get visibility while the management account stays restricted. Switching into 200 accounts is slow and operationally heavy. CloudTrail records API activity rather than AWS Health events, and Config aggregators collect resource configuration and compliance data, not service events.",
+    "subtopic": "AWS Health Organizational View",
+    "source": "https://docs.aws.amazon.com/health/latest/ug/aggregate-events.html"
+  },
+  {
+    "id": "fundamentals-050",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A global payments company requires that a complete Regional outage cause near-zero downtime, and users on several continents must always be served from a nearby Region during normal operation. Cost is a secondary concern. Which disaster recovery strategy meets these requirements?",
+    "options": [
+      "Multi-site active/active, serving traffic from multiple Regions with data replicated between them and latency-based routing",
+      "Warm standby, with a scaled-down copy of the workload in a second Region that is scaled out after a failover decision",
+      "Pilot light, with replicated databases in a second Region and application servers that are started during failover",
+      "Backup and restore, with cross-Region copies of snapshots and infrastructure as code to rebuild the environment"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Multi-site active/active runs the full workload in several Regions at once, so users are served locally in normal operation and recovery time is near zero when a Region fails, at the highest cost and complexity. Warm standby and pilot light are active/passive strategies that send all traffic to one Region and need scaling or start-up time during failover. Backup and restore has the longest recovery time because the environment must be rebuilt.",
+    "subtopic": "DR Strategies",
+    "source": "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html"
+  },
+  {
+    "id": "fundamentals-051",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a warm standby environment in us-west-2 for a production workload in us-east-1. During a DR test, the Auto Scaling groups in us-west-2 fail to scale out to production size, and launch requests return errors stating that the account has exceeded its vCPU limit. Which action will prevent this problem during a real disaster?",
+    "options": [
+      "Move the standby environment to a different Availability Zone in us-west-2 that has its own vCPU quota.",
+      "Switch the standby Auto Scaling groups to Spot Instances, which are not subject to vCPU quotas.",
+      "Request service quota increases in us-west-2 in advance so they are high enough to run full production capacity.",
+      "Copy the service quotas from us-east-1 to us-west-2 automatically by using AWS CloudFormation StackSets."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Service quotas are applied per Region, so a recovery Region needs quotas high enough to scale up to production capacity before a disaster occurs, as the AWS disaster recovery guidance advises. Quotas are not per Availability Zone. Spot Instances have their own vCPU-based quotas, and CloudFormation StackSets deploy resources but cannot copy or raise service quotas.",
+    "subtopic": "DR Service Quotas",
+    "source": "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html"
+  },
+  {
+    "id": "fundamentals-052",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A business impact analysis sets a recovery point objective (RPO) of 1 hour and a recovery time objective (RTO) of 4 hours for an inventory application. Which statements correctly describe these objectives? (Select TWO.)",
+    "options": [
+      "The application must run in two Regions at full capacity because the RTO is shorter than one day.",
+      "No more than 1 hour of data, measured back from the interruption, may be lost when service is restored.",
+      "Backups taken every 4 hours satisfy the RPO because they match the 4-hour recovery window.",
+      "The RTO defines the maximum amount of data loss, and the RPO defines the maximum downtime.",
+      "Service must be restored no more than 4 hours after the interruption begins."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "RPO is the maximum acceptable time since the last recovery point, so at most 1 hour of data may be lost, and RTO is the maximum acceptable delay between interruption and restoration, so service must be back within 4 hours. Backups every 4 hours could lose up to 4 hours of data and violate the RPO. The option that swaps the definitions is wrong, and a 4-hour RTO can be met by less expensive strategies than full multi-Region capacity.",
+    "subtopic": "RPO and RTO",
+    "source": "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/business-continuity-plan-bcp.html"
+  },
+  {
+    "id": "fundamentals-053",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An online travel agency wants to detect problems with its checkout flow before customers report them. Traffic is very low overnight, so errors often go unnoticed for hours. The company wants a scripted browser test that logs in, searches, and completes a test booking every 5 minutes, records latency and screenshots, and alarms on failures. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Enable AWS X-Ray tracing on the application and alarm when no traces are received for 5 minutes.",
+      "Create a CloudWatch Logs metric filter on the web server logs that counts failed checkout requests.",
+      "Run a headless browser script from cron on an EC2 instance and publish the results as custom metrics.",
+      "Create an Amazon CloudWatch Synthetics canary that runs the checkout script on a schedule, and alarm on its metrics."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "CloudWatch Synthetics canaries are scheduled scripts that follow the same routes as a customer, can drive a headless browser, record availability, latency, and screenshots, and publish metrics that alarms can use even when there is no real traffic. X-Ray and log metric filters only observe real user requests, so they stay silent overnight. A self-managed script on EC2 works but adds an instance and tooling to maintain.",
+    "subtopic": "CloudWatch Synthetics",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Synthetics_Canaries.html"
+  },
+  {
+    "id": "fundamentals-054",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A video streaming service's request count follows a strong daily and weekly pattern: it is low at night, peaks every evening, and is higher on weekends. A static-threshold CloudWatch alarm either fires every evening or misses unusual drops during the day. The team wants alerts only when the metric deviates from its normal pattern. Which solution meets this requirement?",
+    "options": [
+      "Create a CloudWatch alarm that uses anomaly detection on the metric so the threshold is a band of expected values.",
+      "Create separate static-threshold alarms for each hour of the day and enable or disable them on a schedule.",
+      "Create a composite alarm that combines the existing static alarm with an alarm on CPU utilization.",
+      "Increase the alarm's evaluation period to 24 hours so that daily peaks are averaged out."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "CloudWatch anomaly detection trains a model on the metric's history, accounting for hourly, daily, and weekly seasonality and trends, and an anomaly detection alarm compares values with that band instead of a fixed threshold. Hour-by-hour static alarms are complex to maintain and still ignore weekly patterns. A composite alarm only combines alarm states, and a 24-hour period would hide real incidents for most of a day.",
+    "subtopic": "CloudWatch Anomaly Detection",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Anomaly_Detection.html"
+  },
+  {
+    "id": "fundamentals-055",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Developers frequently forget to shut down their EBS-backed Amazon EC2 test instances, which then sit idle for days. The company wants idle instances to be shut down automatically so that they can be restarted later with the same instance ID and root volume, without writing or maintaining any code. Which solution meets these requirements?",
+    "options": [
+      "Create a CloudWatch alarm on each instance's StatusCheckFailed_Instance metric with the EC2 terminate action.",
+      "Create a CloudWatch alarm that triggers when average CPUUtilization stays below 10 percent for 24 hours and uses the EC2 stop action.",
+      "Place each test instance in an Auto Scaling group with a scheduled action that sets the desired capacity to zero.",
+      "Enable detailed monitoring on the instances so that AWS stops them automatically when they become idle."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "CloudWatch alarms can stop, terminate, reboot, or recover EC2 instances, and AWS documents a low-CPU alarm with a stop action as the way to shut down forgotten idle instances; a stopped EBS-backed instance keeps its instance ID and root volume. A status check alarm does not detect idleness, and terminating the instance would prevent a restart. An Auto Scaling group at zero capacity terminates instances, and detailed monitoring only increases metric frequency.",
+    "subtopic": "CloudWatch Alarm Actions",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/UsingAlarmActions.html"
+  },
+  {
+    "id": "fundamentals-056",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A high-frequency trading application publishes an order-queue-depth custom metric to Amazon CloudWatch. The operations team must be alerted within about 30 seconds when the queue depth exceeds a threshold, but the current alarm takes several minutes to react. Which change meets this requirement?",
+    "options": [
+      "Enable detailed monitoring on the EC2 instances so that the custom metric is published every second.",
+      "Create a composite alarm that combines the queue-depth alarm with an EC2 CPUUtilization alarm.",
+      "Publish the metric as a high-resolution custom metric and create a high-resolution alarm with a 10-second period.",
+      "Publish the metric to CloudWatch Logs and create a metric filter that evaluates every log event in real time."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "High-resolution custom metrics are stored at 1-second granularity, and alarms on them can use a 10-second or 30-second period, which allows sub-minute alerting at a higher alarm charge. Detailed monitoring changes only the frequency of the EC2 metrics that AWS publishes to 1 minute and does not affect custom metrics. A composite alarm only combines alarm states and adds no speed, and routing the value through CloudWatch Logs and a metric filter adds a processing step without shortening the alarm period.",
+    "subtopic": "CloudWatch High-Resolution Metrics",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/publishingMetrics.html"
+  },
+  {
+    "id": "fundamentals-057",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A healthcare company discovers that some of its applications write patient identifiers and credit card numbers into CloudWatch Logs. Developers still need to read the logs for troubleshooting, but only a small security team may see the sensitive values. The control must also cover log groups created in the future. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Encrypt every log group with a customer managed AWS KMS key and grant decrypt permission only to the security team.",
+      "Export the logs to Amazon S3 every hour and run Amazon Macie jobs that delete objects containing sensitive data.",
+      "Create a subscription filter that sends the logs to a Lambda function that rewrites the sensitive values in place.",
+      "Create an account-level CloudWatch Logs data protection policy that masks the sensitive data types, and grant logs:Unmask only to the security team."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A CloudWatch Logs data protection policy uses managed data identifiers to detect sensitive data at ingestion and mask it in every egress path, an account-level policy also applies to future log groups, and only principals with logs:Unmask can see the original values. KMS encryption controls access to the whole log group, so developers would either see everything or nothing. Deleting exported objects or forwarding logs to Lambda adds custom work and leaves the original sensitive events in CloudWatch Logs.",
+    "subtopic": "CloudWatch Logs Data Protection",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/mask-sensitive-log-data.html"
+  },
+  {
+    "id": "fundamentals-058",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is about to send several terabytes per day of verbose debug logs from a new microservice to CloudWatch Logs. The logs are kept only for occasional after-the-fact investigations with CloudWatch Logs Insights; no metric filters, subscription filters, or Live Tail sessions will be used on them. Which approach will MOST reduce CloudWatch Logs costs for this data?",
+    "options": [
+      "Create new log groups for the debug logs in the Infrequent Access log class and send the logs there.",
+      "Send the logs to existing Standard class log groups and change their log class to Infrequent Access later.",
+      "Send the logs to Standard class log groups and set a metric filter that drops debug-level events.",
+      "Send the logs to the Delivery log class so that they remain queryable with Logs Insights for one year."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The Infrequent Access log class has a lower ingestion price per GB and supports Logs Insights queries, which fits logs used only for ad hoc forensic analysis that do not need metric filters, subscription filters, or Live Tail. A log group's class cannot be changed after it is created, so new log groups are needed. Metric filters create metrics and do not drop events, and the Delivery class keeps events for only two days and does not support Logs Insights.",
+    "subtopic": "CloudWatch Logs Log Classes",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/CloudWatch_Logs_Log_Classes.html"
+  },
+  {
+    "id": "fundamentals-059",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An engineer is about to update a production AWS CloudFormation stack with a modified template. Before anything changes, the team wants to see which resources will be added, modified, or deleted, and whether any critical resource will be replaced. Which CloudFormation feature should the engineer use?",
+    "options": [
+      "Drift detection on the stack",
+      "A change set for the stack",
+      "Termination protection on the stack",
+      "A StackSet that contains the stack"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A change set compares the submitted template or parameters with the current stack and shows which resources will be added, modified, deleted, or replaced, and nothing changes until the change set is executed. Drift detection compares live resources with the last deployed template, not with a proposed template. Termination protection only blocks stack deletion, and StackSets deploy stacks across accounts and Regions.",
+    "subtopic": "CloudFormation Change Sets",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-updating-stacks-changesets.html"
+  },
+  {
+    "id": "fundamentals-060",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An AWS CloudFormation template manages an Amazon RDS DB instance. A planned template change modifies a property that requires replacement of the DB instance. The company must keep a snapshot of the old DB instance when CloudFormation replaces it during the stack update. What should the solutions architect configure?",
+    "options": [
+      "Set the DeletionPolicy attribute of the DB instance resource to Snapshot.",
+      "Enable termination protection on the stack before running the update.",
+      "Add a CreationPolicy attribute with a timeout to the DB instance resource.",
+      "Set the UpdateReplacePolicy attribute of the DB instance resource to Snapshot."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "UpdateReplacePolicy controls what happens to the old physical resource when a stack update replaces it, and Snapshot makes CloudFormation snapshot the old DB instance before deleting it. DeletionPolicy applies when a stack is deleted or the resource is removed from the template, not when it is replaced during an update. Termination protection only prevents stack deletion, and CreationPolicy waits for success signals during resource creation.",
+    "subtopic": "CloudFormation UpdateReplacePolicy",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-attribute-updatereplacepolicy.html"
+  },
+  {
+    "id": "fundamentals-061",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security team maintains a hardened AWS CloudFormation template for an Application Load Balancer with approved listeners, TLS policies, and security groups. Dozens of application templates need this same load balancer configuration, and fixes made by the security team must reach every application stack without copying and pasting template code. Which approach meets these requirements?",
+    "options": [
+      "Reference the security team's template from each application template as a nested stack by using the AWS::CloudFormation::Stack resource.",
+      "Copy the load balancer resources into each application template and run drift detection weekly to find differences.",
+      "Store the load balancer settings in the Mappings section of each application template and update the mappings manually.",
+      "Deploy the load balancer template with StackSets and have each application stack import the load balancer ARN."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Nested stacks let common configurations live in a dedicated template that other templates reference with the AWS::CloudFormation::Stack resource, so updates to the shared template flow into every root stack that uses it. Copying resources or mappings into each template duplicates code and makes fixes manual. StackSets deploy the same stack across accounts and Regions but would create separate load balancers that are not embedded in each application's stack.",
+    "subtopic": "CloudFormation Nested Stacks",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-nested-stacks.html"
+  },
+  {
+    "id": "fundamentals-062",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Several engineers have permission to update a CloudFormation stack that contains both frequently changed application resources and a production Amazon RDS database. The company wants to prevent any stack update from accidentally replacing or deleting the database, while still allowing updates to the other resources in the stack. What should the solutions architect do?",
+    "options": [
+      "Enable termination protection on the stack so that the database cannot be modified during updates.",
+      "Run drift detection before every update and cancel the update if the database shows as MODIFIED.",
+      "Set a stack policy that allows Update:* on all resources and explicitly denies Update:* on the database's logical ID.",
+      "Remove the engineers' IAM permissions for rds:DeleteDBInstance so CloudFormation cannot replace the database."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A stack policy defines which update actions are allowed on which stack resources and applies to everyone who updates the stack, and an explicit Deny on the database's logical ID protects it from modification, replacement, or deletion while other resources remain updatable. Termination protection only prevents deletion of the entire stack. Drift detection reports out-of-band changes and does not block updates, and CloudFormation uses the caller's credentials or a service role, so trimming one IAM action is an incomplete and fragile safeguard.",
+    "subtopic": "CloudFormation Stack Policies",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/protect-stack-resources.html"
+  },
+  {
+    "id": "fundamentals-063",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company deploys application updates by updating an AWS CloudFormation stack. Some recent updates completed successfully but caused a spike in HTTP 5xx errors that went unnoticed for an hour. The company wants CloudFormation to automatically roll back an update if the error rate rises during the update or within 15 minutes after it finishes. Which solution meets this requirement?",
+    "options": [
+      "Add a rollback trigger that references a CloudWatch alarm on the 5xx error rate and set a monitoring time of 15 minutes.",
+      "Add a CreationPolicy with a 15-minute timeout to every resource so that the update waits for success signals.",
+      "Enable drift detection on the stack and configure it to roll back the stack when any resource drifts.",
+      "Set a stack policy that denies Update:Replace actions for 15 minutes after each update completes."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Rollback triggers let CloudFormation monitor specified CloudWatch alarms during a create or update and for a monitoring period of up to 180 minutes afterward, and roll back the whole operation if an alarm enters the ALARM state. CreationPolicy waits for resource signals during creation but does not watch application error rates afterward. Drift detection does not trigger rollbacks, and stack policies control which update actions are allowed rather than reacting to errors.",
+    "subtopic": "CloudFormation Rollback Triggers",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-rollback-triggers.html"
+  },
+  {
+    "id": "fundamentals-064",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company wants developers to deploy approved CloudFormation templates that create VPC resources, EC2 instances, and IAM roles. Following least privilege, the developers themselves must not have direct permissions to create those resources outside CloudFormation. Which solution meets these requirements?",
+    "options": [
+      "Grant the developers AdministratorAccess and use AWS CloudTrail to review the resources they create directly.",
+      "Create a CloudFormation service role with the required permissions, and grant developers CloudFormation permissions plus iam:PassRole for only that role.",
+      "Attach the required EC2, VPC, and IAM permissions to the developers and add a condition that requires MFA for every API call.",
+      "Store the templates in a private S3 bucket and grant developers s3:GetObject on the bucket so that CloudFormation inherits the bucket owner's permissions."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "When a stack uses a service role, CloudFormation makes resource calls with the role's credentials, so developers need only CloudFormation permissions and iam:PassRole for that specific role, not direct resource permissions. The role itself should be scoped to least privilege because anyone who can operate on the stack can use it. AdministratorAccess and direct resource permissions with MFA both let developers create resources outside CloudFormation, and S3 object access does not grant CloudFormation any permissions.",
+    "subtopic": "CloudFormation Service Role",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-iam-servicerole.html"
+  },
+  {
+    "id": "fundamentals-065",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company runs dozens of Amazon EKS clusters and currently operates its own Prometheus servers and Grafana instances on EC2. The servers struggle to scale as metric volume grows, and the team spends significant time patching them. The company wants to keep using PromQL queries and Grafana dashboards, with single sign-on through IAM Identity Center, and stop managing the underlying servers. Which services should the company use? (Select TWO.)",
+    "options": [
+      "Amazon OpenSearch Service domains to store the Prometheus metrics",
+      "Amazon CloudWatch Logs Insights to run the existing PromQL queries",
+      "Amazon Managed Service for Prometheus workspaces to ingest, store, and query the metrics",
+      "AWS X-Ray to collect the Prometheus metrics from each cluster",
+      "Amazon Managed Grafana workspaces that use the Prometheus workspaces as a data source"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Amazon Managed Service for Prometheus is a serverless, Prometheus-compatible service that automatically scales ingestion, storage, and PromQL querying and replicates data across three AZs. Amazon Managed Grafana runs Grafana workspaces without servers to manage, supports Managed Service for Prometheus as a data source, and integrates with IAM Identity Center for sign-in. OpenSearch and Logs Insights do not run PromQL, and X-Ray collects traces rather than Prometheus metrics.",
+    "subtopic": "Amazon Managed Prometheus and Grafana",
+    "source": "https://docs.aws.amazon.com/prometheus/latest/userguide/what-is-Amazon-Managed-Service-Prometheus.html"
+  },
+  {
+    "id": "fundamentals-066",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A manufacturer runs a plant-floor control application that must exchange data with on-premises machinery with single-digit millisecond latency, and regulations require the production data to be processed and stored at the plant. The company wants to use the same AWS APIs, tools, and EC2 and EBS services that it uses in the cloud, with AWS managing the infrastructure. Which solution meets these requirements?",
+    "options": [
+      "Deploy the application in the nearest AWS Local Zone and connect the plant through AWS Site-to-Site VPN.",
+      "Install AWS Outposts racks at the plant and run the application on EC2 instances in an Outpost subnet.",
+      "Deploy the application in an AWS Wavelength Zone and connect the machinery over the carrier's 5G network.",
+      "Run the application in the parent AWS Region and use AWS Global Accelerator to reduce latency to the plant."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS Outposts extends AWS infrastructure, services, APIs, and tools to the customer's own site, where AWS operates and manages the capacity, enabling low-latency access to on-premises systems and local data processing and storage. A Local Zone or Wavelength Zone is AWS-operated infrastructure outside the plant, so data would leave the site. Global Accelerator improves internet routing to a Region but cannot provide on-site processing or single-digit millisecond latency to local machinery.",
+    "subtopic": "AWS Outposts",
+    "source": "https://docs.aws.amazon.com/outposts/latest/userguide/what-is-outposts.html"
+  },
+  {
+    "id": "fundamentals-067",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A game studio is building a cloud gaming service for smartphones on 5G networks. Game sessions must run on EC2 instances with the lowest possible latency to players' mobile devices, while matchmaking and player profiles stay in the parent AWS Region. Which AWS infrastructure should the studio use for the game session servers?",
+    "options": [
+      "AWS Outposts servers installed in the studio's own data center",
+      "Amazon CloudFront edge locations configured with a custom origin",
+      "A cluster placement group in a single Availability Zone of the Region",
+      "AWS Wavelength Zones in the mobile carriers' 5G networks"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Wavelength Zones place AWS compute at the edge of communications service providers' 5G networks, so EC2 instances run very close to mobile devices for the lowest latency, and the Wavelength subnet stays part of a VPC connected to the parent Region. Outposts in the studio's data center are not near mobile players. CloudFront caches and delivers content but does not host interactive game servers, and a placement group in a Region does not shorten the path from mobile networks.",
+    "subtopic": "AWS Wavelength",
+    "source": "https://docs.aws.amazon.com/wavelength/latest/developerguide/what-is-wavelength.html"
+  },
+  {
+    "id": "fundamentals-068",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company is moving a self-managed MySQL database from Amazon EC2 to Amazon RDS for MySQL. Under the AWS shared responsibility model, which tasks remain the company's responsibility after the migration? (Select TWO.)",
+    "options": [
+      "Configuring the security groups that control which clients can connect to the DB instance",
+      "Applying operating system patches to the hosts that run the DB instance",
+      "Managing database users and their privileges by using the database engine's security features",
+      "Replacing failed physical storage devices in the AWS data center",
+      "Maintaining physical access controls for the facilities that house the database servers"
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "With RDS the customer still controls network access through security groups, IAM permissions for managing RDS resources, database logins and privileges, and encryption choices. Amazon RDS performs maintenance on the underlying hardware, operating system, and database engine versions, and AWS is responsible for the physical infrastructure and facilities, including storage hardware and data center access.",
+    "subtopic": "Shared Responsibility Model",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.html"
+  },
+  {
+    "id": "fundamentals-069",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company currently runs a key-value store on Amazon EC2 instances that it patches and hardens itself. It plans to migrate the data to Amazon DynamoDB. According to the AWS shared responsibility model, which responsibility will shift from the company to AWS after the migration?",
+    "options": [
+      "Classifying the stored data and deciding which encryption options to use",
+      "Writing the IAM policies that control which applications can read and write the tables",
+      "Patching and maintaining the operating system and platform that run the data store",
+      "Deciding which users and roles in the account may delete tables and backups"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "For EC2 the customer manages the guest operating system, installed software, and patches, while for abstracted services such as DynamoDB AWS operates the infrastructure layer, operating system, and platform. The customer remains responsible for its data, including asset classification and encryption choices, and for IAM permissions that control who can access or delete tables and backups.",
+    "subtopic": "Shared Responsibility Model",
+    "source": "https://aws.amazon.com/compliance/shared-responsibility-model/"
+  },
+  {
+    "id": "fundamentals-070",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A compliance team is mapping its controls to the AWS shared responsibility model. Which controls are shared controls, where AWS and the customer each have responsibilities in their own context? (Select THREE.)",
+    "options": [
+      "Physical and environmental controls for AWS data centers",
+      "Patch management",
+      "Zone security that routes data within specific security environments",
+      "Configuration management",
+      "Service and communications protection for the customer's own application",
+      "Awareness and training"
+    ],
+    "answer": [
+      1,
+      3,
+      5
+    ],
+    "explanation": "AWS lists patch management, configuration management, and awareness and training as shared controls: for example, AWS patches its infrastructure while customers patch their guest operating systems and applications. Physical and environmental controls are inherited entirely from AWS. Service and communications protection and zone security, such as routing data within specific security environments, are customer-specific controls.",
+    "subtopic": "Shared Responsibility Model",
+    "source": "https://aws.amazon.com/compliance/shared-responsibility-model/"
+  },
+  {
+    "id": "fundamentals-071",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup that does not yet have an AWS account wants to estimate the monthly cost of a proposed architecture with EC2 instances, an RDS database, and S3 storage, compare purchase options, and share the estimate with investors as a PDF before building anything. Which AWS tool should the startup use?",
+    "options": [
+      "AWS Cost Explorer",
+      "AWS Budgets",
+      "AWS Pricing Calculator",
+      "AWS Cost and Usage Report"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS Pricing Calculator is a free web-based planning tool for modeling solutions before building them, comparing service configurations and payment options, and exporting or sharing estimates in CSV or PDF format, and it does not require prior AWS experience. Cost Explorer, Budgets, and the Cost and Usage Report all analyze or track actual spending in an existing account, so they cannot estimate an architecture that has not been built.",
+    "subtopic": "AWS Pricing Calculator",
+    "source": "https://docs.aws.amazon.com/pricing-calculator/latest/userguide/what-is-pricing-calculator.html"
+  },
+  {
+    "id": "fundamentals-072",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A retail company's checkout API calls several microservices, an Amazon DynamoDB table, and a third-party payment API. Some requests take more than 3 seconds, and the team cannot tell which downstream call causes the delay. Which solution will help the team identify the bottleneck MOST effectively?",
+    "options": [
+      "Instrument the services with AWS X-Ray and use the trace map and request traces to find the slow downstream calls.",
+      "Enable VPC Flow Logs on the subnets and analyze the bytes transferred between the services.",
+      "Enable AWS CloudTrail data events for the DynamoDB table and compare the API call timestamps.",
+      "Increase the CloudWatch metric resolution of the API to 1 second and graph the average latency."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS X-Ray traces each request end to end, including calls to downstream AWS resources, microservices, databases, and web APIs, and its trace map highlights latency and errors so the slow component is easy to find. Flow Logs show network flows but not request-level latency per call. CloudTrail data events record who called an API, not the end-to-end request path, and higher-resolution latency metrics show that requests are slow without showing where.",
+    "subtopic": "AWS X-Ray",
+    "source": "https://docs.aws.amazon.com/xray/latest/devguide/aws-xray.html"
+  },
+  {
+    "id": "fundamentals-073",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company's cloud center of excellence is aligning its practices with the cost optimization pillar of the AWS Well-Architected Framework. Which practices are design principles of that pillar? (Select TWO.)",
+    "options": [
+      "Adopt a consumption model by paying only for resources used and stopping development environments outside working hours.",
+      "Provision every environment for its maximum expected load so that teams never have to resize resources later.",
+      "Purchase three-year commitments for all workloads before measuring their actual usage patterns.",
+      "Keep all workloads in a single shared account so that costs do not need to be attributed to owners.",
+      "Analyze and attribute expenditure so that costs can be assigned to workload owners and revenue streams."
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "The cost optimization pillar's design principles are implementing cloud financial management, adopting a consumption model, measuring overall efficiency, stopping spending on undifferentiated heavy lifting, and analyzing and attributing expenditure. Provisioning for peak load and committing before measuring usage both lead to waste. Avoiding cost attribution contradicts the principle of transparently assigning costs to workload owners.",
+    "subtopic": "Well-Architected Cost Optimization Pillar",
+    "source": "https://docs.aws.amazon.com/wellarchitected/latest/cost-optimization-pillar/design-principles.html"
+  },
+  {
+    "id": "fundamentals-074",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A QA team creates a temporary environment for each test cycle from a CloudFormation template that includes an Amazon RDS for PostgreSQL DB instance, and it deletes the stack when the cycle ends. The templates do not set a DeletionPolicy on any resource. Months later, the finance team notices a steadily growing charge for RDS snapshot storage. What is the cause, and how should the team prevent it for these short-lived environments?",
+    "options": [
+      "Automated backups of each DB instance are copied to S3 when the stack is deleted, so the team should disable Multi-AZ on the test databases.",
+      "CloudFormation always applies a Retain policy to stateful resources, so the team should enable termination protection to force a cleanup.",
+      "The stack deletions failed and left the DB instances running, so the team should add a DependsOn attribute to the DB instance resource.",
+      "The default DeletionPolicy for a standalone RDS DB instance is Snapshot, so the team should set DeletionPolicy to Delete for the test databases."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "If no DeletionPolicy is specified, CloudFormation deletes most resources, but the default is Snapshot for AWS::RDS::DBInstance resources that are not part of a cluster, and those final snapshots keep incurring charges until they are deleted. Setting DeletionPolicy to Delete for disposable test databases avoids the leftover snapshots. Multi-AZ does not create snapshots on deletion, CloudFormation does not retain resources by default, and DependsOn only affects creation and deletion order.",
+    "subtopic": "CloudFormation DeletionPolicy",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-attribute-deletionpolicy.html"
+  },
+  {
+    "id": "fundamentals-075",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company needs a second-Region disaster recovery environment that can begin serving user requests immediately after failover, with an RTO of about 15 minutes. The company accepts that full capacity may take additional time to reach through Auto Scaling, and it wants to keep standby costs as low as possible. Which approach meets these requirements MOST cost-effectively?",
+    "options": [
+      "A hot standby that runs full production capacity in the recovery Region but does not receive traffic until failover",
+      "A warm standby that runs a scaled-down but fully functional copy of the workload and scales out after failover",
+      "A pilot light with only replicated databases running and application servers deployed after a disaster is declared",
+      "A multi-site active/active deployment that splits production traffic evenly between both Regions"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Warm standby keeps a smaller, fully working copy of the stack that can handle traffic immediately at reduced capacity and then scales out, which meets a 15-minute RTO at lower cost than running full capacity. Hot standby and active/active run full production capacity in the second Region, which costs more than required. Pilot light cannot process requests until servers are deployed and started, so it cannot serve traffic immediately after failover.",
+    "subtopic": "DR Strategies",
+    "source": "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html"
   }
 ]

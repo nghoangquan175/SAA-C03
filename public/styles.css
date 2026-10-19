@@ -332,6 +332,8 @@ label.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; 
 .explain.bad { border-left-color: var(--bad); }
 .explain h4 { font-size: 14px; margin-bottom: 6px; }
 .explain p { color: var(--text-2); font-size: 14.5px; white-space: pre-wrap; }
+.explain .source { display: inline-block; margin-top: 10px; font-size: 13px; color: var(--blue); }
+.explain .source:hover { text-decoration: underline; }
 
 .qactions { display: flex; align-items: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
 .kbd-hint { font-size: 12px; color: var(--muted); margin-top: 14px; }

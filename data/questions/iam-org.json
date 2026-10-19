@@ -875,5 +875,619 @@
     ],
     "explanation": "CloudWatch cross-account observability lets a monitoring account search and visualize metrics, logs, and traces from linked source accounts, and accounts can be linked through AWS Organizations. Custom copy functions add code and cost. An organization trail centralizes API activity, not metrics and traces, and signing in to each account separately is what the team wants to avoid.",
     "subtopic": "CloudWatch Cross-Account Observability"
+  },
+  {
+    "id": "iam-org-046",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has 75 AWS accounts in AWS Organizations. The security team must continuously identify S3 buckets, KMS keys, IAM roles, and SQS queues whose resource-based policies grant access to principals outside the organization, and must review each case as a finding. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Enable Amazon Macie in every account and review its findings for buckets that contain sensitive data.",
+      "Enable Amazon GuardDuty with an organization administrator and review findings about unusual API calls.",
+      "Create an IAM Access Analyzer external access analyzer with the organization as the zone of trust in each Region that has resources.",
+      "Run a weekly AWS Lambda function that downloads every resource policy and searches it for account IDs that are not in the organization."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "An IAM Access Analyzer external access analyzer uses logic-based reasoning on resource-based policies and generates a finding for each supported resource shared outside the zone of trust; with the organization as the zone of trust, only access from outside the organization is reported. External access analysis is Regional, so an analyzer is needed in each Region with resources. Macie discovers sensitive data in S3, GuardDuty detects threats from activity, and a custom Lambda scanner adds code to maintain and misses the reasoning that Access Analyzer performs.",
+    "subtopic": "IAM Access Analyzer",
+    "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html"
+  },
+  {
+    "id": "iam-org-047",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A platform team stores IAM policies in a Git repository and deploys them through a CI/CD pipeline. The pipeline must fail automatically if a changed policy grants any access that the currently deployed version does not grant, or if any policy allows the iam:CreateUser or kms:ScheduleKeyDeletion actions. Which IAM Access Analyzer checks should the pipeline run? (Select TWO.)",
+    "options": [
+      "CheckNoNewAccess, comparing each updated policy with the currently deployed version",
+      "StartPolicyGeneration, generating a policy from the last 90 days of CloudTrail activity",
+      "GenerateCredentialReport, listing the credential status of every IAM user",
+      "CheckAccessNotGranted, verifying that the policy does not allow the listed critical actions",
+      "StartResourceScan, rescanning resources that are reported in existing external access findings"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "IAM Access Analyzer custom policy checks validate policies against your own security standards: CheckNoNewAccess reports whether an updated policy grants new access compared to the existing version, and CheckAccessNotGranted reports whether specified critical actions are allowed. Both can be called from the CLI or API, which makes them suitable as pipeline gates. Policy generation builds a policy from CloudTrail activity, the credential report lists IAM user credentials, and a resource rescan only refreshes external access findings for deployed resources.",
+    "subtopic": "Access Analyzer Custom Policy Checks",
+    "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-custom-policy-checks.html"
+  },
+  {
+    "id": "iam-org-048",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An IAM role used by a batch application was created two years ago with several broad AWS managed policies. The account has a CloudTrail trail that has logged management events for the entire period. The security team wants to replace the broad policies with a least-privilege policy based on the actions the role actually used, with the LEAST effort. What should the team do?",
+    "options": [
+      "Download the IAM credential report and copy the services listed for the role into a new customer managed policy.",
+      "Enable AWS Trusted Advisor security checks and apply the policy that Trusted Advisor recommends for the role.",
+      "Write CloudTrail Lake queries for every API call made by the role and hand-build a policy from the query results.",
+      "Use IAM Access Analyzer policy generation to build a policy template from the role's CloudTrail activity, then review and attach it."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "IAM Access Analyzer policy generation analyzes CloudTrail events for a user or role over a period of up to 90 days and produces a policy template with the services and actions used, which you can refine and attach as a managed policy. The credential report covers IAM users' credentials, not role activity. Trusted Advisor does not generate IAM policies, and hand-building a policy from CloudTrail queries is the same analysis with far more manual effort.",
+    "subtopic": "Access Analyzer Policy Generation",
+    "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-policy-generation.html"
+  },
+  {
+    "id": "iam-org-049",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A multi-tenant SaaS application assumes a single IAM role that can read every tenant's prefix in a shared S3 bucket. For each request, the application must receive credentials that can read only the current tenant's prefix, without creating a role per tenant. Which solution meets these requirements?",
+    "options": [
+      "Pass an inline session policy that allows access only to the tenant's prefix when calling AssumeRole, so the session receives the intersection of the role policy and the session policy.",
+      "Attach a permissions boundary to the role that allows a single tenant prefix, and update the boundary before each request.",
+      "Create an IAM user for each tenant and store each user's access keys in the application configuration file.",
+      "Add a deny statement for all other tenants' prefixes to the bucket policy and rewrite the bucket policy for each request."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Session policies are passed when a role session is created, and the session's permissions are the intersection of the role's identity-based policies and the session policy, so each session can be scoped down to one tenant without new roles. Session policies cannot add permissions. Updating a boundary or bucket policy per request is not safe for concurrent tenants and would affect every session at once, and per-tenant IAM users rely on long-term access keys.",
+    "subtopic": "Session Policies",
+    "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html"
+  },
+  {
+    "id": "iam-org-050",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "In a single AWS account, an IAM user has no identity-based policies. An Amazon SQS queue in the same account has a queue policy that allows sqs:SendMessage for that IAM user's ARN. No SCPs, permissions boundaries, or deny statements apply. What happens when the user calls SendMessage on the queue?",
+    "options": [
+      "The request is denied, because both an identity-based policy and a resource-based policy must allow every request.",
+      "The request is denied, because resource-based policies apply only to principals from other AWS accounts.",
+      "The request is allowed, because within the same account an allow in either the identity-based policy or the resource-based policy is sufficient.",
+      "The request is allowed only after the user calls sts:AssumeRole on a role that is named in the queue policy."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "For requests within a single account, AWS allows the request if either the identity-based policy or the resource-based policy allows it and no explicit deny applies. Requiring both allows is the rule for cross-account access, where the principal's account must also grant the permission. Resource-based policies can name principals in the same account, and no role assumption is needed when the queue policy names the user directly.",
+    "subtopic": "Policy Evaluation Logic",
+    "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-basics.html"
+  },
+  {
+    "id": "iam-org-051",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company keeps shared reference data in an S3 bucket. Principals in every account of the company's organization, including accounts that will be created later, must be able to read the objects. No one outside the organization may read them. Which bucket policy approach meets these requirements with the LEAST maintenance?",
+    "options": [
+      "List every member account ID as a principal and add new account IDs whenever an account is created.",
+      "Allow s3:GetObject for Principal \"*\" with a condition that aws:PrincipalOrgID equals the organization ID.",
+      "Allow s3:GetObject only when aws:SourceIp matches the CIDR ranges of every VPC in the organization.",
+      "Allow s3:GetObject for Principal \"*\" and enable S3 Block Public Access on the bucket to block outsiders."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The aws:PrincipalOrgID condition key compares the requester's organization ID with the value in the policy, so a single statement covers all member accounts, and accounts added or removed later are handled automatically. Listing account IDs requires constant updates. Source IP conditions do not identify accounts, and requests through VPC endpoints do not carry public source IPs. A policy with Principal \"*\" and no restricting condition is public, which Block Public Access would reject rather than scope to the organization.",
+    "subtopic": "aws:PrincipalOrgID",
+    "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_condition-keys.html"
+  },
+  {
+    "id": "iam-org-052",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "The cloud security team manages service control policies and tag policies for an organization by signing in to the management account every day. The company wants to follow AWS best practices by minimizing the use of the management account while letting the security team keep managing these policies. What should a solutions architect do?",
+    "options": [
+      "Create IAM users for the security team in the management account and restrict their sign-in to business hours.",
+      "Share the management account's administrator role with the security team through AWS RAM.",
+      "Move the security team's workloads into the management account so that the team needs only one account.",
+      "Create a resource-based delegation policy in AWS Organizations that delegates policy management to the security team's member account."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "AWS Organizations lets the management account delegate policy management, which is otherwise available only to the management account, to specified member accounts through a resource-based delegation policy. AWS recommends using the management account only for tasks that require it, partly because SCPs do not restrict principals in the management account. IAM users in the management account still use it daily, IAM roles cannot be shared through AWS RAM, and running workloads in the management account goes against best practice.",
+    "subtopic": "Delegated Administrator",
+    "source": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_delegate_policies.html"
+  },
+  {
+    "id": "iam-org-053",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company must guarantee that no Amazon Machine Image (AMI) or Amazon EBS snapshot in any of its 300 accounts can be shared publicly. The baseline must apply to new accounts automatically, must keep working when EC2 introduces new API actions, and must also govern actions taken by service-linked roles. Which solution meets these requirements?",
+    "options": [
+      "Attach an EC2 declarative policy to the organization root that sets image block public access and snapshot block public access.",
+      "Attach an SCP to the organization root that denies the API actions that modify AMI and snapshot sharing attributes.",
+      "Deploy an AWS Config rule with automatic remediation that makes public AMIs and snapshots private after they are detected.",
+      "Create a tag policy that requires a Public=false tag on every AMI and snapshot in the organization."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Declarative policies are enforced in the service control plane rather than by authorizing API calls, so the configuration persists when the service adds new features or APIs, applies to accounts that join later, and governs service-linked roles. EC2 declarative policies support image block public access and snapshot block public access. An SCP controls specific API actions and does not govern service-linked roles, a Config rule only remediates after the resource is already public, and a tag does not control sharing.",
+    "subtopic": "Declarative Policies",
+    "source": "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_ec2.html"
+  },
+  {
+    "id": "iam-org-054",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses IAM Identity Center with its corporate directory as the identity source. Developers from 40 teams share one AWS account and need identical permissions, except that each developer may manage only the resources tagged with their own team's CostCenter value. Team membership changes often. Which solution requires the LEAST ongoing administration?",
+    "options": [
+      "Create one permission set per team that lists the ARNs of that team's resources, and reassign developers when they change teams.",
+      "Create an SCP for each team that denies access to resources owned by other teams, and attach it to the shared account.",
+      "Enable attributes for access control with the CostCenter user attribute, and use one permission set whose policy matches aws:PrincipalTag/CostCenter to aws:ResourceTag/CostCenter.",
+      "Create an IAM user for each developer in the shared account and tag each user with the developer's CostCenter value."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With ABAC in IAM Identity Center, user attributes from the identity source are passed into the AWS session as tags, so a single permission set can compare the principal's CostCenter tag with the resource's tag. When a developer changes teams, only the directory attribute changes. Per-team permission sets and SCPs multiply administration, and IAM users bypass the central identity source and require their own lifecycle management.",
+    "subtopic": "Identity Center ABAC",
+    "source": "https://docs.aws.amazon.com/singlesignon/latest/userguide/abac.html"
+  },
+  {
+    "id": "iam-org-055",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An administrator creates an IAM Identity Center permission set that references a customer managed policy named AppDeployPolicy. Assigning the permission set to a newly created member account fails, although the same assignment works in older accounts. What is the MOST likely cause, and how should it be fixed?",
+    "options": [
+      "Customer managed policies can be referenced only from the management account, so the policy must be converted to an SCP.",
+      "The policy does not exist in the new account; create AppDeployPolicy with the same name and path in every account that receives the permission set.",
+      "Permission sets support only AWS managed policies, so the policy must be replaced with the closest AWS managed job function policy.",
+      "The new account has not accepted an AWS RAM invitation for the policy, so the invitation must be accepted in the new account."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "When a permission set references a customer managed policy, IAM Identity Center attaches an existing IAM policy with the same name and path in each assigned account to the role it creates, so the policy must be created in every target account first, for example with CloudFormation StackSets. Inline and AWS managed policies do not need this step. Permission sets support customer managed policies, SCPs serve a different purpose, and IAM policies are not shared through AWS RAM.",
+    "subtopic": "Identity Center Permission Sets",
+    "source": "https://docs.aws.amazon.com/singlesignon/latest/userguide/permissionsetcustom.html"
+  },
+  {
+    "id": "iam-org-056",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants employees to sign in to Amazon WorkSpaces and the AWS Management Console with their existing on-premises Active Directory credentials. User accounts and password policies must continue to be managed only on premises, no directory data may be synchronized to AWS, and sign-ins must use the company's existing RADIUS-based MFA. Which solution meets these requirements?",
+    "options": [
+      "Deploy AD Connector in a VPC that can reach the on-premises domain controllers and enable RADIUS MFA on the connector.",
+      "Deploy Simple AD in AWS, re-create the users in it, and enable RADIUS MFA on the Simple AD directory.",
+      "Deploy AWS Managed Microsoft AD and replicate all users and passwords into it from the on-premises domain.",
+      "Create an Amazon Cognito user pool, import the users from Active Directory, and enable MFA in the user pool."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AD Connector is a proxy that forwards sign-in requests to the on-premises domain controllers, so users and policies stay on premises with no directory synchronization, and it can integrate with existing RADIUS-based MFA. Simple AD is a separate standalone directory and does not support MFA. Replicating users into a managed directory or a Cognito user pool contradicts the requirement to keep identity data only on premises.",
+    "subtopic": "AD Connector",
+    "source": "https://docs.aws.amazon.com/directoryservice/latest/admin-guide/what_is.html"
+  },
+  {
+    "id": "iam-org-057",
+    "topic": "iam-org",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is migrating .NET applications and Amazon RDS for SQL Server databases that use Windows authentication to AWS. It needs a real Microsoft Active Directory in AWS that survives the loss of an Availability Zone and that can trust the company's existing on-premises forest. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Deploy Simple AD across two subnets and create a trust relationship with the on-premises forest.",
+      "Deploy AD Connector across two subnets and point the RDS for SQL Server instances at the connector.",
+      "Install Active Directory Domain Services on a single large EC2 instance and enable EC2 automatic recovery.",
+      "Deploy AWS Managed Microsoft AD, which runs domain controllers in two Availability Zones, and create a trust with the on-premises forest."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "AWS Managed Microsoft AD is an actual Windows Server Active Directory managed by AWS, deploys two domain controllers in different Availability Zones by default, supports trusts with existing domains, and works with RDS for SQL Server. Simple AD is Samba-based, does not support trusts, and is not compatible with RDS for SQL Server; AD Connector is also not compatible with RDS for SQL Server. A single self-managed domain controller is a single point of failure and adds patching and backup work.",
+    "subtopic": "AWS Managed Microsoft AD",
+    "source": "https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_getting_started_what_gets_created.html"
+  },
+  {
+    "id": "iam-org-058",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A small company with 150 employees needs a directory in AWS for Amazon WorkSpaces and for LDAP authentication on a few Linux EC2 instances. It has no on-premises Active Directory and needs only basic features: user accounts, group membership, domain join, and Kerberos-based SSO. It does not need trusts, MFA, or schema extensions. Which option is MOST cost-effective?",
+    "options": [
+      "AWS Managed Microsoft AD (Enterprise Edition)",
+      "AD Connector",
+      "Simple AD",
+      "Self-managed Active Directory on two EC2 instances"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Simple AD is a low-scale, low-cost, Samba 4-based directory that supports basic Active Directory features, works with WorkSpaces, and provides LDAP for Linux workloads, which fits a small company without advanced requirements. AWS Managed Microsoft AD Enterprise Edition is sized for very large directories and costs more. AD Connector requires an existing on-premises directory, and self-managed domain controllers add instance and administration costs.",
+    "subtopic": "Simple AD",
+    "source": "https://docs.aws.amazon.com/directoryservice/latest/admin-guide/what_is.html"
+  },
+  {
+    "id": "iam-org-059",
+    "topic": "iam-org",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A solutions architect is documenting the availability characteristics of a new AWS Managed Microsoft AD directory for a disaster recovery review. Which statements are correct? (Select TWO.)",
+    "options": [
+      "By default, the directory runs two domain controllers that are deployed across two Availability Zones.",
+      "The domain controllers can be assigned Elastic IP addresses so that clients on the internet can authenticate directly.",
+      "The company must install monitoring agents on each domain controller so that AWS can detect failures.",
+      "Failed domain controllers are replaced automatically, and AWS takes a backup of the directory once per day.",
+      "The directory runs a single domain controller until additional domain controllers are deployed manually."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "AWS Managed Microsoft AD provisions two domain controllers in two Availability Zones for fault tolerance, automatically replaces failed domain controllers in the same AZ with the same IP address, and takes daily backups. Elastic IP addresses cannot be attached to the directory's network interfaces, and AWS does not allow monitoring agents to be installed on the domain controllers. Additional domain controllers are optional for more resiliency and performance, not required to get past a single one.",
+    "subtopic": "AWS Managed Microsoft AD",
+    "source": "https://docs.aws.amazon.com/directoryservice/latest/admin-guide/ms_ad_getting_started_what_gets_created.html"
+  },
+  {
+    "id": "iam-org-060",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a steady baseline of Amazon Aurora, Amazon RDS for Oracle, and Amazon DynamoDB usage. Over the next year it plans to migrate RDS for Oracle to Aurora PostgreSQL-Compatible Edition and to move some workloads between Regions. The company wants a commitment-based discount that keeps applying through these changes. Which purchase option meets these requirements?",
+    "options": [
+      "Reserved DB instances for the current RDS for Oracle instance class in the current Region",
+      "Database Savings Plans sized to the steady hourly database spend",
+      "Compute Savings Plans sized to the steady hourly database spend",
+      "EC2 Instance Savings Plans for the instance family that the databases use"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Database Savings Plans apply to Aurora, RDS, DynamoDB, and other database services regardless of engine, instance family, size, or Region, so the discount follows a move from RDS for Oracle to Aurora PostgreSQL. Reserved DB instances must match the Region, DB engine, and instance type, so an engine migration ends the discount. Compute Savings Plans cover EC2, Fargate, and Lambda, and EC2 Instance Savings Plans cover EC2 instances only, not managed database usage.",
+    "subtopic": "Savings Plans Types",
+    "source": "https://docs.aws.amazon.com/savingsplans/latest/userguide/plan-types.html"
+  },
+  {
+    "id": "iam-org-061",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a stable fleet of M-family EC2 instances in eu-west-1 that will run 24/7 for at least 3 years. It expects to change instance sizes and move some instances from Windows to Linux, but it will not change the instance family or Region, and it does not use AWS Fargate or AWS Lambda. Which option provides the LARGEST discount for this usage?",
+    "options": [
+      "A 3-year EC2 Instance Savings Plan for the M family in eu-west-1",
+      "A 3-year Compute Savings Plan sized to the fleet's hourly spend",
+      "Spot Instances requested through an EC2 Fleet with a capacity-optimized strategy",
+      "On-Demand Capacity Reservations for the fleet in each Availability Zone"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "EC2 Instance Savings Plans offer up to 72 percent off On-Demand in exchange for committing to an instance family in a Region, and they still apply across sizes, operating systems, and tenancy within that family, which matches the planned changes. Compute Savings Plans offer up to 66 percent because they add flexibility across families, Regions, Fargate, and Lambda that this company does not need. Spot Instances can be interrupted, and Capacity Reservations are billed at On-Demand rates.",
+    "subtopic": "Savings Plans Types",
+    "source": "https://docs.aws.amazon.com/savingsplans/latest/userguide/plan-types.html"
+  },
+  {
+    "id": "iam-org-062",
+    "topic": "iam-org",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company opted in to AWS Compute Optimizer. Its Java application servers on EC2 are memory-bound, but Compute Optimizer recommends instance types based only on CPU, network, and disk metrics, and some recommended types would run out of memory. How can the company get rightsizing recommendations that account for memory usage?",
+    "options": [
+      "Enable detailed monitoring on the instances so that memory metrics are published every minute.",
+      "Enable the AWS Trusted Advisor low utilization check so that Compute Optimizer imports memory data.",
+      "Create a Cost Explorer rightsizing report filtered on the memory-optimized instance families.",
+      "Install the CloudWatch agent on the instances to publish memory utilization with the InstanceId dimension."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Compute Optimizer analyzes memory utilization only when the CloudWatch agent publishes it (for example, mem_used_percent in the CWAgent namespace with the InstanceId dimension), or when memory metrics are ingested from a supported observability product. Detailed monitoring increases the frequency of hypervisor-level metrics but does not add memory metrics. Trusted Advisor and Cost Explorer reports do not feed memory data into Compute Optimizer.",
+    "subtopic": "AWS Compute Optimizer",
+    "source": "https://docs.aws.amazon.com/compute-optimizer/latest/ug/ec2-metrics-analyzed.html"
+  },
+  {
+    "id": "iam-org-063",
+    "topic": "iam-org",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company with 40 accounts in AWS Organizations wants rightsizing recommendations for its EC2 instances, EBS volumes, and Lambda functions in every account, viewed from one place. Several workloads have month-end processing peaks, and recommendations must not undersize resources for those peaks. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Enable AWS Cost Anomaly Detection monitors for each linked account.",
+      "Opt in to AWS Compute Optimizer from the management account for all member accounts.",
+      "Create AWS Budgets usage budgets for EC2, EBS, and Lambda in each account.",
+      "Enable S3 Storage Lens advanced metrics for the organization.",
+      "Activate the Compute Optimizer enhanced infrastructure metrics preference to extend the lookback period to 93 days."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "Compute Optimizer generates recommendations for EC2 instances, EBS volumes, Lambda functions, and other resources, and opting in from the management account lets the team view findings across member accounts. By default it analyzes 14 days of metrics, so enhanced infrastructure metrics, which extend the lookback to 93 days, capture monthly peaks. Cost Anomaly Detection and Budgets track spend and usage rather than resource sizing, and Storage Lens analyzes S3 storage.",
+    "subtopic": "AWS Compute Optimizer",
+    "source": "https://docs.aws.amazon.com/compute-optimizer/latest/ug/what-is-compute-optimizer.html"
+  },
+  {
+    "id": "iam-org-064",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company with the AWS Basic Support plan opens the AWS Trusted Advisor console and sees all Service Limits checks and a few security and fault tolerance checks, but no cost optimization checks such as low-utilization EC2 instances or idle load balancers. What must the company do to use these checks?",
+    "options": [
+      "Enable Trusted Advisor separately in every AWS Region where resources run.",
+      "Enable AWS Config recording so that Trusted Advisor can evaluate resource utilization.",
+      "Upgrade to a support plan that includes the full set of Trusted Advisor checks, such as AWS Enterprise Support.",
+      "Opt in to AWS Cost Explorer so that its data is shared with Trusted Advisor."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With Basic Support, Trusted Advisor provides all Service Limits checks and selected security and fault tolerance checks; the full set of checks, including cost optimization, requires a higher support plan such as Business Support+, Enterprise Support, or Unified Operations. Trusted Advisor is not enabled per Region, and enabling AWS Config or Cost Explorer does not unlock additional Trusted Advisor checks.",
+    "subtopic": "AWS Trusted Advisor",
+    "source": "https://docs.aws.amazon.com/awssupport/latest/user/trusted-advisor.html"
+  },
+  {
+    "id": "iam-org-065",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A finance team wants to be alerted when spending on any AWS service or in any linked account rises unusually compared with its normal pattern, without having to choose fixed dollar thresholds, and wants to see the likely root cause of each spike. Which AWS feature meets these requirements?",
+    "options": [
+      "AWS Cost Anomaly Detection with monitors and alert subscriptions",
+      "AWS Budgets cost budgets with forecasted-spend alerts for each service",
+      "A CloudWatch alarm on the EstimatedCharges metric for each linked account",
+      "AWS Cost Explorer saved reports grouped by service and linked account"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Cost Anomaly Detection uses machine learning to learn spend patterns, including seasonality and growth, sends alerts by email or Amazon SNS, and ranks root causes by service, account, Region, and usage type. Budgets and billing alarms rely on fixed thresholds that must be chosen and maintained. Cost Explorer reports are for analysis and do not send anomaly alerts.",
+    "subtopic": "AWS Cost Anomaly Detection",
+    "source": "https://docs.aws.amazon.com/cost-management/latest/userguide/manage-ad.html"
+  },
+  {
+    "id": "iam-org-066",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company purchased Compute Savings Plans last quarter. The FinOps team must be notified on any day that less than 90 percent of the purchased commitment is used, and on any day that less than 70 percent of eligible compute usage is covered by Savings Plans. Which budgets should the team create in AWS Budgets? (Select TWO.)",
+    "options": [
+      "A cost budget with a forecasted-spend alert at 90 percent of the monthly amount",
+      "A daily Savings Plans utilization budget with a 90 percent threshold",
+      "A daily Savings Plans coverage budget with a 70 percent threshold",
+      "A usage budget that tracks EC2 instance hours against a fixed limit",
+      "An RI coverage budget with a 70 percent threshold"
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "Savings Plans utilization budgets alert when the used portion of the commitment falls below a threshold, and Savings Plans coverage budgets alert when the percentage of eligible usage covered by Savings Plans falls below a threshold; both can track daily periods. A cost budget tracks spend, not commitment usage, a usage budget tracks raw usage quantities, and RI coverage budgets track Reserved Instances rather than Savings Plans.",
+    "subtopic": "AWS Budgets",
+    "source": "https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html"
+  },
+  {
+    "id": "iam-org-067",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has never bought Savings Plans. The finance team wants to know how much hourly commitment to buy, based on the organization's actual past compute usage, together with the estimated monthly savings, with the LEAST effort. What should the team use?",
+    "options": [
+      "AWS Compute Optimizer rightsizing recommendations for the EC2 instances in each account",
+      "Savings Plans recommendations in the AWS Billing and Cost Management console",
+      "An AWS Data Exports export analyzed in a spreadsheet to model different commitment levels",
+      "The AWS Pricing Calculator with manually entered instance counts and hours"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Savings Plans recommendations are generated from past usage and show the recommended commitment, estimated monthly spend, and estimated monthly savings, at the management account or member account level. Compute Optimizer recommends rightsizing and identifies idle resources rather than commitment purchases. Modeling exported billing data or entering usage into the Pricing Calculator can produce an answer but requires much more manual work.",
+    "subtopic": "Savings Plans Recommendations",
+    "source": "https://docs.aws.amazon.com/savingsplans/latest/userguide/sp-recommendations.html"
+  },
+  {
+    "id": "iam-org-068",
+    "topic": "iam-org",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company governs its organization with AWS Control Tower. An administrator recently used the AWS Organizations console to edit a Control Tower managed SCP and to move an enrolled account to a different OU. The security team wants to be notified automatically whenever this kind of governance drift happens. What should the team do?",
+    "options": [
+      "Enable Amazon GuardDuty in every account and alert on findings related to AWS Organizations API calls.",
+      "Turn on CloudTrail Insights on the organization trail to detect unusual changes to SCPs and OUs.",
+      "Subscribe to the aws-controltower-AggregateSecurityNotifications SNS topic in the audit account, which receives Control Tower drift notifications.",
+      "Create a daily AWS Budgets report that lists changes to the organization's SCPs and OU membership."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS Control Tower detects drift automatically, including modified or detached managed SCPs and accounts moved between OUs, and aggregates drift notifications to SNS topics in the audit account such as aws-controltower-AggregateSecurityNotifications. GuardDuty detects threats rather than governance drift, CloudTrail Insights flags unusual API call volumes rather than configuration drift, and Budgets reports cover costs.",
+    "subtopic": "Control Tower Drift",
+    "source": "https://docs.aws.amazon.com/controltower/latest/userguide/drift.html"
+  },
+  {
+    "id": "iam-org-069",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A central IT team offers an Amazon EC2 development environment as an AWS Service Catalog product. The product's CloudFormation template allows many instance types, but to control costs, data science users must be able to choose only t3.micro or t3.small when they launch it from their portfolio. Which solution meets this requirement?",
+    "options": [
+      "Add a template constraint to the product in the portfolio that limits the instance type parameter to t3.micro and t3.small.",
+      "Add a launch constraint to the product that specifies an IAM role allowed to launch only small instances.",
+      "Add a notification constraint that sends an SNS message when a user launches a large instance type.",
+      "Add a tag update constraint that prevents users from changing the instance type tag after launch."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Template constraints narrow the allowed values of parameters in the product's CloudFormation template for a specific portfolio, such as restricting instance types to small sizes. A launch constraint sets the IAM role Service Catalog uses to provision the product but does not restrict parameter choices, a notification constraint only sends stack events to SNS, and tag update constraints control whether tags can be changed.",
+    "subtopic": "Service Catalog Constraints",
+    "source": "https://docs.aws.amazon.com/servicecatalog/latest/adminguide/catalogs_constraints_template-constraints.html"
+  },
+  {
+    "id": "iam-org-070",
+    "topic": "iam-org",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A networking account uses AWS RAM to share VPC subnets with 30 workload accounts. Each account must currently accept a RAM invitation, which delays new environments, and accounts added to the Workloads OU later must get access automatically. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Write an AWS Lambda function in each workload account that accepts pending AWS RAM invitations every hour.",
+      "Create VPC peering connections from each workload account's VPC to the shared VPC.",
+      "Use CloudFormation StackSets to create identical subnets in every workload account.",
+      "Enable sharing with AWS Organizations in AWS RAM from the management account and share the subnets with the Workloads OU."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "After sharing with AWS Organizations is enabled from the management account, resources shared with the organization or an OU are available to member accounts without invitations, and accounts added to the OU later get access automatically. A Lambda function to accept invitations adds code and does not handle OU-level sharing. Peering or duplicating subnets does not provide shared subnets and adds network resources to manage.",
+    "subtopic": "AWS RAM",
+    "source": "https://docs.aws.amazon.com/ram/latest/userguide/getting-started-sharing.html"
+  },
+  {
+    "id": "iam-org-071",
+    "topic": "iam-org",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Domain-joined applications in AWS authenticate heavily against an AWS Managed Microsoft AD directory. During business hours, authentication and LDAP queries slow down because the two default domain controllers are overloaded. Which action will improve performance with the LEAST operational overhead?",
+    "options": [
+      "Migrate the directory to Simple AD, which is designed for high-volume authentication.",
+      "Deploy additional domain controllers for the AWS Managed Microsoft AD directory so requests are distributed across more domain controllers.",
+      "Replace the directory with AD Connector so that requests are cached in the VPC.",
+      "Install a caching agent on each domain controller to reduce the number of LDAP lookups."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS Managed Microsoft AD can be scaled by deploying additional domain controllers, which distributes requests across more servers and improves application performance and resiliency. Simple AD is designed for low-scale, low-cost use cases. AD Connector is a proxy to an existing self-managed directory rather than a replacement for this directory, and AWS does not allow agents to be installed on the managed domain controllers.",
+    "subtopic": "AWS Managed Microsoft AD",
+    "source": "https://docs.aws.amazon.com/directoryservice/latest/admin-guide/what_is.html"
+  },
+  {
+    "id": "iam-org-072",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Servers in a company's on-premises data center upload files to Amazon S3 by using an IAM user's long-term access keys stored on each server. The company already operates a private certificate authority that issues X.509 certificates to these servers. The security team wants to eliminate long-term AWS credentials on the servers. Which solution meets these requirements?",
+    "options": [
+      "Attach an EC2 instance profile to each on-premises server so the servers can retrieve role credentials.",
+      "Use IAM Roles Anywhere with the company's CA as a trust anchor so servers exchange their certificates for temporary role credentials.",
+      "Store the access keys in AWS Secrets Manager and rotate them automatically every 30 days.",
+      "Enable IAM Identity Center and assign each server a permission set for the S3 bucket."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "IAM Roles Anywhere lets workloads outside AWS obtain temporary credentials for an IAM role by authenticating with X.509 certificates issued by a CA that is registered as a trust anchor, so no long-term keys are stored. Instance profiles work only for EC2 instances. Rotating keys in Secrets Manager still relies on long-term credentials, and IAM Identity Center is for workforce users, not server workloads.",
+    "subtopic": "IAM Roles Anywhere",
+    "source": "https://docs.aws.amazon.com/rolesanywhere/latest/userguide/introduction.html"
+  },
+  {
+    "id": "iam-org-073",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company has 200 member accounts in AWS Organizations, and each account still has a root user password and MFA device that the security team must safeguard. The team wants to remove these long-term root credentials, but it must still be able to recover when a developer applies an S3 bucket policy that denies all principals. Which actions meet these requirements? (Select TWO.)",
+    "options": [
+      "Attach an SCP that allows the root user of each member account to perform only S3 actions.",
+      "Store every member account's root password in AWS Secrets Manager in the management account.",
+      "Enable centralized root access management for member accounts and delete the root user credentials from the member accounts.",
+      "Open an AWS Support case whenever a bucket policy must be removed from a member account.",
+      "Use a privileged root task from the management account or the IAM delegated administrator to delete the misconfigured bucket policy."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Centralized root access management lets the management account or IAM delegated administrator remove root user passwords, access keys, and MFA from member accounts, and new accounts are created without root credentials. Privileged root tasks then allow those accounts to delete an S3 bucket policy or SQS queue policy that denies all principals. SCPs cannot grant permissions, storing passwords keeps the long-term credentials, and AWS Support is not the mechanism for removing a customer's bucket policy.",
+    "subtopic": "Root User Management",
+    "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html"
+  },
+  {
+    "id": "iam-org-074",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company's 25 AWS accounts belong to four business units, and some shared accounts host resources tagged with a Team tag. Finance wants to view and budget costs by business unit in Cost Explorer and AWS Budgets, with rules based on account and tag that are maintained in one place. Which feature should the company use?",
+    "options": [
+      "AWS Data Exports with a separate SQL view created for each business unit",
+      "AWS Resource Groups with one group per business unit",
+      "AWS Organizations tag policies attached to each business unit's OU",
+      "AWS Cost Categories with rules that map accounts and tag values to business units"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Cost Categories let you define rules on dimensions such as account, tag, service, and Region to group costs into business units, and the categories appear as a dimension in Cost Explorer and AWS Budgets and as a column in cost reports. SQL views over exports require building and maintaining queries outside these tools. Resource Groups organize resources for operations, and tag policies standardize tags without mapping costs to business units.",
+    "subtopic": "AWS Cost Categories",
+    "source": "https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/manage-cost-categories.html"
+  },
+  {
+    "id": "iam-org-075",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A security architect is training engineers on how AWS combines policy types when evaluating a request. Which statements are correct? (Select THREE.)",
+    "options": [
+      "For cross-account access, the resource-based policy must allow the external principal and the principal's own account must also allow the action in an identity-based policy.",
+      "A permissions boundary can grant an IAM role permissions that its identity-based policies do not grant.",
+      "SCPs restrict the IAM users and roles in the organization's management account.",
+      "An RCP can limit access to resources in member accounts even when the caller belongs to an account outside the organization.",
+      "A session policy can add permissions to a role session beyond what the role's identity-based policies allow.",
+      "SCPs limit the permissions of every principal in member accounts, including each account's root user."
+    ],
+    "answer": [
+      0,
+      3,
+      5
+    ],
+    "explanation": "Cross-account access needs an allow on both sides: the resource-based policy in the resource account and an identity-based policy in the caller's account. RCPs set the maximum permissions on resources in member accounts regardless of whether the caller is inside the organization, and SCPs limit all principals in member accounts, including the root user. Permissions boundaries and session policies only limit permissions and never grant them, and SCPs do not apply to the management account.",
+    "subtopic": "Policy Evaluation Logic",
+    "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html"
   }
 ]
