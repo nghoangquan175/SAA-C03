@@ -28,7 +28,17 @@ variable "bucket_name" {
 }
 
 variable "github_repo" {
-  description = "owner/name allowed to deploy through GitHub Actions OIDC."
+  description = "owner/name of the repo that deploys the site."
   type        = string
   default     = "nghoangquan175/SAA-C03"
+}
+
+variable "github_oidc_sub_prefix" {
+  description = <<-EOT
+    OIDC `sub` prefix of the repo allowed to assume the deploy role. The repo uses GitHub's
+    immutable subject format (owner@owner_id/repo@repo_id). Check it with:
+    gh api repos/nghoangquan175/SAA-C03/actions/oidc/customization/sub
+  EOT
+  type        = string
+  default     = "repo:nghoangquan175@111145927/SAA-C03@1425362907"
 }
