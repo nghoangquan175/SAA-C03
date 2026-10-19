@@ -1,0 +1,8 @@
+node_modules/
+dist/
+
+# Terraform: state is committed on purpose (infras/terraform.tfstate), plugins are not
+infras/.terraform/
+infras/*.tfstate.backup
+infras/*.tfplan
+infras/crash.log

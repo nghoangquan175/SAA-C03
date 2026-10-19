@@ -1,0 +1,777 @@
+[
+  {
+    "id": "cdn-001",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company serves api.example.com over HTTPS from Application Load Balancers in us-east-1 and ap-southeast-1. The company requested a public certificate for api.example.com in AWS Certificate Manager (ACM) in us-east-1. When configuring the HTTPS listener of the ALB in ap-southeast-1, the solutions architect cannot select the certificate. What should the solutions architect do?",
+    "options": [
+      "Enable cross-Region replication for the certificate in the ACM console.",
+      "Enter the ARN of the us-east-1 certificate manually in the ap-southeast-1 listener.",
+      "Request a public certificate for api.example.com in ACM in ap-southeast-1 and use it on that ALB.",
+      "Attach the certificate to a CloudFront distribution so that it becomes available in all Regions."
+    ],
+    "answer": [2],
+    "explanation": "ACM certificates are Regional resources, and an ALB can only use a certificate from ACM in its own Region, so a separate certificate for the same name must be requested in ap-southeast-1. ACM has no cross-Region certificate replication, and a listener cannot reference a certificate ARN from another Region. Using a certificate with CloudFront does not make it available to ALBs elsewhere.",
+    "subtopic": "ACM regional certificates"
+  },
+  {
+    "id": "cdn-002",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company is placing an Amazon CloudFront distribution in front of an internet-facing Application Load Balancer in eu-west-1. Traffic must be encrypted with HTTPS between viewers and CloudFront and between CloudFront and the ALB, using certificates from AWS Certificate Manager. Where should the certificates be requested? (Select TWO.)",
+    "options": [
+      "Request a certificate in eu-west-1 and associate it with the CloudFront distribution.",
+      "Request a certificate in us-east-1 and associate it with the CloudFront distribution.",
+      "Request a certificate in us-east-1 and associate it with the ALB HTTPS listener.",
+      "Request a certificate in eu-west-1 and associate it with the ALB HTTPS listener.",
+      "Export a certificate from ACM and install it on the EC2 instances behind the ALB."
+    ],
+    "answer": [1, 3],
+    "explanation": "CloudFront only uses ACM certificates that are requested or imported in the us-east-1 Region, while an ALB uses certificates from ACM in its own Region, eu-west-1. A eu-west-1 certificate cannot be attached to CloudFront, and a us-east-1 certificate cannot be attached to an ALB in eu-west-1. The targets do not need certificates because TLS terminates at the ALB.",
+    "subtopic": "ACM for CloudFront and ALB"
+  },
+  {
+    "id": "cdn-003",
+    "topic": "cdn",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses public ACM certificates on its ALBs and CloudFront distributions. The certificates were validated by email, and last year a renewal email was missed, causing a certificate to expire and an outage. The domain is hosted in Route 53. The company wants certificate renewals to happen automatically with no human action. What should the company do?",
+    "options": [
+      "Request new certificates with DNS validation, keep the validation CNAME records in Route 53, and replace the email-validated certificates.",
+      "Create an AWS Lambda function that requests a new certificate every 60 days and updates every listener.",
+      "Import certificates from a third-party CA into ACM, because imported certificates are renewed automatically.",
+      "Configure an Amazon SNS subscription for the renewal emails so that more people receive them."
+    ],
+    "answer": [0],
+    "explanation": "ACM renews DNS-validated certificates automatically as long as the validation CNAME record remains in DNS and the certificate is in use, so no one has to respond to an email. A custom Lambda rotation process adds operational overhead that ACM already removes. Imported certificates are never renewed by ACM, and sending emails to more people still depends on human action.",
+    "subtopic": "ACM DNS validation and renewal"
+  },
+  {
+    "id": "cdn-004",
+    "topic": "cdn",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company's security policy requires certificates from a specific third-party certificate authority. The company imports these certificates into ACM and uses them on ALBs. The company wants to prevent outages caused by expired certificates with minimal custom code. Which solution will meet this requirement?",
+    "options": [
+      "Rely on ACM managed renewal, which renews imported certificates 60 days before they expire.",
+      "Re-import the certificates by using email validation so that ACM can renew them.",
+      "Store the certificates in AWS Secrets Manager and turn on automatic rotation.",
+      "Create an Amazon EventBridge rule for the ACM certificate approaching expiration event that notifies the team through Amazon SNS, and re-import renewed certificates before they expire."
+    ],
+    "answer": [3],
+    "explanation": "ACM does not renew imported certificates, but it emits events as certificates approach expiration, so an EventBridge rule with SNS (or the AWS Config expiration check rule) can alert the team in time to obtain and re-import a renewed certificate. Validation methods apply only to certificates that ACM issues. Secrets Manager rotation would need a custom function that talks to the CA and does not update the certificate in ACM by itself.",
+    "subtopic": "ACM imported certificate expiry"
+  },
+  {
+    "id": "cdn-005",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a web application on EC2 instances in an Auto Scaling group. Each instance currently uses a self-managed TLS certificate that the team renews manually. The company wants free, publicly trusted certificates that renew automatically, with the least operational overhead. Which solution will meet these requirements?",
+    "options": [
+      "Request an ACM public certificate and install it directly on each EC2 instance by using a user data script.",
+      "Place the instances behind an Application Load Balancer and use an ACM public certificate on the ALB HTTPS listener.",
+      "Request an ACM public certificate and store its private key in AWS Systems Manager Parameter Store for the instances.",
+      "Use AWS Private CA to issue certificates to each instance through a cron job."
+    ],
+    "answer": [1],
+    "explanation": "ACM public certificates are free and renew automatically, but they are deployed to integrated services such as Elastic Load Balancing, CloudFront, and API Gateway rather than installed on instances, so terminating TLS on an ALB is the right design. Installing an ACM public certificate or its private key directly on instances is not the standard pattern and removes the automatic renewal benefit. AWS Private CA certificates are not publicly trusted and have a cost.",
+    "subtopic": "ACM integrated services"
+  },
+  {
+    "id": "cdn-006",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A news website uses Amazon CloudFront. Popular articles are served from edge locations, but older, less popular articles are also served quickly without reaching the origin in most cases. Which CloudFront component is primarily responsible for this behavior?",
+    "options": [
+      "Origin groups that keep a backup copy of every object in a second origin",
+      "Lambda@Edge functions that prefetch objects from the origin on a schedule",
+      "Regional edge caches that sit between edge locations and the origin and keep objects longer than individual edge locations",
+      "Field-level encryption that stores encrypted copies of objects at each edge location"
+    ],
+    "answer": [2],
+    "explanation": "Regional edge caches have larger caches than individual edge locations, so objects that are evicted from an edge location can often still be served from the regional edge cache without an origin fetch. Origin groups provide failover between origins, not caching. Lambda@Edge runs code on requests and responses rather than prefetching content, and field-level encryption protects specific form fields.",
+    "subtopic": "CloudFront regional edge caches"
+  },
+  {
+    "id": "cdn-007",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants a single domain, www.example.com, to serve static assets from an S3 bucket and dynamic API requests under the /api/ path from an Application Load Balancer. API responses must not be cached, while static assets should be cached. Which CloudFront configuration will meet these requirements?",
+    "options": [
+      "One distribution with two origins: a cache behavior for /api/* that targets the ALB with a caching-disabled cache policy, and the default behavior that targets the S3 bucket with a caching policy.",
+      "Two distributions with the same alternate domain name, one for the S3 bucket and one for the ALB.",
+      "One distribution with an origin group that contains the S3 bucket and the ALB.",
+      "One distribution that targets the ALB, with the ALB forwarding static asset requests to Amazon S3."
+    ],
+    "answer": [0],
+    "explanation": "Cache behaviors match path patterns and route each pattern to a specific origin with its own cache policy, so /api/* can bypass caching while everything else is cached from S3. Two distributions cannot share the same alternate domain name. Origin groups are for failover between origins, not path routing, and an ALB cannot use an S3 bucket as a target.",
+    "subtopic": "CloudFront cache behaviors"
+  },
+  {
+    "id": "cdn-008",
+    "topic": "cdn",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company deploys new CSS and JavaScript files for its single-page application several times a day. The files are served through CloudFront with a TTL of 24 hours, and after each deployment the team creates an invalidation for /*. Invalidation charges and the time users see mixed old and new files are both growing. Which solution is MOST cost-effective and reliable?",
+    "options": [
+      "Reduce the default TTL of the distribution to 0 seconds for all files.",
+      "Create invalidations only for the specific files that changed after each deployment.",
+      "Disable caching for CSS and JavaScript files by using a separate cache behavior.",
+      "Use versioned file names, such as app.3f9c2.js, referenced from the HTML, and keep long TTLs for the versioned files."
+    ],
+    "answer": [3],
+    "explanation": "Versioned object names make each deployment fetch new objects immediately, need no invalidations, and let the files keep long TTLs for a high cache hit ratio. A TTL of 0 or disabled caching sends every request to the origin, increasing load and cost. Targeted invalidations still cost money beyond the free monthly paths and still take time to propagate.",
+    "subtopic": "Versioned object names"
+  },
+  {
+    "id": "cdn-009",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A media company mistakenly published an image that is now cached in CloudFront with a TTL of 24 hours. The legal team requires the image to stop being served as soon as possible. The company has already deleted the image from the S3 origin. What should the company do next?",
+    "options": [
+      "Change the default TTL of the distribution to 0 seconds.",
+      "Create a CloudFront invalidation for the path of the image.",
+      "Disable and re-enable the CloudFront distribution.",
+      "Upload an empty file with the same name to the origin."
+    ],
+    "answer": [1],
+    "explanation": "An invalidation removes the specified object from CloudFront caches so that the next request goes to the origin, where the image no longer exists. Changing the default TTL does not evict objects that are already cached. Disabling the distribution takes the whole site offline, and uploading an empty file does not affect cached copies until they expire.",
+    "subtopic": "CloudFront invalidations"
+  },
+  {
+    "id": "cdn-010",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A retailer's CloudFront distribution has a cache hit ratio of 15%. The cache policy includes all query strings, all cookies, and the User-Agent header in the cache key. The product pages vary only by the lang query string parameter. The origin still needs a session cookie on requests that reach it, for logging purposes. Which change will MOST improve the cache hit ratio while meeting these requirements?",
+    "options": [
+      "Keep the current cache policy and increase the maximum TTL to one year.",
+      "Remove the cache policy and use the legacy cache settings to forward all headers.",
+      "Use a cache policy that includes only the lang query string in the cache key, and use an origin request policy to forward the session cookie to the origin.",
+      "Add Lambda@Edge on viewer request to delete the session cookie before the cache lookup."
+    ],
+    "answer": [2],
+    "explanation": "Every value in the cache key splits the cache, so including only lang lets all viewers share cached pages, while an origin request policy can still send the session cookie to the origin without affecting the cache key. Longer TTLs do not help when nearly every request has a unique key. Forwarding all headers makes the hit ratio worse, and deleting the cookie at the viewer stage prevents it from reaching the origin.",
+    "subtopic": "Cache keys and policies"
+  },
+  {
+    "id": "cdn-011",
+    "topic": "cdn",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is configuring a custom domain with HTTPS on a CloudFront distribution. Analytics show that all of its viewers use modern browsers and mobile apps. The company wants the MOST cost-effective SSL/TLS configuration. Which option should the company choose?",
+    "options": [
+      "Serve HTTPS requests by using Server Name Indication (SNI) with an ACM certificate.",
+      "Serve HTTPS requests by using dedicated IP addresses in each edge location.",
+      "Use the default *.cloudfront.net certificate and add the custom domain to it.",
+      "Terminate TLS on the origin and configure CloudFront to pass encrypted traffic through."
+    ],
+    "answer": [0],
+    "explanation": "SNI lets CloudFront serve many certificates from shared IP addresses at no additional charge, and it is supported by all modern browsers and clients. Dedicated IP custom SSL is needed only for legacy clients that do not support SNI and carries a significant monthly fee. The default certificate only covers cloudfront.net names, and CloudFront does not pass TLS through to the origin.",
+    "subtopic": "SNI vs dedicated IP"
+  },
+  {
+    "id": "cdn-012",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company's CloudFront distribution is currently reachable only at d111111abcdef8.cloudfront.net. The company wants users to reach it at https://www.example.com. The domain is hosted in Route 53. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Request an ACM certificate for www.example.com in the origin's Region and attach it to the distribution.",
+      "Create a CNAME record at the zone apex, example.com, that points to the distribution.",
+      "Add www.example.com as an alternate domain name on the distribution and attach an ACM certificate for that name issued in us-east-1.",
+      "Configure origin access control on the distribution for www.example.com.",
+      "Create a Route 53 alias record for www.example.com that targets the distribution."
+    ],
+    "answer": [2, 4],
+    "explanation": "A custom name must be added as an alternate domain name with a certificate that covers it from ACM in us-east-1, and DNS must point the name at the distribution, for which a Route 53 alias record is ideal. Certificates from other Regions cannot be used by CloudFront. A CNAME at the zone apex is invalid and the requirement is for www, and origin access control secures the origin rather than the viewer-facing domain.",
+    "subtopic": "Alternate domain names"
+  },
+  {
+    "id": "cdn-013",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company serves images from an S3 bucket through a CloudFront distribution. Security requires that the bucket remain private with S3 Block Public Access enabled, and that users cannot download objects directly from S3 URLs. Which solution will meet these requirements?",
+    "options": [
+      "Configure the bucket as a static website and allow access only from CloudFront IP ranges in the bucket policy.",
+      "Configure origin access control (OAC) on the distribution and add a bucket policy that allows the CloudFront service principal with a condition on the distribution ARN.",
+      "Enable S3 Transfer Acceleration and require signed URLs on the S3 bucket.",
+      "Make the objects public but require an HTTP Referer header that matches the domain."
+    ],
+    "answer": [1],
+    "explanation": "OAC lets CloudFront sign requests to S3, and a bucket policy that allows cloudfront.amazonaws.com only when the source ARN is the distribution keeps the bucket private while serving content through CloudFront. Website endpoints require public access and cannot use OAC. Transfer Acceleration is for faster uploads, and Referer checks on public objects are easily spoofed.",
+    "subtopic": "Origin access control"
+  },
+  {
+    "id": "cdn-014",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company uses a legacy origin access identity (OAI) to serve objects from an S3 bucket through CloudFront. The company changed the bucket's default encryption to SSE-KMS with a customer managed key, and now viewers receive Access Denied errors for newly uploaded objects. Which solution will fix the issue while following AWS recommendations?",
+    "options": [
+      "Grant the OAI permission to use the KMS key in the bucket policy.",
+      "Change the bucket back to SSE-S3 and keep the OAI in place.",
+      "Make the KMS key policy allow any principal to decrypt objects in the bucket.",
+      "Migrate to origin access control, update the bucket policy for the CloudFront service principal, and allow that principal to use the key in the KMS key policy with a condition on the distribution ARN."
+    ],
+    "answer": [3],
+    "explanation": "OAI does not support objects encrypted with SSE-KMS, whereas OAC does, provided the KMS key policy lets the CloudFront service principal decrypt for the specific distribution. A bucket policy cannot grant KMS key usage, and reverting to SSE-S3 ignores the requirement and keeps the legacy OAI. Allowing any principal to decrypt weakens security significantly.",
+    "subtopic": "OAC vs OAI with SSE-KMS"
+  },
+  {
+    "id": "cdn-015",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company uses CloudFront in front of an internet-facing Application Load Balancer. Users have been bypassing CloudFront, and its AWS WAF rules, by sending requests directly to the ALB DNS name. Which actions will ensure the ALB accepts only requests that come through CloudFront? (Select TWO.)",
+    "options": [
+      "Configure origin access control for the ALB origin.",
+      "Configure CloudFront to add a custom header with a secret value to origin requests, and add ALB listener rules that forward only requests containing that header.",
+      "Allow inbound traffic in the ALB security group only from the AWS-managed prefix list for CloudFront origin-facing servers.",
+      "Enable geo restriction on the CloudFront distribution.",
+      "Configure the ALB to require CloudFront signed URLs."
+    ],
+    "answer": [1, 2],
+    "explanation": "The CloudFront origin-facing managed prefix list limits network access to CloudFront servers, and a secret custom header checked by an ALB listener rule ensures the request came through your own distribution rather than any CloudFront distribution. OAC is not supported for ALB origins. Geo restriction applies to viewers of the distribution, not direct ALB traffic, and ALBs cannot validate CloudFront signed URLs.",
+    "subtopic": "Custom origins with custom headers"
+  },
+  {
+    "id": "cdn-016",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company is delivering a web application globally through CloudFront. Its security team requires that the Application Load Balancer that serves the application be placed in private subnets with no internet-facing endpoint at all. Which solution will meet this requirement with the LEAST operational overhead?",
+    "options": [
+      "Create an internal ALB in private subnets and configure it as a CloudFront VPC origin.",
+      "Keep an internet-facing ALB and require a secret custom header from CloudFront.",
+      "Configure origin access control on the distribution for the internal ALB.",
+      "Place an AWS Global Accelerator accelerator between CloudFront and the internal ALB."
+    ],
+    "answer": [0],
+    "explanation": "CloudFront VPC origins let a distribution reach an internal ALB, NLB, or EC2 instance in private subnets, so the application has no public endpoint. A custom header still leaves the ALB internet-facing. OAC applies to origins such as S3, not ALBs, and chaining Global Accelerator in front of an internal ALB adds cost and still exposes public anycast IPs.",
+    "subtopic": "CloudFront VPC origins"
+  },
+  {
+    "id": "cdn-017",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A training company streams HLS videos through CloudFront. Each video consists of hundreds of small segment files, and only paying subscribers may watch. The video player requests segment URLs from a playlist, and the company does not want to change those URLs. Which solution will restrict access with the LEAST effort?",
+    "options": [
+      "Generate a CloudFront signed URL for every segment file in every playlist.",
+      "Use CloudFront geo restriction to allow only countries where subscribers live.",
+      "Issue CloudFront signed cookies to subscribers after they sign in, and require them on the video cache behavior.",
+      "Use an S3 bucket policy that allows only subscriber IP addresses."
+    ],
+    "answer": [2],
+    "explanation": "Signed cookies grant access to multiple restricted files, such as all segments of a video, without changing the object URLs. Signed URLs would require rewriting every segment URL in each playlist. Geo restriction does not verify subscriptions, and subscriber IP addresses change frequently and do not reach S3 directly when CloudFront is used.",
+    "subtopic": "Signed cookies"
+  },
+  {
+    "id": "cdn-018",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An online bookstore sells downloadable e-books stored behind CloudFront. After a purchase, the customer must receive a link that downloads only that one file and expires after one hour. Some customers use download managers that do not support cookies. Which solution will meet these requirements?",
+    "options": [
+      "CloudFront signed cookies with a custom policy",
+      "A CloudFront signed URL with an expiration time of one hour",
+      "S3 presigned URLs for the S3 origin with OAC enabled",
+      "CloudFront geo restriction with an allow list"
+    ],
+    "answer": [1],
+    "explanation": "A signed URL grants access to an individual file with an expiration time and works with clients that do not handle cookies. Signed cookies fit multiple files and require cookie support. An S3 presigned URL would bypass CloudFront and is incompatible with the bucket access being limited to CloudFront, and geo restriction does not control access per purchase.",
+    "subtopic": "Signed URLs"
+  },
+  {
+    "id": "cdn-019",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company signs CloudFront URLs by using a CloudFront key pair that was created with the AWS account root user years ago. A new security policy forbids any use of the root user and requires keys to be rotated without root access. What should a solutions architect do?",
+    "options": [
+      "Generate a new CloudFront key pair with the root user once and store it in AWS Secrets Manager.",
+      "Replace signed URLs with an S3 bucket policy that checks the aws:SourceIp condition.",
+      "Use IAM user access keys to sign the URLs instead of a CloudFront key pair.",
+      "Upload a public key to CloudFront, add it to a key group, set the key group as a trusted key group on the cache behavior, and store the private key in AWS Secrets Manager."
+    ],
+    "answer": [3],
+    "explanation": "Trusted key groups are the recommended signer type: public keys are managed through IAM-controlled CloudFront APIs without the root user, and keys can be rotated by adding and removing them in the group. Creating CloudFront key pairs still requires the root user. Source IP conditions do not provide per-user signed access, and IAM access keys cannot sign CloudFront URLs.",
+    "subtopic": "Key groups"
+  },
+  {
+    "id": "cdn-020",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A streaming service distributes licensed content through CloudFront. Its licensing agreement prohibits serving the content to viewers in three specific countries. Which solution meets this requirement with the LEAST effort?",
+    "options": [
+      "Enable CloudFront geographic restrictions with a block list that contains the three countries.",
+      "Create network ACLs that deny the IP ranges of the three countries.",
+      "Use Route 53 geolocation records that return no answer for the three countries.",
+      "Use a Lambda@Edge function that looks up each viewer IP address in a third-party database."
+    ],
+    "answer": [0],
+    "explanation": "CloudFront geo restriction uses a GeoIP database to block requests from listed countries and returns HTTP 403 with no custom code. Network ACLs do not apply to CloudFront edge locations. DNS-based blocking can be bypassed by using other resolvers, and a custom Lambda@Edge lookup adds cost and maintenance.",
+    "subtopic": "CloudFront geo restriction"
+  },
+  {
+    "id": "cdn-021",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company must block viewers from two countries that its CloudFront-hosted application does not serve. However, a partner's office in one of those countries must still be able to access the application from a known set of IP addresses. Which solution will meet these requirements?",
+    "options": [
+      "Use CloudFront geo restriction with a block list for both countries and add the partner IP addresses as an exception.",
+      "Use CloudFront signed URLs for all viewers in the two countries.",
+      "Associate an AWS WAF web ACL with the distribution that has an IP set allow rule for the partner addresses, evaluated before a geo match block rule for the two countries.",
+      "Use a security group on the origin that allows the partner IP addresses and denies the two countries."
+    ],
+    "answer": [2],
+    "explanation": "AWS WAF rules are evaluated in priority order, so an allow rule for the partner IP set can be placed before a geo match rule that blocks the countries. CloudFront's built-in geo restriction works only at country level and does not support IP exceptions. Signed URLs do not block countries, and security groups have no deny rules and cannot match countries.",
+    "subtopic": "AWS WAF geo match"
+  },
+  {
+    "id": "cdn-022",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An insurance company collects application forms through CloudFront. The form includes a national ID number. Many internal services process the request, but only a single claims-processing service may ever see the ID number in plaintext. Which solution will meet this requirement?",
+    "options": [
+      "Enable HTTPS between viewers and CloudFront and between CloudFront and the origin.",
+      "Use CloudFront field-level encryption to encrypt the ID number field with a public key, and give only the claims-processing service the private key.",
+      "Enable SSE-KMS on the S3 bucket where the forms are stored.",
+      "Use AWS WAF to remove the ID number field from requests."
+    ],
+    "answer": [1],
+    "explanation": "Field-level encryption encrypts specified POST form fields at the edge with a public key, so the data stays encrypted through all downstream services until the holder of the private key decrypts it. HTTPS protects data only in transit and it is decrypted at the origin. SSE-KMS protects data at rest but not as it passes through internal services, and removing the field would lose required data.",
+    "subtopic": "Field-level encryption"
+  },
+  {
+    "id": "cdn-023",
+    "topic": "cdn",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A website served through CloudFront receives billions of requests each month. The company needs to redirect legacy URLs to new paths and normalize a header before the cache lookup. The logic is simple, needs no network calls, and must run with sub-millisecond latency. Which solution is MOST cost-effective?",
+    "options": [
+      "Lambda@Edge functions on the origin request event",
+      "An AWS Lambda function behind Amazon API Gateway that the origin calls",
+      "Lambda@Edge functions on the viewer request event",
+      "CloudFront Functions on the viewer request event"
+    ],
+    "answer": [3],
+    "explanation": "CloudFront Functions run lightweight JavaScript at edge locations for viewer request and response events, scale to millions of requests per second, and cost much less than Lambda@Edge, which suits simple redirects and header normalization. Lambda@Edge costs more and has higher latency. Origin request triggers run after the cache lookup, too late to normalize the cache key, and an API Gateway call adds latency and cost.",
+    "subtopic": "CloudFront Functions"
+  },
+  {
+    "id": "cdn-024",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses CloudFront to serve a personalized site. On cache misses, the company must look up the user's tier in an Amazon DynamoDB table and choose between two origins based on that tier. The lookup takes about 50 ms. Which solution will meet these requirements?",
+    "options": [
+      "A Lambda@Edge function on the origin request event that queries DynamoDB and sets the origin",
+      "A CloudFront Function on the viewer request event that queries DynamoDB and sets the origin",
+      "An origin group that contains both origins with failover criteria based on the user tier",
+      "A cache behavior with a path pattern for each user tier"
+    ],
+    "answer": [0],
+    "explanation": "Lambda@Edge can make network calls, can run on the origin request event (only on cache misses), and can modify the origin for the request, which fits a DynamoDB lookup. CloudFront Functions have no network access and very short execution limits. Origin groups provide failover, not routing logic, and path patterns cannot express a value stored in a database.",
+    "subtopic": "Lambda@Edge"
+  },
+  {
+    "id": "cdn-025",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A solutions architect is choosing between CloudFront Functions and Lambda@Edge for several edge use cases. Which statements correctly describe CloudFront Functions? (Select TWO.)",
+    "options": [
+      "They run only on viewer request and viewer response events.",
+      "They can make network calls to external services and AWS APIs.",
+      "They can be triggered on origin request and origin response events.",
+      "They can be written in Python and run for up to 30 seconds.",
+      "They are designed for lightweight, high-scale tasks such as header manipulation, URL rewrites, and redirects."
+    ],
+    "answer": [0, 4],
+    "explanation": "CloudFront Functions run JavaScript on viewer request and viewer response events with sub-millisecond execution, making them ideal for simple, high-volume transformations. They cannot make network calls or access the request body. Origin request and response triggers, Python support, and longer execution times are characteristics of Lambda@Edge.",
+    "subtopic": "CloudFront Functions vs Lambda@Edge"
+  },
+  {
+    "id": "cdn-026",
+    "topic": "cdn",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company serves a read-only product catalog through CloudFront from an ALB in us-east-1. An identical stack runs behind an ALB in us-west-2. The company wants CloudFront to retry requests against us-west-2 automatically when the us-east-1 origin returns 5xx errors or cannot be reached. Which solution will meet this requirement?",
+    "options": [
+      "Create two cache behaviors with the same path pattern, one for each ALB.",
+      "Enable Origin Shield in us-west-2 for the existing origin.",
+      "Create an origin group with the us-east-1 ALB as primary and the us-west-2 ALB as secondary, with failover on 500, 502, 503, and 504 status codes.",
+      "Add the us-west-2 ALB as a target of the us-east-1 ALB."
+    ],
+    "answer": [2],
+    "explanation": "An origin group makes CloudFront send a request to the secondary origin when the primary returns one of the configured status codes or fails to connect, which provides automatic origin failover for read requests. Cache behaviors cannot share an identical path pattern. Origin Shield is a caching layer, not a failover mechanism, and an ALB cannot register another Region's ALB as a target.",
+    "subtopic": "Origin failover"
+  },
+  {
+    "id": "cdn-027",
+    "topic": "cdn",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company uses a CloudFront origin group with ALBs in two Regions. During a test outage of the primary Region, product page requests succeeded, but checkout requests sent with HTTP POST failed. The company needs automatic Regional failover for both reads and writes while continuing to use CloudFront. Which solution will meet this requirement?",
+    "options": [
+      "Add the POST method to the origin group failover criteria.",
+      "Use a single custom origin whose domain name is a Route 53 failover record that points to the two Regional ALBs.",
+      "Increase the origin connection timeout so that POST requests wait for the primary Region to recover.",
+      "Configure a CloudFront Function that resends failed POST requests to the secondary ALB."
+    ],
+    "answer": [1],
+    "explanation": "CloudFront origin failover applies only to GET, HEAD, and OPTIONS requests, so writes need failover at another layer, such as an origin domain name that Route 53 fails over between Regions based on health checks. Failover criteria are status codes, not methods. Longer timeouts only delay errors, and CloudFront Functions cannot make network requests to resend traffic.",
+    "subtopic": "Origin failover limitations"
+  },
+  {
+    "id": "cdn-028",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company's website runs behind CloudFront. The company is seeing SQL injection attempts and bursts of requests from individual IP addresses that overload the login page. The company wants to stop these requests at the edge with the LEAST operational overhead. Which solution will meet these requirements?",
+    "options": [
+      "Rely on AWS Shield Standard, which is enabled automatically for CloudFront.",
+      "Restrict the origin's security group to the IP addresses of legitimate users.",
+      "Deploy AWS Network Firewall in the origin VPC with SQL injection rules.",
+      "Associate an AWS WAF web ACL with the distribution that uses an AWS managed SQL injection rule group and a rate-based rule for the login path."
+    ],
+    "answer": [3],
+    "explanation": "AWS WAF web ACLs for CloudFront are evaluated at edge locations; managed rule groups detect SQL injection, and rate-based rules block IP addresses that exceed a request threshold. Shield Standard protects against network and transport layer DDoS attacks, not application-layer SQL injection. Listing legitimate user IPs is impractical, and Network Firewall in the VPC does not stop traffic at the edge.",
+    "subtopic": "AWS WAF on CloudFront"
+  },
+  {
+    "id": "cdn-029",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A gaming company runs multiplayer game servers that communicate with players over a custom UDP protocol. Servers run in three Regions. The company wants to reduce latency and jitter for players worldwide by routing traffic over the AWS global network. Which service should the company use?",
+    "options": [
+      "AWS Global Accelerator",
+      "Amazon CloudFront",
+      "Amazon S3 Transfer Acceleration",
+      "Amazon API Gateway edge-optimized endpoints"
+    ],
+    "answer": [0],
+    "explanation": "Global Accelerator accepts TCP and UDP traffic at the nearest edge location and carries it over the AWS global network to the optimal Regional endpoint, improving latency and jitter. CloudFront serves HTTP and HTTPS (including WebSocket) and does not proxy custom UDP protocols. Transfer Acceleration speeds S3 uploads, and API Gateway is for HTTP APIs.",
+    "subtopic": "AWS Global Accelerator"
+  },
+  {
+    "id": "cdn-030",
+    "topic": "cdn",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A B2B company runs its API behind Network Load Balancers in us-east-1 and eu-west-1. Enterprise customers must add the API's IP addresses to their outbound firewall allow lists, and those addresses must not change even if the company adds or replaces Regions. Which solution will meet these requirements?",
+    "options": [
+      "Assign Elastic IP addresses to the NLB in each Region and share all of them with customers.",
+      "Use a CloudFront distribution and share the IP ranges of all edge locations with customers.",
+      "Create an AWS Global Accelerator accelerator with endpoint groups for both Regions and share its two static anycast IP addresses.",
+      "Use Route 53 latency routing with health checks and share the current DNS answers with customers."
+    ],
+    "answer": [2],
+    "explanation": "Global Accelerator provides two static anycast IP addresses that stay the same while endpoints and Regions behind them change, which is ideal for allow listing. Per-Region Elastic IPs change whenever a Region is added or replaced. CloudFront edge IP ranges are large and change over time, and DNS answers are not fixed addresses.",
+    "subtopic": "Global Accelerator static IPs"
+  },
+  {
+    "id": "cdn-031",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company offers a video-on-demand library made of large, cacheable MP4 files, and a real-time voice chat feature that uses a UDP-based protocol. Both are used by customers worldwide, and the backends run in two AWS Regions. The company wants to optimize performance for both workloads. Which solution will meet these requirements?",
+    "options": [
+      "Use AWS Global Accelerator for both the video files and the voice chat feature.",
+      "Use CloudFront to cache and deliver the video files, and use AWS Global Accelerator for the voice chat traffic.",
+      "Use CloudFront for both the video files and the voice chat feature.",
+      "Use S3 Transfer Acceleration for the video files and Route 53 latency routing for voice chat."
+    ],
+    "answer": [1],
+    "explanation": "CloudFront caches content at edge locations, which is the right fit for large, cacheable video files, while Global Accelerator proxies UDP traffic over the AWS network to the best Regional endpoint. Global Accelerator does not cache, so using it for video gives no caching benefit, and CloudFront cannot carry a custom UDP protocol. Transfer Acceleration targets uploads to S3, and DNS routing alone does not improve the network path.",
+    "subtopic": "CloudFront vs Global Accelerator"
+  },
+  {
+    "id": "cdn-032",
+    "topic": "cdn",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company uses AWS Global Accelerator with endpoint groups in us-east-1 and ap-northeast-1. Each endpoint group contains two ALBs. The company needs to send less traffic to us-east-1 during maintenance and to shift traffic gradually between the two ALBs inside ap-northeast-1 during a blue/green deployment. Which Global Accelerator features should be used? (Select TWO.)",
+    "options": [
+      "Client affinity on the listener",
+      "A new pair of static IP addresses for each deployment",
+      "The traffic dial on the us-east-1 endpoint group",
+      "Endpoint weights for the ALBs in the ap-northeast-1 endpoint group",
+      "An origin group with the two ALBs as primary and secondary"
+    ],
+    "answer": [2, 3],
+    "explanation": "The traffic dial controls the percentage of traffic that an endpoint group (a Region) receives, and endpoint weights control how traffic is split between endpoints within one endpoint group. Client affinity keeps a client on the same endpoint but does not shift traffic. Static IPs stay the same across changes, and origin groups are a CloudFront feature.",
+    "subtopic": "Global Accelerator traffic dials and weights"
+  },
+  {
+    "id": "cdn-033",
+    "topic": "cdn",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a TCP-based trading API in two Regions and uses Route 53 failover records. During a recent test, many clients kept connecting to the failed Region for a long time because their devices cached DNS answers beyond the record TTL. The company needs failover in under a minute that does not depend on client DNS caching. Which solution will meet this requirement?",
+    "options": [
+      "Place both Regional endpoints behind an AWS Global Accelerator accelerator so clients connect to its static IP addresses.",
+      "Lower the TTL of the Route 53 failover records to 1 second.",
+      "Replace failover routing with Route 53 multivalue answer routing.",
+      "Use a CloudFront origin group with both Regional endpoints."
+    ],
+    "answer": [0],
+    "explanation": "With Global Accelerator, clients always connect to the same static anycast IPs, and Global Accelerator health checks redirect traffic to healthy endpoints in another Region without any DNS change. Lowering TTLs or changing DNS routing still depends on clients honoring TTLs. CloudFront does not support a raw TCP trading protocol, and its origin failover applies only to some HTTP methods.",
+    "subtopic": "Global Accelerator failover"
+  },
+  {
+    "id": "cdn-034",
+    "topic": "cdn",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A regional e-commerce company uses CloudFront, but all of its customers are in North America and Europe. The company wants to reduce CloudFront costs without affecting those customers. What should the company do?",
+    "options": [
+      "Enable Origin Shield in a Region in North America.",
+      "Configure geo restriction to block all other continents.",
+      "Change the distribution to Price Class 100, which uses edge locations in North America and Europe.",
+      "Reduce the maximum TTL of the cache behaviors."
+    ],
+    "answer": [2],
+    "explanation": "Price classes limit which edge locations serve a distribution, and Price Class 100 uses the lower-cost locations in North America and Europe, which matches the customer base. Origin Shield adds a charge. Geo restriction blocks viewers but does not change the price paid for edge locations, and a shorter TTL increases origin requests.",
+    "subtopic": "CloudFront price classes"
+  },
+  {
+    "id": "cdn-035",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company serves software downloads through CloudFront from an on-premises origin that has limited bandwidth. When a new version is released, the origin is overwhelmed by requests for the same file coming from many regional edge caches around the world. Which solution will MOST reduce the load on the origin?",
+    "options": [
+      "Add a second cache behavior for the download path.",
+      "Enable CloudFront Origin Shield in the AWS Region closest to the origin.",
+      "Configure an origin group with the same origin as primary and secondary.",
+      "Use CloudFront Functions to add a Cache-Control header to viewer responses."
+    ],
+    "answer": [1],
+    "explanation": "Origin Shield is an additional centralized caching layer in front of the origin, so requests from all regional edge caches are consolidated and the origin receives far fewer duplicate requests. An extra cache behavior does not change how many caches request the file. An origin group with the same origin gives no relief, and changing viewer response headers does not affect how CloudFront fetches from the origin.",
+    "subtopic": "CloudFront Origin Shield"
+  },
+  {
+    "id": "cdn-036",
+    "topic": "cdn",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company distributes large installation files to users worldwide directly from public S3 object URLs. Data transfer out charges are high, and users far from the bucket's Region report slow downloads. Which solution will reduce costs and improve download performance?",
+    "options": [
+      "Enable S3 Transfer Acceleration on the bucket and share the accelerated endpoint.",
+      "Replicate the bucket to five Regions and give users a Region-specific URL.",
+      "Move the files to S3 Glacier Instant Retrieval to lower storage costs.",
+      "Serve the files through a CloudFront distribution with the bucket as an origin protected by OAC."
+    ],
+    "answer": [3],
+    "explanation": "Data transfer from S3 to CloudFront is free, CloudFront data transfer out is typically priced lower than S3 data transfer to the internet, and edge caching speeds up downloads, while OAC keeps the bucket private. Transfer Acceleration adds a per-GB charge and is designed mainly for uploads. Multi-Region replication adds storage and replication costs, and Glacier Instant Retrieval adds retrieval fees for frequently downloaded files.",
+    "subtopic": "CloudFront with S3 for cost"
+  },
+  {
+    "id": "cdn-037",
+    "topic": "cdn",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company serves product images through CloudFront from a fleet of EC2 instances. Although the images rarely change, the origin receives a request for almost every page view, and the company has had to scale out the fleet. The application returns the header Cache-Control: no-cache, max-age=0 for all responses. Which change will reduce origin load and cost?",
+    "options": [
+      "Configure the origin to return a long max-age Cache-Control value for image responses, or set a minimum TTL in the cache policy for the image path.",
+      "Create an invalidation for the image path every hour.",
+      "Add Lambda@Edge on the viewer response event to remove the Cache-Control header.",
+      "Enable field-level encryption for the image path."
+    ],
+    "answer": [0],
+    "explanation": "CloudFront honors origin Cache-Control headers within the cache policy's TTL limits, so returning a long max-age for images or enforcing a minimum TTL lets edge locations serve cached copies. Invalidations remove cached objects and would increase origin requests. Changing viewer response headers happens after the caching decision, and field-level encryption has no effect on caching.",
+    "subtopic": "CloudFront TTL and Cache-Control"
+  },
+  {
+    "id": "cdn-038",
+    "topic": "cdn",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company wants to lower its CloudFront bill. Most traffic is text-based HTML, CSS, and JSON, and nearly all viewers are in North America and Europe. Which actions will reduce costs? (Select TWO.)",
+    "options": [
+      "Create an invalidation for /* every hour.",
+      "Enable automatic compression so that CloudFront serves Gzip and Brotli compressed objects.",
+      "Use dedicated IP addresses for custom SSL instead of SNI.",
+      "Include all viewer headers in the cache key.",
+      "Select a price class that excludes edge locations in Regions where the company has no viewers."
+    ],
+    "answer": [1, 4],
+    "explanation": "Compressing text-based objects reduces the bytes transferred out, and a lower price class avoids the more expensive edge locations that the company does not need. Frequent invalidations cost money beyond the free tier and lower the cache hit ratio. Dedicated IP custom SSL carries a large monthly fee, and including all headers in the cache key lowers the hit ratio and increases origin costs.",
+    "subtopic": "CloudFront cost optimization"
+  },
+  {
+    "id": "cdn-039",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A healthcare company serves its patient portal through CloudFront with an ALB origin. Compliance requires that all traffic is encrypted in transit from the viewer to the origin, and users who type an http:// URL should still reach the site securely. Which configurations will meet these requirements? (Select TWO.)",
+    "options": [
+      "Set the viewer protocol policy to Redirect HTTP to HTTPS.",
+      "Set the origin protocol policy to HTTP only.",
+      "Set the origin protocol policy to HTTPS only and use a trusted ACM certificate on the ALB listener.",
+      "Enable field-level encryption for every request.",
+      "Enable geo restriction for countries outside the company's market."
+    ],
+    "answer": [0, 2],
+    "explanation": "Redirect HTTP to HTTPS upgrades viewers who use http:// to an encrypted connection, and an HTTPS-only origin protocol policy with a valid certificate on the ALB encrypts the CloudFront-to-origin hop. HTTP only to the origin would leave that hop unencrypted. Field-level encryption protects specific POST fields rather than the whole connection, and geo restriction does not provide encryption.",
+    "subtopic": "End-to-end HTTPS"
+  },
+  {
+    "id": "cdn-040",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security audit found that a company's website served through CloudFront is missing HTTP Strict Transport Security (HSTS) and X-Content-Type-Options headers. The origin is a legacy application that the team cannot modify easily. Which solution will add these headers to all responses with the LEAST operational overhead?",
+    "options": [
+      "Deploy a Lambda@Edge function on the origin response event that adds the headers.",
+      "Add a custom header in the origin settings of the distribution.",
+      "Attach a CloudFront response headers policy that includes the security headers to the cache behaviors.",
+      "Configure an AWS WAF rule that inserts the headers into responses."
+    ],
+    "answer": [2],
+    "explanation": "Response headers policies let CloudFront add security headers such as HSTS and X-Content-Type-Options to responses without code, and a managed security headers policy is available. Lambda@Edge works but adds code to maintain and per-request cost. Origin custom headers are sent to the origin, not to viewers, and AWS WAF custom header insertion applies to requests forwarded to the origin rather than to viewer responses.",
+    "subtopic": "Response headers policies"
+  },
+  {
+    "id": "cdn-041",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A solutions architect is comparing Amazon CloudFront and AWS Global Accelerator for a new global workload. Which statements are correct? (Select THREE.)",
+    "options": [
+      "CloudFront supports custom UDP-based applications such as VoIP.",
+      "Global Accelerator provides two static anycast IP addresses that front Regional endpoints.",
+      "Global Accelerator caches static content at edge locations.",
+      "Global Accelerator supports both TCP and UDP traffic.",
+      "Global Accelerator requires the application to be deployed in us-east-1.",
+      "CloudFront caches content at edge locations to reduce load on the origin."
+    ],
+    "answer": [1, 3, 5],
+    "explanation": "Global Accelerator gives a workload two static anycast IPs, supports TCP and UDP, and routes traffic over the AWS network to endpoints in any supported Region. CloudFront is a content delivery network that caches HTTP content at the edge to reduce origin load. CloudFront does not proxy custom UDP protocols, Global Accelerator does not cache content, and endpoints can be in many Regions.",
+    "subtopic": "CloudFront vs Global Accelerator"
+  },
+  {
+    "id": "cdn-042",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company hosts a static documentation site in Amazon S3 behind CloudFront. Links on the site point to directory-style paths such as /guides/setup/, and each directory contains an index.html file. Security requires that the bucket stay private and be readable only by CloudFront. Which solution will meet these requirements?",
+    "options": [
+      "Use the S3 static website endpoint as the origin and configure origin access control on it.",
+      "Use the S3 static website endpoint as the origin and add a bucket policy that allows public read access.",
+      "Use the S3 REST endpoint with origin access control and set the default root object to index.html.",
+      "Use the S3 REST endpoint with origin access control and a CloudFront Function on viewer request that appends index.html to URIs that end with a slash."
+    ],
+    "answer": [3],
+    "explanation": "The REST endpoint with OAC keeps the bucket private, and because the default root object only applies to the root URL, a viewer request CloudFront Function is needed to rewrite /guides/setup/ to /guides/setup/index.html. S3 website endpoints are treated as custom origins, do not support OAC, and require public read access, which violates the security requirement. The default root object alone leaves subdirectory requests returning errors.",
+    "subtopic": "S3 REST endpoint with OAC and URL rewrites"
+  },
+  {
+    "id": "cdn-043",
+    "topic": "cdn",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company serves static web content from an S3 bucket in us-east-1 through CloudFront. The company must continue to serve the latest content even if S3 in us-east-1 becomes unavailable, without manual intervention. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Create a CloudFront origin group with the us-east-1 bucket as primary and a bucket in another Region as secondary, with failover on 5xx and 403/404 status codes.",
+      "Enable CloudFront Origin Shield so that it serves all objects if the origin fails.",
+      "Enable S3 Transfer Acceleration on the us-east-1 bucket.",
+      "Enable S3 Cross-Region Replication from the us-east-1 bucket to the secondary bucket.",
+      "Set the default TTL of the distribution to one year so that cached objects survive the outage."
+    ],
+    "answer": [0, 3],
+    "explanation": "An origin group makes CloudFront fail over automatically to the secondary bucket, and Cross-Region Replication keeps that bucket up to date with the latest content. Origin Shield is a cache that cannot serve objects it does not hold. Transfer Acceleration speeds uploads, and very long TTLs would serve stale content and still fail for uncached objects.",
+    "subtopic": "Origin groups with S3"
+  },
+  {
+    "id": "cdn-044",
+    "topic": "cdn",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a dynamic, non-cacheable HTTPS API behind an ALB in one Region. Users on other continents experience slow responses. The company wants to accelerate the API by using the AWS global network and must block malicious HTTP requests at edge locations before they reach the Region. Which solution will meet these requirements?",
+    "options": [
+      "Place an AWS Global Accelerator accelerator in front of the ALB and associate an AWS WAF web ACL with the accelerator.",
+      "Enable S3 Transfer Acceleration and route API calls through the accelerated endpoint.",
+      "Deploy the API to additional Regions and use Route 53 geolocation routing with AWS WAF on each ALB.",
+      "Place a CloudFront distribution in front of the ALB with a caching-disabled cache policy, all HTTP methods allowed, and an AWS WAF web ACL associated with the distribution."
+    ],
+    "answer": [3],
+    "explanation": "CloudFront accelerates dynamic content through optimized, persistent connections over the AWS network even when caching is disabled, and a WAF web ACL on the distribution inspects requests at edge locations. AWS WAF cannot be associated with a Global Accelerator accelerator. Transfer Acceleration applies only to S3, and WAF on Regional ALBs filters traffic only after it reaches the Region.",
+    "subtopic": "CloudFront for dynamic content with WAF"
+  },
+  {
+    "id": "cdn-045",
+    "topic": "cdn",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company serves example.com and a growing number of subdomains, such as shop.example.com and blog.example.com, through CloudFront. New subdomains are added every month. The company wants one ACM certificate that covers the apex domain and all current and future first-level subdomains. Which certificate should the company request?",
+    "options": [
+      "A certificate for *.example.com only",
+      "A certificate for example.com with *.example.com as an additional name",
+      "A separate certificate for each subdomain, requested when it is created",
+      "A certificate for *.*.example.com"
+    ],
+    "answer": [1],
+    "explanation": "A wildcard name covers any single-level subdomain but not the apex, so the certificate must include both example.com and *.example.com. A wildcard alone leaves example.com uncovered. Separate certificates add ongoing work for every new subdomain, and multi-level wildcards such as *.*.example.com are not supported.",
+    "subtopic": "ACM wildcard certificates"
+  }
+]

@@ -1,0 +1,879 @@
+[
+  {
+    "id": "iam-org-001",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An IAM user has an identity-based policy that allows s3:* on all resources. The user is also a member of an IAM group whose policy explicitly denies s3:DeleteObject on the bucket named audit-logs. What happens when the user tries to delete an object from audit-logs?",
+    "options": [
+      "The request is allowed, because a policy attached directly to the user takes precedence over group policies.",
+      "The request is allowed, because the broader s3:* wildcard overrides more specific deny statements.",
+      "The request is denied only if the user signed in without MFA, because explicit denies apply only to sessions without MFA.",
+      "The request is denied, because an explicit deny in any applicable policy overrides any allow."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "IAM evaluates all applicable policies together: by default everything is implicitly denied, an allow can override that default, but an explicit deny always wins. It does not matter whether the deny comes from a user, group, or other policy. Wildcards do not override denies, and explicit denies apply regardless of MFA unless a condition says otherwise.",
+    "subtopic": "Policy Evaluation Logic"
+  },
+  {
+    "id": "iam-org-002",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A member account in AWS Organizations has a single SCP attached that allows only ec2:*, s3:*, and cloudwatch:* actions; the default FullAWSAccess policy has been removed. An IAM role in the account has the AdministratorAccess managed policy. What happens when the role tries to create an Amazon DynamoDB table?",
+    "options": [
+      "The request is allowed, because the AdministratorAccess policy grants every action regardless of SCPs.",
+      "The request is denied, because SCPs define the maximum available permissions and the SCP does not allow DynamoDB actions.",
+      "The request is allowed, because SCPs restrict IAM users in member accounts but not IAM roles.",
+      "The request is denied, because SCPs grant permissions only to the root user of each member account."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An SCP acts as a permission guardrail: an action must be allowed by both the SCPs in the account's path and the identity's IAM policies. Because this allow-list SCP does not include DynamoDB, the action is denied even with AdministratorAccess. SCPs apply to all users and roles in member accounts, including the root user, and they never grant permissions on their own.",
+    "subtopic": "Service Control Policies"
+  },
+  {
+    "id": "iam-org-003",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company must prevent all member accounts in its organization from creating resources in any Region other than eu-central-1 and eu-west-1. Global services such as IAM, Amazon CloudFront, and Amazon Route 53 must continue to work. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Attach an IAM policy to every user and role in every account that allows actions only when aws:RequestedRegion matches one of the approved Regions.",
+      "Attach an SCP to the organization root that denies all actions except a NotAction list of global services when aws:RequestedRegion is not one of the two approved Regions.",
+      "Attach an SCP to the organization root that denies all actions whenever aws:RequestedRegion is not one of the two approved Regions, with no exceptions.",
+      "Disable every Region other than the two approved Regions in the account settings of each member account."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A single SCP with a Region condition enforces the restriction across all member accounts, and exempting global services with NotAction keeps them working because their requests are made to a fixed Region such as us-east-1. IAM policies in every account are hard to maintain and can be changed by account administrators. Denying everything without exceptions breaks global services, and Regions that are enabled by default cannot be disabled.",
+    "subtopic": "Service Control Policies"
+  },
+  {
+    "id": "iam-org-004",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A developer's IAM role has an identity-based policy that allows s3:* and dynamodb:*. The role also has a permissions boundary that allows s3:* and sqs:*. No other policies apply. Which actions can the developer perform?",
+    "options": [
+      "Only Amazon S3 actions",
+      "Amazon S3, Amazon DynamoDB, and Amazon SQS actions",
+      "Amazon S3 and Amazon DynamoDB actions",
+      "Amazon S3 and Amazon SQS actions"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A permissions boundary sets the maximum permissions an identity-based policy can grant, so the effective permissions are the intersection of the two. Only S3 is allowed by both. DynamoDB is outside the boundary, and SQS is in the boundary but not granted by the identity policy, and a boundary never grants permissions by itself.",
+    "subtopic": "Permissions Boundaries"
+  },
+  {
+    "id": "iam-org-005",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company wants to let application team leads create IAM roles for their own AWS Lambda functions without opening a ticket. The team leads must not be able to create roles with more permissions than a set of approved services allows, and they must not be able to escalate their own privileges. Which solution meets these requirements?",
+    "options": [
+      "Grant the team leads the AdministratorAccess policy and review AWS CloudTrail logs every week for privilege escalation.",
+      "Attach an SCP to the account that denies iam:CreateRole for every principal, including the team leads.",
+      "Allow iam:CreateRole only when the iam:PermissionsBoundary condition key equals an approved boundary policy, and deny actions that remove or change that boundary.",
+      "Allow iam:CreateRole without conditions and rely on the Lambda service-linked role to limit the permissions of each function."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Requiring a specific permissions boundary on every role the team leads create caps those roles at the approved permissions, and denying changes to boundaries prevents them from removing the cap. AdministratorAccess with after-the-fact review does not prevent escalation. Denying iam:CreateRole blocks the self-service requirement, and Lambda functions use execution roles that the team leads would define, not a service-linked role.",
+    "subtopic": "Permissions Boundaries"
+  },
+  {
+    "id": "iam-org-006",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company requires that IAM users can stop or terminate production Amazon EC2 instances only if they authenticated with multi-factor authentication (MFA) during their current session. Which solution meets this requirement?",
+    "options": [
+      "Enable MFA on the account root user and require engineers to sign in as the root user for production changes.",
+      "Enable termination protection on each production instance and associate an MFA device with the protection setting.",
+      "Add a condition that requires aws:MultiFactorAuthPresent to be true to the policy statement that allows ec2:StopInstances and ec2:TerminateInstances.",
+      "Add an aws:SourceIp condition so that the stop and terminate actions are allowed only from the corporate network."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "The aws:MultiFactorAuthPresent condition key is true only when the request uses credentials from an MFA-authenticated session, so the allow applies only in that case. Using the root user for routine work violates best practice. Termination protection has no MFA setting and does not cover stopping instances, and a source IP condition restricts location rather than requiring MFA.",
+    "subtopic": "IAM Policy Conditions"
+  },
+  {
+    "id": "iam-org-007",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "An application that runs under an IAM role in account A must read objects from an S3 bucket in account B. The bucket uses SSE-S3 encryption and ACLs are disabled. Which configurations are required? (Select TWO.)",
+    "options": [
+      "An AWS RAM resource share that shares the bucket from account B with account A",
+      "An identity-based policy on the role in account A that allows s3:GetObject on the bucket's objects",
+      "A bucket policy in account B that allows the account A role to perform s3:GetObject on the bucket's objects",
+      "An SCP attached to account B that allows the account A role to perform s3:GetObject",
+      "A trust policy on the bucket in account B that allows sts:AssumeRole from account A"
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "For cross-account access to a resource with a resource-based policy, the resource owner must allow the external principal in the bucket policy and the principal's own account must also allow the action in an identity-based policy. Buckets do not have trust policies; trust policies belong to roles. SCPs only restrict principals in their own organization and never grant access, and S3 buckets are not shared through AWS RAM.",
+    "subtopic": "Cross-Account Access"
+  },
+  {
+    "id": "iam-org-008",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An application on Amazon EC2 writes items to an Amazon DynamoDB table. The developers currently keep an IAM user's access key and secret access key in a configuration file on the instance. Which change is MOST secure?",
+    "options": [
+      "Create an IAM role with the required DynamoDB permissions and attach it to the instance through an instance profile.",
+      "Move the access keys into the instance user data and rotate them every 90 days.",
+      "Create a separate IAM user for each instance and bake its access keys into the AMI.",
+      "Store the access keys in an S3 bucket with SSE-S3 encryption and download them at startup."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "An instance profile delivers temporary, automatically rotated role credentials to the instance through the metadata service, so no long-term keys are stored anywhere. User data, AMIs, and S3 downloads all still rely on long-term access keys that can leak and must be rotated manually.",
+    "subtopic": "IAM Roles"
+  },
+  {
+    "id": "iam-org-009",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A developer has permission to call ec2:RunInstances and can launch instances successfully. When the developer tries to launch an instance with an IAM instance profile attached, the request fails with an authorization error. What permission must be added to the developer's policy?",
+    "options": [
+      "iam:PassRole for the role that is contained in the instance profile",
+      "sts:AssumeRole for the role that is contained in the instance profile",
+      "iam:CreateServiceLinkedRole for the Amazon EC2 service",
+      "iam:UpdateAssumeRolePolicy for the role that is contained in the instance profile"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "To give a role to an AWS service, such as attaching it to an EC2 instance, the caller needs iam:PassRole on that role, which prevents users from handing services more privileges than they have themselves. sts:AssumeRole would let the developer use the role directly, which is not what the launch requires. Service-linked roles are unrelated to instance profiles, and changing the trust policy is neither needed nor safe.",
+    "subtopic": "iam:PassRole"
+  },
+  {
+    "id": "iam-org-010",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An administrator notices a role named AWSServiceRoleForElasticLoadBalancing in an account and wants to reduce its permissions to follow the principle of least privilege. What should a solutions architect advise?",
+    "options": [
+      "Detach the AWS managed policy from the role and attach a custom policy that grants fewer Elastic Load Balancing permissions.",
+      "Attach a permissions boundary to the role so that Elastic Load Balancing can perform only the required actions.",
+      "It is a service-linked role whose permissions are predefined by the service and cannot be edited; it can be deleted only after the service no longer uses it.",
+      "Attach an SCP to the account that denies the role's actions, because SCPs restrict service-linked roles."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Service-linked roles are created and owned by an AWS service, include exactly the permissions the service needs, and their permissions and trust policies cannot be modified by the account owner. You cannot swap their policies or add boundaries to them. SCPs do not affect service-linked roles, so they cannot be used to restrict them either.",
+    "subtopic": "Service-Linked Roles"
+  },
+  {
+    "id": "iam-org-011",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A solutions architect is reviewing how different workloads authenticate to AWS. In which scenarios should an IAM role with temporary credentials be used instead of an IAM user with long-term access keys? (Select THREE.)",
+    "options": [
+      "Employees who sign in through the corporate SAML identity provider to use the AWS Management Console",
+      "A legacy third-party tool that supports only a static access key ID and secret access key",
+      "An AWS Lambda function that writes items to an Amazon DynamoDB table",
+      "An on-premises script that runs where no form of temporary credential retrieval is possible",
+      "Engineers from a partner's AWS account who need temporary access to troubleshoot resources",
+      "A break-glass identity that must work even when the corporate identity provider is unavailable"
+    ],
+    "answer": [
+      0,
+      2,
+      4
+    ],
+    "explanation": "AWS services such as Lambda, cross-account partners, and federated workforce users should all obtain temporary credentials by assuming roles. A tool that only accepts static keys, an emergency break-glass identity that cannot depend on the IdP, and a script that truly cannot retrieve temporary credentials are the narrow cases where an IAM user may still be justified, ideally with tight permissions, MFA where possible, and key rotation.",
+    "subtopic": "When to Use Roles"
+  },
+  {
+    "id": "iam-org-012",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company grants a third-party monitoring SaaS provider access to its AWS account through a cross-account IAM role. The security team is concerned that another customer of the provider could trick the provider into using this role on that customer's behalf. Which solution addresses this confused deputy risk?",
+    "options": [
+      "Create an IAM user for the provider instead of a role, and require MFA for every API call the provider makes.",
+      "Add an aws:SourceIp condition with the provider's IP ranges to the permissions policy attached to the role.",
+      "Share the role with the provider's AWS account through AWS RAM instead of using a trust policy.",
+      "Require a unique external ID in the role's trust policy with the sts:ExternalId condition, and have the provider supply it when assuming the role."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An external ID that is unique to each customer ensures the provider assumes the role only when acting for this customer, which mitigates the confused deputy problem. An IAM user with long-term keys is less secure and does not address the issue. The provider's IP addresses are shared by all its customers, so a source IP condition does not distinguish them, and IAM roles cannot be shared through AWS RAM.",
+    "subtopic": "Cross-Account Roles"
+  },
+  {
+    "id": "iam-org-013",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Developers sign in to a central identity account with IAM users. They need to switch to an Admin role in a separate production account when performing releases. Which configuration enables this?",
+    "options": [
+      "Create IAM users with matching names in the production account and enable password synchronization between accounts.",
+      "Grant the developers iam:PassRole on the production role from a policy in the identity account.",
+      "Trust the identity account in the production role's trust policy, and grant the developers sts:AssumeRole on the role's ARN in the identity account.",
+      "Attach the production role's permissions policy directly to the developers' IAM group in the identity account."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Cross-account role switching requires both sides: the role's trust policy must trust the source account (or specific principals), and the source principals need permission to call sts:AssumeRole on that role. IAM has no password synchronization between accounts. iam:PassRole is for handing a role to a service, and permissions policies in one account cannot grant access to resources in another account by themselves.",
+    "subtopic": "Role Switching"
+  },
+  {
+    "id": "iam-org-014",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security team wants to reduce the permissions of dozens of IAM roles by removing access to services and actions that the roles have not used in the last 90 days. Which approach meets this requirement with the LEAST effort?",
+    "options": [
+      "Use AWS Trusted Advisor to automatically remove the unused permissions from every role in the account.",
+      "Use IAM last accessed information and IAM Access Analyzer unused access findings to identify unused services and actions, then tighten the policies.",
+      "Enable CloudTrail Insights on the account so that unused permissions are deleted from the roles.",
+      "Download the IAM credential report to see which policies and actions each role has used."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "IAM last accessed information shows when services and many actions were last used, and Access Analyzer unused access findings highlight unused roles, keys, and permissions, which makes right-sizing policies straightforward. Trusted Advisor does not edit policies, and CloudTrail Insights detects unusual API activity rather than unused permissions. The credential report lists IAM users and their credentials, not role permission usage.",
+    "subtopic": "Least Privilege"
+  },
+  {
+    "id": "iam-org-015",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company has more than 50 project teams that share one AWS account. Engineers must be able to start and stop only the EC2 instances that belong to their own project, and new projects are added every month. The company wants to avoid writing a new policy for each project. Which solution meets these requirements?",
+    "options": [
+      "Create an IAM group for each project with a policy that lists the ARNs of that project's instances.",
+      "Place each project's instances in a separate VPC and restrict the engineers with security group rules.",
+      "Use AWS Resource Groups for each project and grant engineers iam:PassRole for their project's group.",
+      "Tag principals and instances with a project tag and use a policy condition that requires aws:ResourceTag/project to match aws:PrincipalTag/project."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Attribute-based access control compares tags on the principal with tags on the resource, so one policy works for every current and future project. Per-project groups with instance ARNs require constant policy updates. Security groups control network traffic, not EC2 API calls, and Resource Groups combined with iam:PassRole do not restrict instance actions.",
+    "subtopic": "Attribute-Based Access Control"
+  },
+  {
+    "id": "iam-org-016",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company has 30 sandbox accounts and 12 production accounts in AWS Organizations. Sandbox accounts need one set of restrictions and production accounts need a different set. The company wants to manage as few policy attachments as possible, including for accounts added later. What should a solutions architect do?",
+    "options": [
+      "Place the accounts in separate sandbox and production OUs and attach the appropriate SCPs to each OU.",
+      "Attach the appropriate SCPs directly to each of the 42 member accounts and to new accounts as they are created.",
+      "Create IAM groups named sandbox and production in the management account and attach the policies to them.",
+      "Tag each account as sandbox or production and attach the SCPs to the tag keys in the organization."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Organizational units group accounts so that a policy attached to an OU is inherited by every account in it, including accounts moved in later. Attaching SCPs to every account multiplies the work. IAM groups in the management account do not apply to other accounts, and SCPs are attached to the root, OUs, or accounts, not to tags.",
+    "subtopic": "Organizational Units"
+  },
+  {
+    "id": "iam-org-017",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company must ensure that Amazon S3 buckets in all of its member accounts can never be accessed by principals outside its organization, even if a developer writes a bucket policy that grants access to an external account. The control must be centrally enforced. Which solution meets these requirements?",
+    "options": [
+      "Attach an SCP to the organization root that denies all S3 actions for principals that are outside the organization.",
+      "Deploy an AWS Config rule to every account that detects bucket policies granting external access and notifies the security team.",
+      "Attach a resource control policy (RCP) to the organization root that denies S3 access when aws:PrincipalOrgID does not match the organization ID, with exceptions for required AWS service principals.",
+      "Use IAM Access Analyzer in each account to automatically delete bucket policies that grant cross-account access."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "RCPs set the maximum permissions on resources in member accounts regardless of who calls them, so they can block external principals even when a bucket policy allows them. SCPs restrict only principals inside the organization's accounts and have no effect on external callers. A Config rule only detects and notifies, and Access Analyzer reports external access findings but does not delete policies.",
+    "subtopic": "Resource Control Policies"
+  },
+  {
+    "id": "iam-org-018",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A security team is designing its service control policy (SCP) strategy for AWS Organizations. Which statements about SCPs are correct? (Select TWO.)",
+    "options": [
+      "SCPs affect all IAM users and roles in member accounts, including each member account's root user.",
+      "An allow in an account's IAM policy can override a deny in an SCP attached to the account's OU.",
+      "SCPs restrict the permissions of service-linked roles in member accounts.",
+      "SCPs restrict users and roles in the management account of the organization.",
+      "SCPs never grant permissions; identities still need IAM policies that allow the actions."
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "SCPs only define the maximum available permissions, so IAM policies must still grant access, and they apply to every principal in member accounts, including the root user. SCPs do not affect service-linked roles or principals in the management account, which is one reason to keep workloads out of the management account. An explicit deny from an SCP cannot be overridden by any IAM allow.",
+    "subtopic": "Service Control Policies"
+  },
+  {
+    "id": "iam-org-019",
+    "topic": "iam-org",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company federates all workforce access to its AWS accounts through IAM Identity Center with an external identity provider. Leadership is concerned that an outage of the identity provider would lock administrators out of AWS during an incident. Which approach provides resilient emergency access while following security best practices?",
+    "options": [
+      "Share the management account's root user credentials with all administrators so they can sign in if the identity provider fails.",
+      "Configure IAM Identity Center to bypass the external identity provider automatically whenever the provider is unreachable.",
+      "Create a small number of break-glass IAM users with strong passwords and hardware MFA, store the credentials securely, and alert on every use.",
+      "Disable MFA for all administrator permission sets so that administrators can sign in faster during incidents."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A tightly controlled set of break-glass IAM users with MFA does not depend on the external IdP, and monitoring their use keeps them auditable. Sharing root credentials widely is a serious security risk. Identity Center has no automatic bypass of its configured identity source, and removing MFA weakens security without addressing an IdP outage.",
+    "subtopic": "Break-Glass Access"
+  },
+  {
+    "id": "iam-org-020",
+    "topic": "iam-org",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must ensure that every account in its Production OU backs up resources tagged backup=daily every day, keeps the backups for 35 days, and copies them to a second Region. Account administrators must not be able to opt out, and the setup must apply automatically to new production accounts. Which solution meets these requirements?",
+    "options": [
+      "Attach an SCP to the Production OU that requires every account to create daily EBS and RDS snapshots with 35-day retention.",
+      "Create a backup vault in the management account and share it with the Production OU accounts through AWS RAM.",
+      "Ask each account owner to create an AWS Backup plan and verify compliance monthly by using AWS Cost Explorer.",
+      "Attach an AWS Organizations backup policy to the Production OU that defines an AWS Backup plan with a daily rule, 35-day retention, and a cross-Region copy action."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Backup policies in AWS Organizations centrally define AWS Backup plans, including schedules, retention, and cross-Region copies, and apply them to every account in the target OU, including new ones. SCPs can only allow or deny actions and cannot create backups. Sharing a vault does not schedule backups, and relying on account owners with a cost tool for verification is manual and unreliable.",
+    "subtopic": "Organizations Backup Policies"
+  },
+  {
+    "id": "iam-org-021",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company has 12 AWS accounts that are each billed separately. The company plans to create an organization in AWS Organizations and enable consolidated billing. Which benefits will consolidated billing provide? (Select TWO.)",
+    "options": [
+      "Member accounts can no longer view their own costs, which reduces the risk of billing data exposure.",
+      "Reserved Instance and Savings Plans discounts purchased in one account can apply to eligible usage in other accounts.",
+      "Data transfer between accounts in the organization becomes free of charge in every Region.",
+      "Usage across all accounts is combined to qualify for volume pricing tiers, such as tiered Amazon S3 storage pricing.",
+      "SCPs are automatically created to stop resources when an account exceeds its share of the bill."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Consolidated billing gives one bill for all accounts, aggregates usage for volume discounts, and shares Reserved Instance and Savings Plans discounts across accounts by default. Data transfer is still charged normally between accounts. Member accounts can still see their own costs, and Organizations does not create cost-based SCPs automatically.",
+    "subtopic": "Consolidated Billing"
+  },
+  {
+    "id": "iam-org-022",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company is setting up IAM Identity Center so that employees can access several AWS accounts. What does a permission set represent in IAM Identity Center?",
+    "options": [
+      "A service control policy that Identity Center attaches to the OUs that contain the assigned accounts",
+      "An IAM group that Identity Center creates in the management account and adds assigned users to",
+      "A SAML assertion attribute that maps each workforce user to a matching IAM user in each account",
+      "A collection of policies that Identity Center provisions as an IAM role in each account where the permission set is assigned to users or groups"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A permission set is a template of AWS managed, customer managed, or inline policies (and optionally a permissions boundary); when it is assigned to an account, Identity Center creates a corresponding IAM role there that users assume through single sign-on. It is not an SCP, an IAM group, or a mapping to IAM users, since Identity Center users never need IAM users in the member accounts.",
+    "subtopic": "IAM Identity Center"
+  },
+  {
+    "id": "iam-org-023",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses Active Directory Federation Services (AD FS) on premises. Employees must access the AWS Management Console of a single AWS account with their corporate credentials, and the company does not want to create IAM users. Which solution meets these requirements?",
+    "options": [
+      "Create IAM users whose names match the Active Directory user names and synchronize their passwords from AD FS with a scheduled script.",
+      "Configure AD FS as a SAML 2.0 identity provider in IAM and create IAM roles that trust it, so users authenticate to AD FS and receive role credentials through AssumeRoleWithSAML.",
+      "Create an IAM OIDC identity provider for AD FS and attach a permissions policy directly to the provider so users can sign in.",
+      "Use Amazon Cognito user pools to replicate the Active Directory users into IAM users in the account."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "SAML 2.0 federation lets AD FS authenticate users and pass a SAML assertion to AWS, which maps users to IAM roles through AssumeRoleWithSAML and signs them in to the console with temporary credentials. Synchronizing IAM users creates the long-term identities the company wants to avoid. Permissions cannot be attached to an identity provider; federated users always receive permissions by assuming a role, and Cognito user pools do not create IAM users.",
+    "subtopic": "SAML 2.0 Federation"
+  },
+  {
+    "id": "iam-org-024",
+    "topic": "iam-org",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A payment application on Amazon EC2 sends its logs to a CloudWatch Logs log group. The operations team must be notified by email when the text PaymentFailed appears more than 10 times within 5 minutes. Which combination of steps meets this requirement? (Select TWO.)",
+    "options": [
+      "Create a subscription filter that sends all log events to Amazon S3 and query them with Amazon Athena every 5 minutes.",
+      "Enable AWS CloudTrail data events for the log group and alarm on the number of events recorded.",
+      "Create a metric filter on the log group that matches PaymentFailed and publishes a custom metric.",
+      "Increase the log group's retention period so that CloudWatch counts PaymentFailed messages automatically.",
+      "Create a CloudWatch alarm on the custom metric with a threshold of 10 over a 5-minute period that notifies an SNS topic."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "A metric filter turns matching log events into a CloudWatch metric, and an alarm on that metric with an SNS action sends the email when the threshold is crossed. CloudTrail records API calls, not application log contents. Scheduled Athena queries add latency and operational overhead, and retention settings only control how long logs are kept.",
+    "subtopic": "CloudWatch Logs Metric Filters"
+  },
+  {
+    "id": "iam-org-025",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company stores application logs in CloudWatch Logs log groups that use the default retention setting. Engineers need the logs for only 30 days for troubleshooting, but compliance requires keeping an archive for 1 year at the lowest possible cost. Which solution meets these requirements?",
+    "options": [
+      "Keep the default retention, which never expires logs, and delete old log streams manually each year.",
+      "Set log group retention to 30 days and deliver the logs to Amazon S3 with a lifecycle rule that moves them to an archive storage class and expires them after 1 year.",
+      "Set the retention period of every log group to 1 year and keep all logs in CloudWatch Logs.",
+      "Send the application logs to AWS CloudTrail and use the CloudTrail event history as the 1-year archive."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Short CloudWatch Logs retention keeps CloudWatch Logs storage costs low, and archiving to S3 with a lifecycle rule to a low-cost archive class meets the 1-year requirement cheaply. By default log groups never expire, so costs grow indefinitely and manual deletion adds overhead. Keeping a full year in CloudWatch Logs costs more than S3 archive storage, and CloudTrail does not store application logs.",
+    "subtopic": "CloudWatch Logs Retention"
+  },
+  {
+    "id": "iam-org-026",
+    "topic": "iam-org",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "During an incident, engineers need to interactively search and aggregate application logs across several CloudWatch Logs log groups, for example to find the 10 slowest requests in the last hour. They want results in seconds without moving the data elsewhere. Which feature should they use?",
+    "options": [
+      "An export of the logs to Amazon S3 followed by loading them into Amazon Redshift",
+      "Metric filters for every log field displayed on a CloudWatch dashboard",
+      "CloudTrail Lake queries run against the application log groups",
+      "CloudWatch Logs Insights queries run against the log groups"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "CloudWatch Logs Insights provides a purpose-built query language to filter, parse, and aggregate log data across log groups in place. Exporting to S3 and loading Redshift is slow for interactive troubleshooting. Metric filters need to be defined in advance and cannot answer ad hoc questions, and CloudTrail Lake stores CloudTrail and other activity events, not CloudWatch application log groups.",
+    "subtopic": "CloudWatch Logs Insights"
+  },
+  {
+    "id": "iam-org-027",
+    "topic": "iam-org",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A security team must receive application logs from CloudWatch Logs in 50 workload accounts in near real time and store them in a central logging account for analysis. The solution must scale without per-account custom code. Which solution meets these requirements?",
+    "options": [
+      "Run a daily CreateExportTask job in each account that exports the log groups to an S3 bucket in the logging account.",
+      "Enable CloudWatch cross-account observability so that log data is copied into storage in the logging account.",
+      "Create subscription filters on the log groups that send events to a cross-account CloudWatch Logs destination backed by Amazon Data Firehose in the logging account.",
+      "Configure an organization trail in AWS CloudTrail to deliver the application log groups to the logging account."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Subscription filters stream log events in near real time, and a cross-account destination backed by Firehose can deliver them to S3 or another analytics store in the logging account. Export tasks are batch jobs that do not meet the near-real-time requirement. Cross-account observability lets a monitoring account view source account data but does not copy it into central storage, and CloudTrail delivers API activity, not application logs.",
+    "subtopic": "CloudWatch Logs Subscriptions"
+  },
+  {
+    "id": "iam-org-028",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An auditor needs to know which IAM principal terminated an Amazon EC2 instance 3 days ago. The account has never had a CloudTrail trail configured. What should a solutions architect do?",
+    "options": [
+      "Search the CloudTrail Event history, which retains the last 90 days of management events by default.",
+      "Accept that the information is unavailable because CloudTrail records nothing until a trail is created.",
+      "Review the VPC Flow Logs for the subnet to find the TerminateInstances API call.",
+      "Review the instance's StatusCheckFailed metric in CloudWatch to identify who stopped it."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "CloudTrail is enabled by default for every account, and Event history provides 90 days of management events such as TerminateInstances with the calling identity. A trail is needed only for longer retention, data events, or delivery to S3 and CloudWatch Logs. Flow Logs capture network traffic metadata, not API calls, and CloudWatch metrics do not record who made a change.",
+    "subtopic": "CloudTrail Event History"
+  },
+  {
+    "id": "iam-org-029",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must record every GetObject and PutObject call made against an S3 bucket that holds sensitive customer documents, including which principal made each call. The company already has a CloudTrail trail that logs management events. What should a solutions architect do?",
+    "options": [
+      "Keep the existing configuration, because management events already include S3 object-level calls.",
+      "Enable S3 Versioning on the bucket so that each object version records who accessed it.",
+      "Configure the trail to log S3 data events for the bucket.",
+      "Enable CloudTrail Insights events on the existing trail."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Object-level operations such as GetObject and PutObject are data events, which are not logged by default and must be enabled on a trail (they incur additional charges). Management events cover control-plane operations such as CreateBucket or PutBucketPolicy. Versioning keeps object versions but does not log reads, and Insights detects unusual API activity rather than recording each object access.",
+    "subtopic": "CloudTrail Data Events"
+  },
+  {
+    "id": "iam-org-030",
+    "topic": "iam-org",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company with 80 AWS accounts in AWS Organizations must log API activity from all Regions in every account, including accounts created in the future, to a central S3 bucket. Administrators of member accounts must not be able to stop or modify this logging. Which solution meets these requirements?",
+    "options": [
+      "Create a multi-Region organization trail from the management account or a delegated administrator account that delivers logs to an S3 bucket in a dedicated log archive account.",
+      "Deploy a trail to each account with CloudFormation StackSets and grant account administrators permission to manage their own trail.",
+      "Rely on CloudTrail Event history in each account and export it to the central bucket every month.",
+      "Create a single-Region trail in the management account that logs activity for the management account only."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "An organization trail automatically applies to all current and future member accounts, and member accounts can see it but cannot modify or delete it; a multi-Region trail captures every Region, and a separate log archive account protects the logs. Per-account trails managed by account admins can be stopped. Event history keeps only 90 days of management events, and a single-account, single-Region trail misses most activity.",
+    "subtopic": "CloudTrail Organization Trail"
+  },
+  {
+    "id": "iam-org-031",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Auditors require proof that CloudTrail log files delivered to Amazon S3 have not been modified or deleted after delivery. Which feature should the company enable?",
+    "options": [
+      "Server-side encryption with AWS KMS keys for the CloudTrail log files in the bucket",
+      "CloudTrail log file integrity validation, then validate the logs by using the generated digest files",
+      "CloudTrail Insights events on the trail to detect tampering with log files",
+      "S3 server access logging on the bucket that stores the CloudTrail log files"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Log file integrity validation creates hourly digest files that contain SHA-256 hashes of the delivered log files and are signed by CloudTrail, so any modification or deletion can be detected. KMS encryption protects confidentiality but does not prove integrity. Insights detects unusual API call rates, and server access logs record requests to the bucket without proving that files are unchanged.",
+    "subtopic": "CloudTrail Log File Integrity"
+  },
+  {
+    "id": "iam-org-032",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company centralizes CloudTrail logs from all accounts in an S3 bucket in a log archive account. The security team wants the logs to be confidential, tamper-evident, and protected from deletion for 7 years, even by administrators. Which actions should a solutions architect take? (Select THREE.)",
+    "options": [
+      "Encrypt the log files with SSE-KMS by using a customer managed key with a restrictive key policy.",
+      "Enable S3 Object Lock in compliance mode on the log bucket with a 7-year retention period.",
+      "Change the trail to a single-Region trail to reduce the number of log files.",
+      "Store the logs in each workload account so that local administrators can manage retention.",
+      "Enable log file integrity validation on the trail.",
+      "Enable S3 Transfer Acceleration on the log bucket."
+    ],
+    "answer": [
+      0,
+      1,
+      4
+    ],
+    "explanation": "Integrity validation makes tampering detectable, SSE-KMS with a restricted customer managed key limits who can decrypt the logs, and Object Lock in compliance mode prevents anyone, including the root user, from deleting or overwriting objects during retention. Transfer Acceleration only speeds up transfers. Keeping logs in workload accounts gives local admins control over them, and a single-Region trail loses visibility into other Regions.",
+    "subtopic": "CloudTrail Log Protection"
+  },
+  {
+    "id": "iam-org-033",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A central IT team wants developers to self-provision approved Amazon EMR clusters and Amazon RDS databases that already meet company standards. Developers must not receive broad IAM permissions to create these resources directly. Which solution meets these requirements?",
+    "options": [
+      "Publish the configurations as AWS Service Catalog products in a portfolio, grant developers access to the portfolio, and use a launch constraint with an IAM role that can create the resources.",
+      "Store approved CloudFormation templates in an S3 bucket and grant developers AdministratorAccess so they can deploy the templates.",
+      "Create the EMR clusters and RDS databases centrally and share them with the developers' accounts through AWS RAM.",
+      "Use AWS Control Tower Account Factory to provision a new account containing the resources for each developer request."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Service Catalog lets administrators publish approved products, and a launch constraint makes Service Catalog use a specified role to provision them, so end users need only Service Catalog permissions. Granting AdministratorAccess violates least privilege. AWS RAM shares specific resource types such as subnets, not EMR clusters or RDS instances, and Account Factory vends accounts rather than individual resources.",
+    "subtopic": "AWS Service Catalog"
+  },
+  {
+    "id": "iam-org-034",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company gives each development team a sandbox account. When a sandbox account's forecasted monthly spend exceeds USD 1,000, the company wants to automatically prevent the team from launching new Amazon EC2 instances while leaving existing workloads running. Which solution meets this requirement with the LEAST operational overhead?",
+    "options": [
+      "Create a budget in AWS Budgets with a forecasted-cost threshold and a budget action that applies an SCP denying ec2:RunInstances to the account.",
+      "Configure AWS Cost Explorer to stop launching new EC2 instances in the account when the forecast exceeds the threshold.",
+      "Create a CloudWatch billing alarm that terminates every EC2 instance in the account when the threshold is reached.",
+      "Use AWS Cost Anomaly Detection to delete newly launched instances that cause unusual spending."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Budget actions can run automatically when an actual or forecasted threshold is crossed and can apply an IAM policy or SCP, or stop specific EC2 or RDS instances. Cost Explorer is for analysis and cannot enforce controls. Terminating every instance would disrupt existing workloads, and Cost Anomaly Detection only sends alerts.",
+    "subtopic": "AWS Budgets"
+  },
+  {
+    "id": "iam-org-035",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A finance team wants to visualize the company's AWS costs for the last 12 months grouped by service and linked account, and to see a forecast for the next 3 months. The team does not want to build any data pipelines. Which AWS tool should the team use?",
+    "options": [
+      "AWS Budgets",
+      "AWS Data Exports with Amazon Athena",
+      "AWS Trusted Advisor",
+      "AWS Cost Explorer"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Cost Explorer provides ready-made graphs of historical costs that can be grouped and filtered by service, account, tags, and more, and includes cost forecasts. Budgets tracks spending against thresholds rather than providing historical analysis. Data Exports with Athena requires setting up exports and queries, and Trusted Advisor gives best-practice recommendations rather than cost reports.",
+    "subtopic": "AWS Cost Explorer"
+  },
+  {
+    "id": "iam-org-036",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company needs the most detailed AWS billing data available, including hourly line items with resource IDs, to build a custom chargeback model that analysts will query with SQL. Which solution meets these requirements?",
+    "options": [
+      "Download the monthly invoice PDF from the Billing and Cost Management console each month.",
+      "Create a standard export in AWS Data Exports (CUR 2.0) that delivers to Amazon S3 and query it with Amazon Athena.",
+      "Export the 12-month cost graph from AWS Cost Explorer to a CSV file each month.",
+      "Schedule an AWS Budgets report that emails daily spending to the analysts."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Data Exports delivers the Cost and Usage Report (CUR 2.0) with line-item detail, hourly granularity, and resource IDs to S3, where Athena can query it with SQL. Invoices and Budgets reports are summaries. Cost Explorer CSV exports are aggregated and do not provide the full line-item detail needed for chargeback.",
+    "subtopic": "AWS Data Exports"
+  },
+  {
+    "id": "iam-org-037",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company tags all of its resources with a CostCenter tag. In AWS Cost Explorer, the finance team cannot filter or group costs by CostCenter. What should a solutions architect do?",
+    "options": [
+      "Enable AWS Config in every account so that tag values are recorded for billing purposes.",
+      "Apply the CostCenter tag to the IAM users and roles that created the resources.",
+      "Activate CostCenter as a user-defined cost allocation tag in the Billing and Cost Management console of the management account.",
+      "Wait for the next billing cycle, because tags appear in billing data only after a full month."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "User-defined tags must be activated as cost allocation tags, in the management (payer) account for an organization, before they appear in Cost Explorer and cost reports; after activation it can take up to 24 hours, and only costs incurred after activation are tagged. AWS Config records resource configurations, not billing dimensions. Tagging the creator does not tag the resources' costs, and no full-month wait is required.",
+    "subtopic": "Cost Allocation Tags"
+  },
+  {
+    "id": "iam-org-038",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company with 40 accounts in AWS Organizations allocates costs by a Project tag, but teams use inconsistent values such as proj-a, ProjectA, and project_a, and some EC2 instances are launched with no Project tag at all. Which combination of actions will enforce consistent cost allocation tagging? (Select TWO.)",
+    "options": [
+      "Create a tag policy in AWS Organizations that defines the allowed key capitalization and values for the Project tag and enforces them for selected resource types.",
+      "Share the Project tag key with all member accounts by using AWS RAM.",
+      "Use AWS Cost Explorer to rename inconsistent tag values across all accounts in the organization.",
+      "Attach an SCP that denies ec2:RunInstances when the aws:RequestTag/Project condition key is missing from the request.",
+      "Create an AWS Budgets budget that adds the missing Project tag to untagged instances automatically."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Tag policies standardize tag keys and allowed values and can prevent noncompliant tag operations on supported resource types, while an SCP with a Null or missing aws:RequestTag condition blocks launches without the tag. Budgets cannot modify tags. Cost Explorer reports on tags but does not rename them on resources, and tag keys are not resources that can be shared through AWS RAM.",
+    "subtopic": "Tag Governance"
+  },
+  {
+    "id": "iam-org-039",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has 60 AWS accounts in AWS Organizations, and its workforce identities are managed in Microsoft Entra ID. Employees need single sign-on to the accounts with different permission levels per account, and users must be provisioned and deprovisioned automatically when they join or leave. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Create an IAM SAML identity provider and federated roles in each of the 60 accounts, and update every account when new roles are needed.",
+      "Enable IAM Identity Center, connect Entra ID as an external identity provider using SAML 2.0 and SCIM provisioning, and assign permission sets to groups for each account.",
+      "Create IAM users for all employees in the management account and let them switch roles into each member account.",
+      "Deploy Simple AD in every account and synchronize the employees from Entra ID into each directory."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "IAM Identity Center provides central single sign-on across all accounts in the organization, SCIM keeps users and groups synchronized from Entra ID automatically, and permission sets define access per account. Per-account SAML providers and roles work but multiply the administration across 60 accounts. IAM users require manual lifecycle management, and Simple AD does not synchronize from Entra ID or provide multi-account access.",
+    "subtopic": "IAM Identity Center"
+  },
+  {
+    "id": "iam-org-040",
+    "topic": "iam-org",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is starting its multi-account journey. It wants a well-architected landing zone with a centralized log archive account and an audit account, preconfigured governance controls, and a self-service way to create new accounts that comply with company standards, with the LEAST effort. Which solution meets these requirements?",
+    "options": [
+      "Create the organization, OUs, trails, and AWS Config rules manually with scripts in every new account.",
+      "Use AWS Service Catalog on its own to create new AWS accounts from a portfolio of templates.",
+      "Share a landing zone from the management account with new accounts by using AWS RAM.",
+      "Set up AWS Control Tower and use Account Factory to provision new accounts."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "AWS Control Tower automates a landing zone on top of AWS Organizations, including log archive and audit accounts, enables governance controls, and provides Account Factory for standardized account vending. Scripting everything manually adds significant effort and drift risk. Account Factory itself is built on Service Catalog, but Service Catalog alone does not set up a governed landing zone, and AWS RAM cannot share a landing zone.",
+    "subtopic": "AWS Control Tower"
+  },
+  {
+    "id": "iam-org-041",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A security team uses AWS Control Tower to govern its organization. Which statements correctly describe how Control Tower controls are implemented? (Select TWO.)",
+    "options": [
+      "Detective controls are implemented as AWS Config rules that flag noncompliant resources.",
+      "Proactive controls are enforced by Amazon GuardDuty findings after resources are created.",
+      "Detective controls block noncompliant API calls before the calls are allowed to run.",
+      "Controls can be applied only to the management account, not to OUs or member accounts.",
+      "Preventive controls are enforced through organization policies such as service control policies."
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "Control Tower preventive controls use organization policies such as SCPs to stop disallowed actions, and detective controls use AWS Config rules to detect noncompliance after the fact. Proactive controls use CloudFormation hooks to check resources before they are provisioned, not GuardDuty. Detective controls do not block calls, and controls are enabled on OUs so they apply to the accounts within them.",
+    "subtopic": "Control Tower Controls"
+  },
+  {
+    "id": "iam-org-042",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A networking account in an organization owns a VPC with shared subnets and a transit gateway. Application accounts must launch EC2 instances directly into the central subnets, and other accounts must attach their own VPCs to the transit gateway, so the company can avoid duplicate NAT gateways and a VPC peering mesh. Which resources should the networking account share by using AWS RAM? (Select TWO.)",
+    "options": [
+      "The VPC's internet gateway",
+      "The transit gateway",
+      "The NAT gateways' Elastic IP addresses",
+      "The VPC subnets",
+      "IAM roles for each application team"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "AWS RAM supports sharing VPC subnets, which lets participant accounts launch resources into centrally managed subnets that use shared NAT gateways, and sharing transit gateways so other accounts can create attachments. Internet gateways, Elastic IP addresses, and IAM roles are not shared through AWS RAM; access to roles is granted through trust policies instead.",
+    "subtopic": "AWS RAM"
+  },
+  {
+    "id": "iam-org-043",
+    "topic": "iam-org",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A compliance officer must give external auditors copies of AWS's SOC 2 report and PCI DSS attestation of compliance, and must review and accept a Business Associate Addendum (BAA) for the company's account. Which AWS service provides this?",
+    "options": [
+      "AWS Audit Manager",
+      "AWS Artifact",
+      "AWS Config",
+      "AWS Security Hub"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS Artifact is the self-service portal for downloading AWS compliance reports such as SOC and PCI attestations and for accepting agreements such as the BAA. Audit Manager collects evidence about the customer's own use of AWS for audits. Config records resource configuration compliance, and Security Hub aggregates security findings.",
+    "subtopic": "AWS Artifact"
+  },
+  {
+    "id": "iam-org-044",
+    "topic": "iam-org",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company brings its own Microsoft SQL Server licenses, which are licensed per vCPU, to Amazon EC2 across several accounts in its organization. Licensed usage must never exceed 200 vCPUs, and launches that would exceed the limit must be blocked. Which solution meets these requirements?",
+    "options": [
+      "Create an AWS License Manager license configuration with a 200-vCPU hard limit, associate it with the SQL Server AMIs, and share it with the other accounts.",
+      "Use Service Quotas to set each account's Running On-Demand instances quota so the total stays under 200 vCPUs.",
+      "Create an AWS Budgets budget that alerts when SQL Server spending exceeds the cost of 200 vCPUs.",
+      "Tag SQL Server instances with their vCPU count and review the totals in AWS Cost Explorer each week."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "License Manager tracks license usage against rules such as vCPU counts, and a hard limit blocks launches of associated AMIs that would exceed the license count; the configuration can be shared across accounts in the organization. Service Quotas limits all instance usage, not SQL Server licenses specifically. Budgets and Cost Explorer only report on spending after the fact and cannot block launches.",
+    "subtopic": "AWS License Manager"
+  },
+  {
+    "id": "iam-org-045",
+    "topic": "iam-org",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A central operations team in a monitoring account must view metrics, logs, and traces from 30 workload accounts in the same organization from one place, without switching roles into each account. Which solution meets this requirement with the LEAST operational overhead?",
+    "options": [
+      "Write an AWS Lambda function in each workload account that copies metrics to the monitoring account every minute.",
+      "Create an organization trail so that metrics and logs from every account appear in the monitoring account.",
+      "Assign the team an IAM Identity Center permission set in every account and open each account's dashboards separately.",
+      "Configure CloudWatch cross-account observability with the monitoring account as the sink and link the workload accounts as source accounts."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "CloudWatch cross-account observability lets a monitoring account search and visualize metrics, logs, and traces from linked source accounts, and accounts can be linked through AWS Organizations. Custom copy functions add code and cost. An organization trail centralizes API activity, not metrics and traces, and signing in to each account separately is what the team wants to avoid.",
+    "subtopic": "CloudWatch Cross-Account Observability"
+  }
+]

@@ -1,0 +1,1168 @@
+[
+  {
+    "id": "ec2-001",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A payments company runs an application on Amazon EC2 instances that must decrypt and process cardholder data. Security policy requires that the decryption step runs in a hardened, isolated environment that has no persistent storage, no interactive access, and no external network connectivity, even for administrators of the parent instance. Which solution will meet these requirements?",
+    "options": [
+      "Run the decryption code in an AWS Nitro Enclave created from the parent EC2 instance and use cryptographic attestation with AWS KMS",
+      "Launch the decryption code on a Dedicated Host so that no other AWS customer shares the physical server",
+      "Run the decryption code in a separate Docker container on the same instance with a restrictive seccomp profile",
+      "Move the decryption code to an instance in a private subnet with a security group that denies all inbound traffic"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Nitro Enclaves carve isolated CPU and memory out of the parent instance into an environment with no persistent storage, no interactive access, and no external networking; only a local vsock channel to the parent exists, and AWS KMS can verify the enclave through attestation. A Dedicated Host isolates hardware from other customers but does not isolate data from administrators of the instance. A container shares the kernel and is reachable by instance administrators. A private subnet limits network paths but still allows interactive access and persistent storage.",
+    "subtopic": "Nitro Enclaves"
+  },
+  {
+    "id": "ec2-002",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Which statement BEST explains why EC2 instances built on the AWS Nitro System deliver performance close to bare metal?",
+    "options": [
+      "Each Nitro-based instance is always placed on a Dedicated Host so that it never shares physical hardware with other instances",
+      "The Nitro hypervisor emulates every hardware device in software, which removes the need for device drivers in the guest operating system",
+      "Nitro-based instances store all data on local instance store volumes instead of network-attached EBS volumes",
+      "Networking, EBS storage, and management functions are offloaded to dedicated Nitro cards, and a lightweight hypervisor leaves nearly all host CPU and memory to the instance"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "The Nitro System moves virtualization functions such as VPC networking, EBS access, and instance management onto purpose-built Nitro cards and uses a minimal hypervisor, so almost all host resources go to the workload. Nitro-based instances use shared tenancy by default rather than Dedicated Hosts. Full software device emulation is the slower approach that Nitro replaced. Nitro-based instances commonly use EBS, and instance store is available only on certain instance types.",
+    "subtopic": "AWS Nitro System"
+  },
+  {
+    "id": "ec2-003",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs its customer portal on a single EC2 instance in one Availability Zone. An outage in that Availability Zone made the portal unavailable for several hours. The company wants the portal to remain available if an entire Availability Zone fails. Which solution will meet this requirement?",
+    "options": [
+      "Place the instance in a spread placement group so that it runs on distinct hardware racks",
+      "Run the application in an Auto Scaling group that spans subnets in at least two Availability Zones behind an Application Load Balancer",
+      "Replace the instance with a larger instance type that has more vCPUs and enable termination protection",
+      "Associate an Elastic IP address with the instance so that it can be moved quickly during an outage"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An EC2 instance runs in one subnet and therefore in one Availability Zone, so surviving an AZ failure requires instances in multiple AZs, a load balancer to route around the failed AZ, and an Auto Scaling group to replace capacity. A larger instance is still a single point of failure in one AZ. An Elastic IP address does not create capacity in a second AZ. A spread placement group separates racks, but a single instance still lives in a single AZ.",
+    "subtopic": "EC2 AZ resilience"
+  },
+  {
+    "id": "ec2-004",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must relocate an EC2 instance and its 2 TiB EBS data volume from us-east-1a to us-east-1c in the same Region so that it is closer to new database replicas. Which approach will accomplish this?",
+    "options": [
+      "Detach the EBS volume and attach it to a new instance launched in us-east-1c",
+      "Modify the instance placement attribute to us-east-1c and then start the instance",
+      "Create an AMI and EBS snapshots, then launch a new instance from the AMI and create the data volume from the snapshot in us-east-1c",
+      "Enable EBS Multi-Attach so that the volume can be attached to instances in both Availability Zones"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "EBS volumes are bound to the Availability Zone in which they were created, and an existing instance cannot change its AZ. Snapshots and AMIs are Regional, so they can be used to create a new instance and new volumes in any AZ of the Region. A volume cannot be attached to an instance in a different AZ, and Multi-Attach only works for instances in the same AZ.",
+    "subtopic": "EBS AZ scope"
+  },
+  {
+    "id": "ec2-005",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company is migrating a self-managed in-memory analytics database that needs 512 GiB of RAM but only moderate CPU. Which EC2 instance family is the MOST appropriate starting point?",
+    "options": [
+      "Memory optimized (R family)",
+      "Storage optimized (I family)",
+      "Accelerated computing (G family)",
+      "Compute optimized (C family)"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Memory optimized R instances provide a high memory-to-vCPU ratio, which suits in-memory databases and real-time analytics. Compute optimized C instances would require paying for many unneeded vCPUs to reach 512 GiB of memory. Storage optimized I instances focus on fast local NVMe storage, and G instances provide GPUs for graphics and inference workloads.",
+    "subtopic": "Instance families"
+  },
+  {
+    "id": "ec2-006",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a reporting service on a t3.xlarge instance in standard credit mode. CloudWatch shows the instance has averaged 75% CPU utilization all day, every day, for 3 months, and the CPU credit balance stays at zero, which makes reports slow. Which change will resolve the performance problem MOST cost-effectively?",
+    "options": [
+      "Change to a t3.2xlarge instance in standard credit mode so that it earns credits faster",
+      "Add a second t3.xlarge instance behind a load balancer to share the load",
+      "Change to a fixed-performance general purpose instance, such as an M-family instance of similar size",
+      "Switch the instance to unlimited credit mode and keep the t3.xlarge instance type"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Burstable T instances are cost-effective only when average CPU stays below the baseline, and a sustained 75% load is far above the t3.xlarge baseline, so a fixed-performance M instance delivers full CPU at a predictable lower price. Unlimited mode removes throttling but continuously charges for surplus credits, which typically costs more than an equivalent M instance at this utilization. Moving to a t3.2xlarge or adding a second T instance roughly doubles the hourly cost to buy headroom that a same-sized M instance provides natively.",
+    "subtopic": "Burstable instances"
+  },
+  {
+    "id": "ec2-007",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A genomics company runs a sequence-alignment pipeline that reads and writes millions of small temporary files and needs very high random IOPS with very low latency to local storage. The intermediate files can be regenerated if they are lost. Which instance choice is MOST suitable?",
+    "options": [
+      "A memory optimized R instance with a gp3 volume provisioned at the baseline 3,000 IOPS",
+      "A compute optimized C instance with an st1 Throughput Optimized HDD volume",
+      "A general purpose M instance with several sc1 Cold HDD volumes striped in RAID 0",
+      "A storage optimized instance, such as I4i, that provides local NVMe SSD instance store volumes"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Storage optimized I-family instances include local NVMe instance store that delivers very high random IOPS at very low latency, and the risk of data loss is acceptable because the files can be regenerated. A gp3 volume at baseline offers only 3,000 IOPS over the network. st1 and sc1 are HDD volume types designed for large sequential I/O, not small random I/O.",
+    "subtopic": "Storage optimized instances"
+  },
+  {
+    "id": "ec2-008",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants developers to open SSH sessions to Amazon Linux 2023 instances without distributing or rotating long-lived SSH private keys. Access must be granted and revoked through IAM policies, and every connection request must be recorded in AWS CloudTrail. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Store a shared private key in AWS Secrets Manager and let developers retrieve it when they need access",
+      "Use EC2 Instance Connect so that IAM-authorized users push a short-lived public key to the instance for each session",
+      "Create a separate EC2 key pair for each developer and add all of the public keys to authorized_keys through user data",
+      "Deploy a bastion host in a public subnet and require developers to use SSH agent forwarding through it"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "EC2 Instance Connect uses IAM to authorize the SendSSHPublicKey API, which places a one-time public key on the instance that is valid for 60 seconds, and these API calls are logged in CloudTrail. A shared key in Secrets Manager is still a long-lived credential that must be rotated. Per-developer key pairs require distribution and cleanup. A bastion host adds infrastructure and still relies on long-lived keys.",
+    "subtopic": "EC2 Instance Connect"
+  },
+  {
+    "id": "ec2-009",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An administrator tries to connect to an EC2 instance in a public subnet by using the browser-based EC2 Instance Connect option in the console, but the connection fails. The instance has a public IPv4 address, the EC2 Instance Connect package is installed, and the security group allows inbound TCP port 22 only from the corporate office CIDR range. What should the administrator do to allow console connections while keeping SSH restricted?",
+    "options": [
+      "Update the network ACL to allow inbound ephemeral ports from the corporate office CIDR range",
+      "Add an inbound rule for TCP port 22 from the AWS-managed EC2 Instance Connect prefix list for the Region",
+      "Add an outbound rule for TCP port 22 to 0.0.0.0/0 in the instance security group",
+      "Attach an instance profile to the instance that allows ec2-instance-connect:SendSSHPublicKey"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Browser-based EC2 Instance Connect sessions originate from the EC2 Instance Connect service IP range, not from the administrator's office, so the security group must allow port 22 from that range, which AWS publishes as a managed prefix list in each Region. Security groups are stateful, so an outbound rule is not the issue. The SendSSHPublicKey permission is needed by the IAM principal making the request, not by the instance. Changing the network ACL for the office range does not admit traffic from the service range.",
+    "subtopic": "EC2 Instance Connect"
+  },
+  {
+    "id": "ec2-010",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has EC2 instances in private subnets with no public IP addresses and no route to an internet gateway. Administrators occasionally need SSH access from the AWS Management Console or the AWS CLI. The company wants to avoid running and patching bastion hosts. Which solution meets these requirements?",
+    "options": [
+      "Create an EC2 Instance Connect Endpoint in the VPC and allow SSH from the endpoint's security group to the instances",
+      "Create a VPC peering connection to a management VPC that hosts a single bastion host",
+      "Associate Elastic IP addresses with the instances and restrict the security group to administrator IP addresses",
+      "Deploy a NAT gateway so that administrators can connect through it to the private instances"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "An EC2 Instance Connect Endpoint provides IAM-authenticated SSH and RDP connectivity to instances in private subnets without public IP addresses, internet gateways, or bastion hosts. Elastic IP addresses would expose the instances publicly. A NAT gateway only supports connections initiated from inside the private subnet. A bastion host in a peered VPC is still a bastion host that must be operated and patched.",
+    "subtopic": "EC2 Instance Connect Endpoint"
+  },
+  {
+    "id": "ec2-011",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a clustered application on four Nitro-based EC2 instances in the same Availability Zone. The application uses a cluster-aware file system and requires all four instances to have concurrent read and write access to the same low-latency block storage volume. Which storage option meets these requirements?",
+    "options": [
+      "An st1 volume with Multi-Attach enabled",
+      "Instance store volumes on each instance that are synchronized with rsync",
+      "A Provisioned IOPS SSD (io2) volume with Multi-Attach enabled",
+      "A gp3 volume attached to one instance and exported to the other instances over NFS"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Multi-Attach lets a single io1 or io2 volume be attached to up to 16 Nitro-based instances in the same Availability Zone, and a cluster-aware file system coordinates concurrent writes. gp3 volumes do not support Multi-Attach, and exporting a volume over NFS adds a single point of failure and extra latency. st1 volumes do not support Multi-Attach. Instance store volumes are separate per instance, and rsync does not provide shared concurrent block access.",
+    "subtopic": "EBS Multi-Attach"
+  },
+  {
+    "id": "ec2-012",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a database on a 2,000 GiB gp2 volume. The data set is only 400 GiB, but the team provisioned the large volume to obtain 6,000 IOPS. Peak throughput is 200 MiB/s. The company wants to reduce EBS costs without reducing performance. Which solution is the MOST cost-effective?",
+    "options": [
+      "Change the existing volume to st1 to take advantage of lower per-GiB pricing",
+      "Keep gp2 and add a second 400 GiB gp2 volume configured in RAID 0",
+      "Create a new 400 GiB io2 volume provisioned with 6,000 IOPS and migrate the data",
+      "Create a new 400 GiB gp3 volume provisioned with 6,000 IOPS and 200 MiB/s of throughput, and migrate the data"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "gp2 performance scales at 3 IOPS per GiB, which is why the volume was oversized, while gp3 lets IOPS and throughput be provisioned independently of size at a lower per-GiB price. A 400 GiB gp3 volume with 6,000 IOPS and 200 MiB/s therefore meets the need at the lowest cost; because EBS volumes cannot be shrunk, a new volume and a data migration are required. io2 provides the IOPS at a much higher price. st1 is HDD-based and unsuitable for random database I/O, and two 400 GiB gp2 volumes provide only about 2,400 baseline IOPS.",
+    "subtopic": "gp2 vs gp3"
+  },
+  {
+    "id": "ec2-013",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A financial services company is moving a mission-critical relational database to EC2. The database requires 200,000 sustained IOPS on a single volume, consistent sub-millisecond latency, and the highest durability that EBS offers. Which EBS volume type should a solutions architect choose?",
+    "options": [
+      "General Purpose SSD (gp3) with the maximum provisioned IOPS",
+      "Provisioned IOPS SSD io2 Block Express",
+      "Throughput Optimized HDD (st1)",
+      "Provisioned IOPS SSD (io1) on a Xen-based instance"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "io2 Block Express supports up to 256,000 IOPS per volume with sub-millisecond latency and is designed for 99.999% durability, the highest of any EBS volume type. gp3 cannot reach 200,000 IOPS on a single volume and has lower durability. st1 is an HDD type intended for sequential throughput. io1 has lower durability and a maximum IOPS far below 200,000, especially on older Xen-based instances.",
+    "subtopic": "io2 Block Express"
+  },
+  {
+    "id": "ec2-014",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A media analytics company processes 12 TiB of clickstream logs every night with a Hadoop job that reads files sequentially in large blocks. The data must stay on EBS. The company wants the lowest-cost volume type that still provides high sequential throughput for this frequently accessed data. Which volume type should be used?",
+    "options": [
+      "Throughput Optimized HDD (st1)",
+      "Provisioned IOPS SSD (io2)",
+      "General Purpose SSD (gp3)",
+      "Cold HDD (sc1)"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "st1 is a low-cost HDD volume type designed for frequently accessed, throughput-intensive sequential workloads such as big data, data warehouses, and log processing. io2 and gp3 are SSD types optimized for IOPS and cost more per GiB for this amount of data. sc1 is cheaper but is intended for infrequently accessed data and offers much lower throughput, which would slow the nightly job.",
+    "subtopic": "Throughput Optimized HDD (st1)"
+  },
+  {
+    "id": "ec2-015",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company must keep 30 TiB of rarely accessed archive data on block storage attached to an EC2 instance for a legacy application. The data is read only a few times a year in large sequential scans. Which EBS volume type is the MOST cost-effective?",
+    "options": [
+      "Throughput Optimized HDD (st1)",
+      "General Purpose SSD (gp2)",
+      "Provisioned IOPS SSD (io1)",
+      "Cold HDD (sc1)"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "sc1 has the lowest cost per GiB of the EBS volume types and is designed for large, infrequently accessed, sequential workloads. st1 is designed for frequently accessed, throughput-heavy data and costs more. The SSD types are priced for IOPS-sensitive workloads and would be the most expensive way to store cold data.",
+    "subtopic": "Cold HDD (sc1)"
+  },
+  {
+    "id": "ec2-016",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A solutions architect is creating a launch template and must choose the EBS volume type for the root (boot) volume of the instances. Which EBS volume types can be used as a boot volume? (Select TWO.)",
+    "options": [
+      "Cold HDD (sc1)",
+      "Throughput Optimized HDD (st1)",
+      "Provisioned IOPS SSD (io2)",
+      "General Purpose SSD (gp3)",
+      "Any HDD volume type, as long as Fast Snapshot Restore is enabled on its snapshot"
+    ],
+    "answer": [
+      2,
+      3
+    ],
+    "explanation": "SSD-backed volume types such as gp3 and io2 can be used as boot volumes. The HDD-backed st1 and sc1 volume types cannot be boot volumes regardless of size, and Fast Snapshot Restore only affects how quickly a restored volume reaches full performance, not whether a volume type is bootable.",
+    "subtopic": "EBS volume types"
+  },
+  {
+    "id": "ec2-017",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a fleet of web servers that each keep a large local cache of rendered page fragments. The cache can be rebuilt from the origin database at any time, and the company wants the lowest possible read latency for the cache with no additional storage charges. Which storage option should the company use for the cache?",
+    "options": [
+      "An Amazon EFS file system mounted on all of the web servers",
+      "An EBS io2 volume with Multi-Attach enabled",
+      "Instance store volumes on an instance type that includes local NVMe storage",
+      "An EBS gp3 volume with additional provisioned throughput"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Instance store volumes are physically attached to the host, provide very low latency and high IOPS, and are included in the instance price, which suits a cache that can be rebuilt if the instance stops or fails. gp3 and io2 volumes are network-attached and billed separately. EFS adds network latency and per-GB charges and is designed for shared file access rather than a per-instance cache.",
+    "subtopic": "Instance store"
+  },
+  {
+    "id": "ec2-018",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "An application writes temporary data to instance store volumes on an EC2 instance. Which actions will cause the data on the instance store volumes to be lost? (Select TWO.)",
+    "options": [
+      "Changing the security groups attached to the instance",
+      "Creating an EBS snapshot of the root volume",
+      "Stopping the instance",
+      "Terminating the instance",
+      "Rebooting the instance from the operating system"
+    ],
+    "answer": [
+      2,
+      3
+    ],
+    "explanation": "Instance store is ephemeral storage tied to the physical host, so its data is lost when the instance is stopped, hibernated, or terminated, or when the underlying hardware fails. A reboot keeps the instance on the same host, so instance store data persists. Snapshotting an EBS volume and changing security groups do not affect instance store data.",
+    "subtopic": "Instance store"
+  },
+  {
+    "id": "ec2-019",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company needs daily snapshots of the EBS volumes attached to production EC2 instances that are tagged Env=prod. Snapshots must be kept for 14 days and copied automatically to a second Region for disaster recovery. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Enable Fast Snapshot Restore on each volume in both Regions",
+      "Write a Lambda function that calls CreateSnapshot and CopySnapshot, and invoke it on an Amazon EventBridge schedule",
+      "Create an Amazon Data Lifecycle Manager policy that targets the tag, retains 14 daily snapshots, and enables cross-Region copy",
+      "Configure a cron job on each instance that runs AWS CLI commands to create and copy snapshots"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Amazon Data Lifecycle Manager natively creates snapshots for tagged resources on a schedule, enforces retention, and copies snapshots to other Regions without custom code. A Lambda function or cron jobs can work but require code, error handling, and retention cleanup to be maintained. Fast Snapshot Restore speeds up volume initialization and does not create or copy snapshots.",
+    "subtopic": "Amazon Data Lifecycle Manager"
+  },
+  {
+    "id": "ec2-020",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company restores EBS volumes from snapshots every morning to launch analytics instances before a trading window opens. Immediately after the restore, the first reads from each block are slow, which delays the start of the job. The company needs restored volumes to deliver their full provisioned performance immediately. What should a solutions architect recommend?",
+    "options": [
+      "Enable Fast Snapshot Restore for the snapshots in the Availability Zones where the volumes are created",
+      "Create the volumes as io2 Block Express volumes instead of gp3 volumes",
+      "Move the snapshots to the EBS Snapshots Archive tier",
+      "Increase the provisioned IOPS of the volumes after they are created"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Volumes created from snapshots are lazily loaded from Amazon S3, so the first access to each block incurs extra latency; Fast Snapshot Restore creates volumes that are fully initialized in the enabled Availability Zones, so they deliver full performance immediately. The archive tier is for low-cost long-term retention and makes restores slower. Increasing IOPS or choosing io2 does not remove the first-read penalty of lazy loading.",
+    "subtopic": "Fast Snapshot Restore"
+  },
+  {
+    "id": "ec2-021",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Once a month, a company restores a 1 TiB EBS volume from a snapshot for a batch job that starts 8 hours after the volume is created. The first reads are slow because of volume initialization. The company wants full performance when the job starts and wants to minimize cost. Which solution meets these requirements?",
+    "options": [
+      "Enable Fast Snapshot Restore on the snapshot permanently in the target Availability Zone",
+      "Initialize the volume after it is created by reading all of its blocks with a tool such as fio or dd before the job starts",
+      "Restore the snapshot to an io2 volume with the highest possible provisioned IOPS",
+      "Move the snapshot to the archive tier and restore it a day in advance"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Reading every block after creation forces all data to be pulled from Amazon S3, and with 8 hours available the volume will be fully initialized before the job starts at no additional charge. Fast Snapshot Restore is billed for every hour it is enabled per snapshot and Availability Zone, which is wasteful for a monthly job. A high-IOPS io2 volume still suffers from lazy loading and costs more. Archived snapshots take much longer to restore and still require initialization.",
+    "subtopic": "EBS volume initialization"
+  },
+  {
+    "id": "ec2-022",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must retain monthly EBS snapshots of its accounting servers for 7 years for audit purposes. The snapshots are almost never restored, and a restore time of up to 72 hours is acceptable. Which solution is the MOST cost-effective?",
+    "options": [
+      "Keep the snapshots in the standard snapshot tier and enable Recycle Bin",
+      "Copy the snapshots to a second Region and delete the originals",
+      "Create AMIs from the snapshots and then deregister the AMIs",
+      "Move the snapshots to the EBS Snapshots Archive tier"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "EBS Snapshots Archive stores full snapshots at up to 75% lower cost than the standard tier and is intended for rarely accessed snapshots kept for 90 days or longer, with restores completing within 72 hours. Recycle Bin protects against accidental deletion but does not lower storage cost. Copying to another Region does not reduce the storage price. Creating and deregistering AMIs does not change how the snapshots are stored or billed.",
+    "subtopic": "EBS Snapshots Archive"
+  },
+  {
+    "id": "ec2-023",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An operations engineer accidentally deleted several EBS snapshots that were needed for recovery. The company wants to be able to recover snapshots that are deleted by mistake for up to 30 days, without changing its existing backup scripts. Which solution meets this requirement?",
+    "options": [
+      "Create a Recycle Bin retention rule for EBS snapshots with a 30-day retention period",
+      "Enable termination protection on the instances that own the volumes",
+      "Configure an S3 Lifecycle rule on the bucket that stores the EBS snapshots",
+      "Enable EBS encryption by default in the Region"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Recycle Bin retention rules keep deleted EBS snapshots and AMIs for a specified period so they can be restored, and they apply without changing the scripts that delete snapshots. Encryption by default does not prevent deletion. Termination protection protects instances, not snapshots. EBS snapshots are stored in AWS-managed storage that is not exposed as a customer S3 bucket, so S3 Lifecycle rules cannot apply.",
+    "subtopic": "Recycle Bin"
+  },
+  {
+    "id": "ec2-024",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company requires that all EBS data be encrypted with AWS KMS and is reviewing how EBS encryption works. Which statements about EBS encryption are correct? (Select TWO.)",
+    "options": [
+      "Only Provisioned IOPS SSD volume types support encryption",
+      "Encryption must be implemented inside the guest operating system because EBS has no native encryption",
+      "Data moving between an encrypted volume and the EC2 instance it is attached to is encrypted",
+      "An unencrypted volume can be encrypted in place by modifying a volume attribute",
+      "Snapshots created from an encrypted volume are automatically encrypted"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "EBS encryption protects data at rest on the volume, data in transit between the instance and the volume, all snapshots created from the volume, and all volumes created from those snapshots. An existing unencrypted volume cannot be encrypted in place; an encrypted copy must be created through a snapshot. EBS encryption is native, handled by AWS on the host with KMS keys, and supported by all current EBS volume types.",
+    "subtopic": "EBS encryption"
+  },
+  {
+    "id": "ec2-025",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A security team requires that every new EBS volume and snapshot copy created in an AWS account is encrypted, even if a developer forgets to select encryption when launching an instance. Which solution meets this requirement with the LEAST operational overhead?",
+    "options": [
+      "Create an AWS Config rule that deletes unencrypted volumes every hour",
+      "Require developers to use a launch template that specifies an encrypted root volume",
+      "Install a disk encryption agent in every AMI that the company uses",
+      "Enable EBS encryption by default in each AWS Region that the account uses"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "EBS encryption by default is a per-Region account setting that forces all newly created volumes and snapshot copies to be encrypted with the default or a specified KMS key, with no change to launch workflows. A Config rule that deletes volumes is reactive and disruptive. Launch templates can be bypassed. Operating system encryption agents add management overhead and do not encrypt snapshots natively.",
+    "subtopic": "EBS encryption by default"
+  },
+  {
+    "id": "ec2-026",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company wants to share an encrypted EBS snapshot with a partner AWS account so that the partner can create volumes from it. The snapshot is currently encrypted with the AWS managed key aws/ebs. What must the company do?",
+    "options": [
+      "Make the snapshot public and give the partner the snapshot ID",
+      "Copy the snapshot and re-encrypt it with a customer managed KMS key, allow the partner account in the key policy, and share the copied snapshot",
+      "Export the snapshot to an S3 bucket and add a bucket policy that grants the partner account read access",
+      "Modify the snapshot permissions to add the partner account ID, after which the partner can use the aws/ebs key automatically"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Snapshots encrypted with the AWS managed aws/ebs key cannot be shared because the policy of that key cannot be changed to allow other accounts. The company must copy the snapshot with a customer managed key, allow the partner account to use that key, and then share the copy. Encrypted snapshots cannot be made public, and EBS snapshots cannot be exported as objects to a customer S3 bucket.",
+    "subtopic": "Sharing encrypted snapshots"
+  },
+  {
+    "id": "ec2-027",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A legacy licensing server runs on an EC2 instance, and its license is bound to the MAC address of the network interface. The company needs a warm standby instance in the same Availability Zone that can take over without re-issuing the license. Which solution meets this requirement?",
+    "options": [
+      "Create an AMI of the primary instance every night and launch it during failover",
+      "Place both instances behind a Network Load Balancer with health checks",
+      "Attach a secondary elastic network interface to the primary instance and move that interface to the standby instance during failover",
+      "Associate an Elastic IP address with the primary instance and reassociate it with the standby instance during failover"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "An elastic network interface keeps its MAC address, private IP addresses, and security groups when it is detached from one instance and attached to another in the same Availability Zone, so the license stays valid. An Elastic IP address moves only the public IPv4 address. An instance launched from an AMI gets a new primary interface with a different MAC address. A load balancer does not preserve a MAC address for the backend.",
+    "subtopic": "Elastic network interfaces"
+  },
+  {
+    "id": "ec2-028",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A partner allow-lists a single public IPv4 address for an EC2 instance that sends data to the partner. After the instance was stopped and started for maintenance, the partner began rejecting its traffic. How can the company prevent this issue in the future?",
+    "options": [
+      "Enable termination protection on the instance",
+      "Assign a secondary private IPv4 address to the primary network interface",
+      "Enable the DNS hostnames attribute on the VPC",
+      "Allocate an Elastic IP address and associate it with the instance"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An auto-assigned public IPv4 address is released when an instance stops and a new one is assigned when it starts, whereas an Elastic IP address stays allocated to the account and remains associated with the instance across stop and start. Termination protection does not affect addressing. A secondary private IP address is not reachable from the internet. DNS hostnames do not keep the public IPv4 address constant.",
+    "subtopic": "Elastic IP addresses"
+  },
+  {
+    "id": "ec2-029",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Two EC2 instances in the same VPC communicate with each other. The application is configured to use the other instance's public DNS hostname, and the finance team is concerned that this traffic is billed as internet data transfer. DNS resolution and DNS hostnames are enabled on the VPC, and the instances use the Amazon-provided DNS server. How is this traffic handled?",
+    "options": [
+      "The public DNS hostname resolves to the public IPv4 address, so traffic leaves the VPC through the internet gateway",
+      "The traffic is dropped because security groups do not evaluate public IP addresses",
+      "The public DNS hostname resolves to the private IPv4 address from inside the VPC, so traffic stays on the private network",
+      "The traffic is routed through a NAT gateway and incurs NAT gateway processing charges"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "When the Amazon-provided DNS server is queried from within the VPC, an instance's public DNS hostname resolves to its private IPv4 address, so the traffic stays inside the VPC and is not internet data transfer. Resolution to the public address happens only for queries from outside the VPC. Security groups do not drop this traffic by design, and no NAT gateway is involved in traffic between instances in the same VPC.",
+    "subtopic": "EC2 DNS resolution"
+  },
+  {
+    "id": "ec2-030",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A production database runs on a 500 GiB gp3 volume and is running out of space and IOPS. The company must grow the volume to 1 TiB and raise its IOPS to 8,000 without stopping the instance. Which approach meets these requirements?",
+    "options": [
+      "Modify the volume in place with Elastic Volumes to change its size and IOPS, and then extend the file system in the operating system",
+      "Attach a second 500 GiB gp3 volume and enable Multi-Attach",
+      "Change the instance to a larger type so that the volume's IOPS increase automatically",
+      "Stop the instance, detach the volume, and create a larger volume from a snapshot"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Elastic Volumes lets you increase size, change IOPS and throughput, or change the volume type while the volume is attached and in use; afterward the partition and file system are extended in the operating system to use the new space. Restoring from a snapshot requires downtime. gp3 does not support Multi-Attach, and a second volume does not grow the existing file system. A larger instance can raise the instance's EBS limits but does not change the volume's provisioned IOPS.",
+    "subtopic": "EBS Elastic Volumes"
+  },
+  {
+    "id": "ec2-031",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company wants to be able to launch its application servers in another AWS Region during a disaster. The servers are built from a custom AMI in us-east-1. What must the company do so that the AMI can be used in us-west-2?",
+    "options": [
+      "Modify the AMI launch permissions to add the same account for us-west-2",
+      "Copy the AMI to us-west-2, which creates a new AMI with a new AMI ID in that Region",
+      "Create a snapshot of the AMI and attach the snapshot to an instance in us-west-2",
+      "Nothing, because AMIs are global resources that can be launched in any Region"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AMIs are Regional resources, so they must be copied to the destination Region, where the copy receives a new AMI ID and its own copies of the backing snapshots. Launch permissions control which accounts can use an AMI in its own Region and do not move it across Regions. Snapshots cannot be attached to instances directly; they must be turned into volumes or AMIs in the destination Region.",
+    "subtopic": "AMI copy"
+  },
+  {
+    "id": "ec2-032",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company builds a golden AMI in its tooling account. The AMI's snapshots are encrypted with a customer managed KMS key. A workload account in the same Region must launch instances from this AMI. Which steps are required? (Select TWO.)",
+    "options": [
+      "Re-encrypt the snapshots with the AWS managed aws/ebs key before sharing",
+      "Remove encryption from the snapshots before sharing and enable it again in the workload account",
+      "Update the KMS key policy to allow the workload account to use the key for operations such as Decrypt and CreateGrant",
+      "Make the AMI public so that the workload account can find it",
+      "Modify the AMI launch permissions to share the AMI with the workload account"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "To share an AMI backed by encrypted snapshots, the owner adds the target account to the AMI launch permissions and grants that account permission to use the customer managed key, because the snapshots must be decrypted when volumes are created. AMIs encrypted with the AWS managed key cannot be shared, so re-encrypting with aws/ebs would block sharing. AMIs with encrypted snapshots cannot be made public, and snapshot encryption cannot simply be removed.",
+    "subtopic": "Sharing encrypted AMIs"
+  },
+  {
+    "id": "ec2-033",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses AWS Organizations with more than 200 accounts. The platform team publishes a new hardened AMI every week and must make it available only to accounts in the organization, including accounts that are created in the future. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Make the AMI public and instruct teams to filter by the platform account's owner ID",
+      "Add each account ID to the AMI launch permissions with a script that runs after every new account is created",
+      "Share the AMI with the organization ARN or with the relevant organizational unit ARNs",
+      "Copy the AMI into every account with a Lambda function that runs on an Amazon EventBridge schedule"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AMI launch permissions can be granted to an organization or organizational unit, which automatically includes current and future member accounts. A public AMI exposes the image to everyone. Maintaining per-account permissions or copying the AMI into every account requires custom automation and produces many copies to manage.",
+    "subtopic": "AMI sharing"
+  },
+  {
+    "id": "ec2-034",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company deregistered several hundred old AMIs to reduce costs, but its monthly EBS charges did not decrease. What is the MOST likely reason?",
+    "options": [
+      "Deregistered AMIs remain billable for 90 days before they are deleted",
+      "The EBS snapshots that backed the AMIs were not deleted and continue to incur storage charges",
+      "The AMIs were automatically moved to the EBS Snapshots Archive tier",
+      "Deregistration takes effect only after all instances launched from the AMIs are terminated"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Deregistering an AMI does not delete the EBS snapshots that back it; the snapshots remain and continue to be billed until they are deleted separately. There is no 90-day billing period for deregistered AMIs, AMIs are not moved to the archive tier automatically, and deregistration takes effect immediately regardless of running instances.",
+    "subtopic": "AMI deregistration"
+  },
+  {
+    "id": "ec2-035",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup needs EC2 capacity for a 6-week proof of concept. Usage will be unpredictable, and the instances must not be interrupted while they run. The startup does not want any long-term commitment. Which purchasing option is MOST appropriate?",
+    "options": [
+      "3-year Standard Reserved Instances",
+      "A Compute Savings Plan with a 1-year term",
+      "Spot Instances",
+      "On-Demand Instances"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "On-Demand Instances require no commitment, are billed only for the time they run, and are not interrupted by AWS, which suits short and unpredictable workloads. Spot Instances can be interrupted when AWS needs the capacity back. Reserved Instances and Savings Plans require 1-year or 3-year commitments that a 6-week project cannot fully use.",
+    "subtopic": "On-Demand Instances"
+  },
+  {
+    "id": "ec2-036",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company wants to use Spot Instances to reduce EC2 costs. Which workloads are good candidates for Spot Instances? (Select TWO.)",
+    "options": [
+      "A license server that must run continuously with a fixed IP address",
+      "A payment API that must remain available 24/7 without interruption",
+      "A CI/CD fleet that runs stateless build and test jobs that can be retried",
+      "The single primary instance of a self-managed relational database",
+      "A video transcoding queue in which each job is checkpointed and can restart on another instance"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Spot Instances offer large discounts but can be interrupted with a two-minute warning, so they fit fault-tolerant, stateless, or checkpointed work such as CI builds and queue-based transcoding. A single primary database, a continuously required license server, and an always-on payment API cannot tolerate interruptions and should run on On-Demand capacity, ideally covered by Savings Plans or Reserved Instances.",
+    "subtopic": "Spot Instances"
+  },
+  {
+    "id": "ec2-037",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A research company runs a large batch simulation on a Spot Fleet that requests only c5.4xlarge instances in a single Availability Zone with the lowest-price allocation strategy. The jobs are interrupted frequently. The company wants to reduce interruptions while keeping costs low. Which change should a solutions architect recommend?",
+    "options": [
+      "Diversify across multiple instance types and Availability Zones and use the price-capacity-optimized allocation strategy",
+      "Switch the fleet to On-Demand Instances in the same Availability Zone",
+      "Raise the maximum Spot price to equal the On-Demand price",
+      "Purchase Convertible Reserved Instances for the c5.4xlarge instances"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Diversifying across instance types and Availability Zones gives the fleet more Spot capacity pools, and the price-capacity-optimized strategy chooses pools with the most available capacity at low prices, which reduces interruptions. On-Demand removes interruptions but costs much more. Raising the maximum price does not prevent interruptions that occur when AWS reclaims capacity. Reserved Instances are a commitment for steady workloads and do not fit a batch job designed around Spot pricing.",
+    "subtopic": "Spot Fleet allocation strategy"
+  },
+  {
+    "id": "ec2-038",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company runs a queue-processing application on Spot Instances in an Auto Scaling group. The company wants to minimize lost work when instances are reclaimed. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Associate Elastic IP addresses so that the instances keep their IP addresses after an interruption",
+      "Increase the EBS volume size so that more in-progress messages can be stored",
+      "Create an Amazon EventBridge rule for EC2 Spot Instance interruption warnings that triggers checkpointing or graceful draining of the instance",
+      "Enable termination protection on all of the Spot Instances",
+      "Enable Capacity Rebalancing on the Auto Scaling group so that it launches replacements when it receives a rebalance recommendation"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Spot interruption warnings give two minutes of notice through EventBridge and instance metadata, which can trigger checkpointing or a graceful shutdown. Capacity Rebalancing lets the Auto Scaling group proactively replace instances that are at elevated risk of interruption. Termination protection does not stop Spot interruptions, Elastic IP addresses do not preserve work, and larger EBS volumes do not prevent lost work.",
+    "subtopic": "Spot interruption handling"
+  },
+  {
+    "id": "ec2-039",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has steady EC2 usage of about $20,000 per month. Over the next 3 years it plans to move some workloads from m5 instances to Graviton-based instances, shift part of the workload to AWS Fargate, and possibly move one application to another Region. Which pricing model provides savings while supporting these changes?",
+    "options": [
+      "An EC2 Instance Savings Plan for the m5 family",
+      "Standard Reserved Instances for the m5 instances",
+      "Zonal Reserved Instances in the current Region",
+      "A Compute Savings Plan"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Compute Savings Plans apply automatically to EC2 usage regardless of instance family, size, operating system, tenancy, or Region, and they also cover AWS Fargate and AWS Lambda. EC2 Instance Savings Plans are tied to one instance family in one Region. Standard and zonal Reserved Instances are tied to specific instance attributes and do not apply to Fargate or to another Region.",
+    "subtopic": "Compute Savings Plans"
+  },
+  {
+    "id": "ec2-040",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company will run a large fleet of r6i instances in eu-west-1 for the next 3 years. Instance sizes and operating systems may change, but the company is confident that it will stay with the r6i family in that Region. The company wants the largest discount available from a Savings Plan. Which option should it choose?",
+    "options": [
+      "A Compute Savings Plan with a 1-year term",
+      "An EC2 Instance Savings Plan for the r6i family in eu-west-1 with a 3-year term",
+      "On-Demand Capacity Reservations for the r6i instances",
+      "Spot Instances launched through a Spot Fleet"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "EC2 Instance Savings Plans provide the highest Savings Plan discount in exchange for committing to one instance family in one Region, while still allowing changes to size, operating system, and tenancy, and a 3-year term increases the discount. Compute Savings Plans are more flexible but give a smaller discount, and a 1-year term reduces savings further. Capacity Reservations provide no discount by themselves, and Spot is unsuitable for a steady long-running fleet.",
+    "subtopic": "EC2 Instance Savings Plans"
+  },
+  {
+    "id": "ec2-041",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company plans to buy Reserved Instances for a steady workload. Management wants the largest Reserved Instance discount but also wants the option to recover part of the cost by selling the reservations if the workload is retired early. Which option meets these requirements?",
+    "options": [
+      "Standard Reserved Instances, because they can be sold on the Reserved Instance Marketplace",
+      "Convertible Reserved Instances, because they can be exchanged for other instance types",
+      "A Compute Savings Plan, because it can be cancelled with 30 days of notice",
+      "On-Demand Capacity Reservations, because they can be cancelled at any time"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Standard Reserved Instances provide a larger discount than Convertible Reserved Instances and can be listed on the Reserved Instance Marketplace if they are no longer needed. Convertible Reserved Instances can be exchanged but cannot be sold on the Marketplace. Savings Plans cannot be cancelled or resold. Capacity Reservations can be cancelled but provide no billing discount by themselves.",
+    "subtopic": "Reserved Instances"
+  },
+  {
+    "id": "ec2-042",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A retailer expects a large traffic spike during a 3-day sales event next month and must be certain that 200 m6i.2xlarge instances will be available in a specific Availability Zone during the event. The company does not want a long-term commitment. Which solution meets these requirements?",
+    "options": [
+      "Request Spot Instances with a maximum price equal to the On-Demand price",
+      "Purchase an EC2 Instance Savings Plan for the m6i family",
+      "Create On-Demand Capacity Reservations for the instances in that Availability Zone for the duration of the event",
+      "Purchase 1-year zonal Reserved Instances for 200 instances"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "On-Demand Capacity Reservations reserve capacity for a specific instance type in a specific Availability Zone for any duration with no long-term commitment, and they can be cancelled after the event. Zonal Reserved Instances reserve capacity but require a 1-year or 3-year term. Spot Instances provide no capacity guarantee. Savings Plans give a billing discount but do not reserve capacity.",
+    "subtopic": "On-Demand Capacity Reservations"
+  },
+  {
+    "id": "ec2-043",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company wants to migrate Windows Server and SQL Server workloads to EC2 and bring its existing licenses, which are licensed per physical core and per socket and are not eligible for License Mobility. The company must also track license usage to stay compliant. Which actions should a solutions architect recommend? (Select TWO.)",
+    "options": [
+      "Launch the instances on EC2 Dedicated Hosts so that the company has visibility into sockets and physical cores",
+      "Launch the instances as Dedicated Instances, which expose socket and core counts for licensing",
+      "Use AWS License Manager to define licensing rules and track license consumption",
+      "Use AWS Compute Optimizer to enforce license limits",
+      "Use Spot Instances launched from a license-included Windows AMI"
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "Dedicated Hosts give visibility into and control over the physical server, including sockets and cores, which server-bound BYOL licenses require, and AWS License Manager tracks and enforces license usage, including on Dedicated Hosts. Dedicated Instances run on single-tenant hardware but do not expose socket or core details or support host affinity. License-included Spot Instances do not use the company's own licenses. Compute Optimizer provides right-sizing recommendations, not license enforcement.",
+    "subtopic": "Dedicated Hosts and BYOL"
+  },
+  {
+    "id": "ec2-044",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A healthcare company's compliance policy states that its EC2 instances must run on hardware that is not shared with any other AWS customer. The company has no software licenses tied to physical cores or sockets and wants to minimize management effort and cost. Which option meets these requirements?",
+    "options": [
+      "Dedicated Hosts with host affinity and auto-placement configured",
+      "Dedicated Instances",
+      "Default tenancy instances in a cluster placement group",
+      "Default tenancy instances that process data inside a Nitro Enclave"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Dedicated Instances run on hardware dedicated to a single customer, which satisfies the isolation requirement without allocating and managing individual hosts. Dedicated Hosts also provide isolation but add host capacity management and are mainly justified for socket- or core-based licensing or host-level control. Placement groups and Nitro Enclaves do not prevent other customers' instances from sharing the physical server.",
+    "subtopic": "Dedicated Instances"
+  },
+  {
+    "id": "ec2-045",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An EBS-backed EC2 instance is failing its system status check because of a problem with the underlying host, while its instance status check passes. The company wants this kind of failure to be fixed automatically in the future, and the instance must keep its instance ID, private IP address, and Elastic IP address. Which solution meets these requirements?",
+    "options": [
+      "Enable termination protection and stop protection on the instance",
+      "Create a CloudWatch alarm on StatusCheckFailed_Instance with a reboot action",
+      "Create a CloudWatch alarm on StatusCheckFailed_System with the EC2 recover action",
+      "Place the instance in an Auto Scaling group with a minimum size of 1"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "System status check failures indicate problems with AWS infrastructure such as host hardware or power, and the recover action moves the instance to new hardware while keeping its instance ID, private IP addresses, Elastic IP addresses, and metadata. A reboot addresses operating system problems reported by the instance status check and does not move the instance off a failing host. An Auto Scaling group replaces the instance with a new instance ID. Termination and stop protection do not repair anything.",
+    "subtopic": "Status checks"
+  },
+  {
+    "id": "ec2-046",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A CloudWatch alarm triggers the recover action for an EBS-backed EC2 instance after a system status check failure. Which characteristics of the instance are preserved after recovery completes? (Select THREE.)",
+    "options": [
+      "Data held in memory at the time of the failure",
+      "Associated Elastic IP addresses",
+      "Data stored on instance store volumes",
+      "The private IPv4 address",
+      "The same physical host",
+      "The instance ID"
+    ],
+    "answer": [
+      1,
+      3,
+      5
+    ],
+    "explanation": "A recovered instance keeps its instance ID, private IP addresses, Elastic IP addresses, and instance metadata, and its EBS volumes stay attached. Recovery restarts the instance on different hardware, so data in memory is lost and the instance no longer runs on the same physical host. Instance store data cannot move with the instance to new hardware.",
+    "subtopic": "Instance recovery"
+  },
+  {
+    "id": "ec2-047",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A critical EC2 instance has termination protection enabled. An administrator logged in to the instance and ran the operating system shutdown command, after which the instance was terminated and its root volume was deleted. What explains this behavior?",
+    "options": [
+      "The root volume had termination protection disabled at the volume level",
+      "Termination protection expires automatically after an instance has run for 30 days",
+      "Termination protection applies only to Spot Instances",
+      "The instance-initiated shutdown behavior was set to terminate, and termination protection does not block shutdowns initiated from the operating system"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "When the instance-initiated shutdown behavior is set to terminate, shutting down from inside the operating system terminates the instance, and termination protection does not prevent this because it only blocks termination requests made through the console, CLI, or API. The root volume was then deleted because DeleteOnTermination is true by default for root volumes. Termination protection is not limited to Spot Instances, is not a volume setting, and does not expire.",
+    "subtopic": "Shutdown behavior"
+  },
+  {
+    "id": "ec2-048",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company wants to prevent operators from accidentally stopping a critical EC2 instance through the console, the AWS CLI, or the API, while still allowing the instance to be rebooted. Which feature should be enabled?",
+    "options": [
+      "Stop protection",
+      "Hibernation",
+      "Detailed monitoring",
+      "Termination protection"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Stop protection blocks StopInstances requests from the console, CLI, and API until it is disabled, which prevents accidental stops while reboots remain possible. Termination protection only blocks termination. Hibernation is a way of stopping an instance while saving its memory, and detailed monitoring only changes the CloudWatch metric period.",
+    "subtopic": "Stop protection"
+  },
+  {
+    "id": "ec2-049",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company currently scales its web application vertically by moving to larger EC2 instance types as traffic grows. The company wants to switch to horizontal scaling. Which statements about horizontal scaling are correct? (Select TWO.)",
+    "options": [
+      "Capacity is capped by the size of the largest available instance type",
+      "Session state should be moved off the instances, for example to Amazon ElastiCache or Amazon DynamoDB, so that any instance can serve any request",
+      "All instances must share a single EBS volume to scale out",
+      "A load balancer is typically used to distribute requests across the instances",
+      "Each scaling action requires stopping the instance so that its instance type can be changed"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Horizontal scaling adds or removes instances, so applications should be stateless with sessions stored externally, and a load balancer spreads traffic across the instances. Stopping an instance to change its type and being capped by the largest instance size are characteristics of vertical scaling. Instances do not need a shared EBS volume to scale out.",
+    "subtopic": "Horizontal vs vertical scaling"
+  },
+  {
+    "id": "ec2-050",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An EBS-backed EC2 instance that runs a database needs more CPU and memory. The team decides to change the instance from m6i.large to m6i.2xlarge. What is required to make this change?",
+    "options": [
+      "Terminate the instance and launch a new one, because instance types cannot be changed",
+      "Create a new EBS volume for the larger instance type and attach it",
+      "Stop the instance, change the instance type, and then start the instance",
+      "Change the instance type while the instance is running, and the change applies immediately"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "To resize an EBS-backed instance, it must be stopped, its instance type attribute changed, and the instance started again, which causes a short outage. The instance type cannot be changed while the instance is running. Termination is unnecessary because the EBS root volume persists through a stop. EBS volumes are not tied to instance types.",
+    "subtopic": "Vertical scaling"
+  },
+  {
+    "id": "ec2-051",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security review found that a web application on EC2 is vulnerable to server-side request forgery (SSRF), which could allow an attacker to retrieve the instance's IAM role credentials from the instance metadata service. Which change will MOST effectively reduce this risk?",
+    "options": [
+      "Move the instance to a private subnet behind a NAT gateway",
+      "Require IMDSv2 by setting HttpTokens to required on the instance",
+      "Enable termination protection and detailed monitoring on the instance",
+      "Remove the instance profile and store access keys in the application configuration file"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "IMDSv2 requires a session token obtained through a PUT request with a custom header before metadata can be read, which blocks most SSRF attacks that can only make simple GET requests. Long-lived access keys on the instance are less secure than temporary role credentials. A private subnet does not stop the application from being tricked into calling the metadata endpoint. Termination protection and monitoring do not affect metadata access.",
+    "subtopic": "IMDSv2"
+  },
+  {
+    "id": "ec2-052",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company with many AWS accounts in AWS Organizations must ensure that no one can launch an EC2 instance that allows IMDSv1, including administrators of member accounts. Which solution meets this requirement?",
+    "options": [
+      "Publish a launch template that requires IMDSv2 and ask all teams to use it",
+      "Use Amazon Inspector to scan instances for IMDSv1 usage every week",
+      "Create an AWS Config rule in each account that reports instances with IMDSv1 enabled",
+      "Attach a service control policy that denies ec2:RunInstances unless the ec2:MetadataHttpTokens condition key equals required"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A service control policy applies to all principals in member accounts, including administrators, and denying RunInstances unless ec2:MetadataHttpTokens is required prevents IMDSv1-enabled instances from being launched. AWS Config and Amazon Inspector only detect the issue after launch. A launch template is optional and can be bypassed.",
+    "subtopic": "Enforcing IMDSv2"
+  },
+  {
+    "id": "ec2-053",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application on EC2 loads a 40 GiB in-memory cache that takes 25 minutes to rebuild every time the instance starts. To save money, the company stops the instance every night and starts it every morning. The company wants the application to be ready faster in the morning. Which solution meets this requirement?",
+    "options": [
+      "Launch the instance with hibernation enabled and hibernate it at night instead of stopping it",
+      "Store the cache on an instance store volume so that it persists across stop and start",
+      "Reboot the instance at night instead of stopping it",
+      "Take an EBS snapshot every night and restore it every morning"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Hibernation saves the contents of RAM to the encrypted EBS root volume and restores it when the instance starts, so processes and the in-memory cache resume without being rebuilt, and compute charges stop while the instance is hibernated. Instance store data is lost when an instance stops. Rebooting keeps the instance running and billed all night. Restoring a snapshot does not restore memory contents.",
+    "subtopic": "Hibernation"
+  },
+  {
+    "id": "ec2-054",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A solutions architect is preparing EC2 instances to use hibernation. Which requirements must be met? (Select TWO.)",
+    "options": [
+      "The instance must be launched in a cluster placement group",
+      "The instance must use an instance store root volume",
+      "The instance must run on a Dedicated Host",
+      "Hibernation must be enabled when the instance is launched",
+      "The root volume must be an encrypted EBS volume with enough space to store the instance's RAM contents"
+    ],
+    "answer": [
+      3,
+      4
+    ],
+    "explanation": "Hibernation writes RAM to the EBS root volume, which must be encrypted and large enough to hold the memory contents, and hibernation must be enabled at launch because it cannot be turned on for an existing instance. Instance store root volumes are not supported. Placement groups and Dedicated Hosts are not requirements for hibernation.",
+    "subtopic": "Hibernation"
+  },
+  {
+    "id": "ec2-055",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A bank must keep certain customer data on premises in its own data center to meet data residency regulations, but it wants to run EC2 instances and EBS volumes with the same APIs, tools, and management experience as in an AWS Region. Which solution meets these requirements?",
+    "options": [
+      "AWS Local Zones",
+      "AWS Wavelength Zones",
+      "AWS Outposts",
+      "EC2 Dedicated Hosts in the nearest AWS Region"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS Outposts delivers AWS-managed racks or servers into the customer's own facility, so EC2 and EBS run on premises with the same APIs and console, keeping data local for residency requirements. Local Zones and Wavelength Zones are AWS-operated locations, not the customer's data center. Dedicated Hosts in a Region still store data in AWS facilities.",
+    "subtopic": "AWS Outposts"
+  },
+  {
+    "id": "ec2-056",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A gaming company is building a mobile multiplayer game that requires single-digit millisecond latency for players connected over 5G networks. Which AWS infrastructure option is designed for this use case?",
+    "options": [
+      "AWS Local Zones",
+      "Amazon CloudFront edge locations",
+      "AWS Outposts",
+      "AWS Wavelength"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "AWS Wavelength embeds AWS compute and storage within telecommunications providers' 5G networks, so traffic from mobile devices reaches the application without leaving the carrier network, which gives ultra-low latency. Outposts runs in a customer's data center. Local Zones bring services close to metropolitan areas but not inside the 5G network. CloudFront edge locations cache content and do not host EC2 game servers.",
+    "subtopic": "AWS Wavelength"
+  },
+  {
+    "id": "ec2-057",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A visual effects studio in Los Angeles has artist workstations that need single-digit millisecond latency to EC2 rendering instances. The closest AWS Region is too far away to provide this latency, and the studio does not want to host or manage AWS hardware in its own office. Which solution meets these requirements?",
+    "options": [
+      "Deploy the rendering instances in an AWS Local Zone in Los Angeles that is extended from the parent Region",
+      "Install AWS Outposts racks in the studio",
+      "Use Amazon CloudFront to accelerate the rendering traffic",
+      "Use AWS Global Accelerator to route traffic to the nearest Region"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Local Zones place AWS compute, storage, and selected services in large metropolitan areas such as Los Angeles, giving single-digit millisecond latency to nearby users while AWS operates the infrastructure. Outposts would require hosting AWS hardware in the studio. CloudFront and Global Accelerator optimize the network path but cannot remove the distance to a Region that is too far away for interactive workstation latency.",
+    "subtopic": "AWS Local Zones"
+  },
+  {
+    "id": "ec2-058",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company wants AWS Compute Optimizer to produce right-sizing recommendations for its EC2 fleet that take memory utilization into account, so that it can safely downsize over-provisioned instances. Which actions should the company take? (Select TWO.)",
+    "options": [
+      "Opt in to AWS Compute Optimizer for the account or the organization",
+      "Enable hibernation on all of the instances",
+      "Enable EBS encryption by default",
+      "Install and configure the CloudWatch agent on the instances to publish memory utilization metrics",
+      "Purchase a Compute Savings Plan"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Compute Optimizer must be opted in, after which it analyzes CloudWatch metrics to recommend better instance types. EC2 does not collect memory utilization by default, so the CloudWatch agent must publish it for memory-aware recommendations. Encryption, hibernation, and Savings Plans do not supply utilization data for right-sizing.",
+    "subtopic": "AWS Compute Optimizer"
+  },
+  {
+    "id": "ec2-059",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "An administrator lost the private key for an EBS-backed Amazon Linux 2023 instance. The instance has the EC2 Instance Connect package installed, and its security group allows SSH from the company network. Which methods can the administrator use to regain SSH access? (Select TWO.)",
+    "options": [
+      "Retrieve the private key from the instance metadata service",
+      "Use EC2 Instance Connect with the required IAM permissions to push a temporary public key and connect",
+      "Download the private key again from the key pairs page of the EC2 console",
+      "Create a new key pair and associate it with the running instance through the ModifyInstanceAttribute API",
+      "Stop the instance, attach its root volume to a helper instance, add a new public key to authorized_keys, reattach the volume, and start the instance"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "EC2 Instance Connect lets an IAM-authorized user push a short-lived public key and connect without the original key, and editing authorized_keys by mounting the root volume on a helper instance restores access for EBS-backed instances. AWS does not keep a copy of private keys, so they cannot be downloaded again or read from instance metadata. A key pair cannot be swapped on a running instance through an API call.",
+    "subtopic": "Lost key pair"
+  },
+  {
+    "id": "ec2-060",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company terminates EC2 instances that run batch jobs when the jobs finish, but auditors require the root volume of each instance to be kept for later investigation. Currently the root volumes are deleted when the instances terminate. Which solution meets this requirement?",
+    "options": [
+      "Enable termination protection on the instances",
+      "Set the DeleteOnTermination attribute of the root volume to false",
+      "Enable stop protection on the instances",
+      "Enable Multi-Attach on the root volumes"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "By default the root EBS volume has DeleteOnTermination set to true, so it is deleted when the instance terminates; setting the attribute to false keeps the volume after termination. Termination protection would block the batch instances from being terminated at all. Stop protection only blocks stops. Multi-Attach shares a volume between instances and does not control deletion on termination.",
+    "subtopic": "DeleteOnTermination"
+  }
+]

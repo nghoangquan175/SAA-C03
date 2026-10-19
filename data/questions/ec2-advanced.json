@@ -1,0 +1,780 @@
+[
+  {
+    "id": "ec2-advanced-001",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A solutions architect adds a shell script to the user data of a Linux EC2 instance to install and start a web server. By default, when does this user data script run?",
+    "options": [
+      "Only when an administrator runs it through AWS Systems Manager",
+      "Every time the instance is rebooted",
+      "Only during the first boot cycle after the instance is launched",
+      "Every time the instance is stopped and started"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "By default, cloud-init runs user data scripts once, as the root user, during the first boot of a newly launched instance. Reboots and stop/start cycles do not rerun the script unless it is explicitly configured to run on every boot. Systems Manager is not needed to execute user data.",
+    "subtopic": "User data"
+  },
+  {
+    "id": "ec2-advanced-002",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Auto Scaling group launches instances that run a user data script to install packages, download application binaries, and compile dependencies. Each new instance takes 18 minutes to become ready, so the group cannot react quickly to traffic spikes. Which solution will MOST reduce the time for new instances to become ready?",
+    "options": [
+      "Create a pre-baked golden AMI that already contains the software and keep only instance-specific configuration in user data",
+      "Move the user data script into a CloudFormation cfn-init configuration",
+      "Increase the health check grace period of the Auto Scaling group",
+      "Use larger instance types so that the script runs faster"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Baking software into a golden AMI moves the slow installation work to build time, so new instances only perform small final configuration steps and become ready quickly. cfn-init still performs the same installation at boot. A longer grace period only delays health checks and does not speed up readiness. Larger instances may shorten compilation slightly, but downloads and installs still dominate and the instances cost more.",
+    "subtopic": "Golden AMI vs user data"
+  },
+  {
+    "id": "ec2-advanced-003",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A developer passes a database password to an EC2 instance in its user data so that a startup script can configure the application. A security engineer flags this as a risk. What is the risk, and what should be done instead?",
+    "options": [
+      "User data is encrypted with the instance's KMS key, so the only risk is its size; compress the script instead",
+      "User data can be read by any process on the instance through the metadata service and by anyone allowed to view instance attributes; retrieve the password at runtime from AWS Secrets Manager by using the instance role",
+      "User data is published on the internet; move the instance to a private subnet",
+      "User data is deleted after boot, so the application will lose the password; store it in an environment variable baked into the AMI"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "User data is not encrypted and can be retrieved from the instance metadata service by any local process and through the DescribeInstanceAttribute API, so it must not contain secrets. The instance should use its IAM role to fetch the secret from Secrets Manager at runtime. User data is not published on the internet and is not deleted after boot, and baking secrets into an AMI is also insecure.",
+    "subtopic": "User data and secrets"
+  },
+  {
+    "id": "ec2-advanced-004",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A team manages EC2 instances with AWS CloudFormation. Their long user data scripts are difficult to maintain and do not clearly express the desired state of packages, files, and services. Which approach provides a declarative way to configure the instances from the template?",
+    "options": [
+      "Use the CloudFormation DependsOn attribute to install packages in order",
+      "Store the scripts in a CloudFormation stack policy",
+      "Use CloudFormation drift detection to apply package changes",
+      "Define the configuration in the AWS::CloudFormation::Init metadata of the instance resource and run cfn-init from user data"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "AWS::CloudFormation::Init metadata declares packages, groups, users, sources, files, commands, and services, and the cfn-init helper script reads that metadata and applies it on the instance. DependsOn only controls the order in which resources are created. Stack policies protect resources from updates. Drift detection reports differences but does not configure instances.",
+    "subtopic": "cfn-init"
+  },
+  {
+    "id": "ec2-advanced-005",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A CloudFormation stack creates an EC2 instance and then other resources that depend on it. The stack reports CREATE_COMPLETE as soon as the instance is running, even though the application installation in user data often fails. The company wants the stack to succeed only if the application is configured correctly. Which solution meets this requirement?",
+    "options": [
+      "Enable termination protection on the stack",
+      "Add an UpdatePolicy with AutoScalingRollingUpdate to the instance resource",
+      "Add a DeletionPolicy of Retain to the instance resource",
+      "Add a CreationPolicy to the instance and run cfn-signal at the end of the user data script with the exit status of the installation"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A CreationPolicy makes CloudFormation wait for a success signal, and cfn-signal reports the result of the installation; if a failure signal is sent or the timeout expires, resource creation fails and the stack rolls back. DeletionPolicy controls what happens to resources when they are deleted. Stack termination protection prevents stack deletion. UpdatePolicy applies to updates of Auto Scaling groups, not to the creation of an individual instance.",
+    "subtopic": "CreationPolicy and cfn-signal"
+  },
+  {
+    "id": "ec2-advanced-006",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A CloudFormation template creates an Auto Scaling group with a desired capacity of 4. The stack must not reach CREATE_COMPLETE until 4 instances have finished bootstrapping, and stack creation must fail if this does not happen within 15 minutes. Which configuration meets these requirements?",
+    "options": [
+      "Add a WaitCondition with a Count of 1 and a Timeout of 15 minutes",
+      "Set the HealthCheckGracePeriod of the Auto Scaling group to 900 seconds",
+      "Add a CreationPolicy to the Auto Scaling group with a ResourceSignal Count of 4 and a Timeout of PT15M, and run cfn-signal on each instance",
+      "Add a DependsOn attribute that references the launch template"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A CreationPolicy on the Auto Scaling group with a ResourceSignal Count of 4 and a Timeout of PT15M makes CloudFormation wait for four success signals sent by cfn-signal, and creation fails if they do not arrive in time. A WaitCondition with a Count of 1 completes after a single signal. The health check grace period affects Auto Scaling health checks, not stack completion. DependsOn only orders resource creation.",
+    "subtopic": "CreationPolicy with Auto Scaling"
+  },
+  {
+    "id": "ec2-advanced-007",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company uses cfn-init and AWS::CloudFormation::Init metadata to configure EC2 instances. When an engineer changes a configuration file in the metadata and updates the stack, the running instances do not pick up the change. The company wants running instances to apply metadata changes automatically without being replaced. What should a solutions architect configure?",
+    "options": [
+      "Run CloudFormation drift detection on a schedule",
+      "Run the cfn-hup daemon on the instances with a hook that reruns cfn-init when the metadata changes",
+      "Add a CreationPolicy with a longer timeout",
+      "Configure the user data to run on every boot and reboot the instances after each update"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "cfn-hup polls the resource metadata for changes and runs configured hooks, typically cfn-init, when it detects an update, so running instances apply the new configuration in place. A CreationPolicy only affects signaling during initial creation. Rebooting with every-boot user data is disruptive and manual. Drift detection identifies differences but does not apply configuration.",
+    "subtopic": "cfn-hup"
+  },
+  {
+    "id": "ec2-advanced-008",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must provide hardened, fully patched AMIs every month to development teams in multiple accounts and Regions. Each AMI must pass security tests before it is distributed. The company wants a managed solution with the LEAST operational overhead. Which solution meets these requirements?",
+    "options": [
+      "Create an EC2 Image Builder pipeline with build and test components, a monthly schedule, and a distribution configuration for the target Regions and accounts",
+      "Use AWS Compute Optimizer to recommend updated AMIs every month",
+      "Run a scheduled script on a build instance that patches it, creates an AMI, and copies the AMI to other Regions",
+      "Use AWS Systems Manager Patch Manager to patch the running instances in each account"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "EC2 Image Builder automates building, hardening, and testing images on a schedule and distributes the resulting AMIs to multiple Regions and accounts through its distribution settings, with no custom build tooling to maintain. A custom script can work but requires maintenance and lacks built-in testing. Patch Manager patches running instances rather than producing images. Compute Optimizer provides right-sizing recommendations, not AMIs.",
+    "subtopic": "EC2 Image Builder"
+  },
+  {
+    "id": "ec2-advanced-009",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An EC2 Image Builder pipeline produces a new AMI every week. After two years, the account holds hundreds of outdated AMIs and snapshots, which increases storage costs. The company wants to keep only the five most recent images and remove older ones automatically. Which solution requires the LEAST operational overhead?",
+    "options": [
+      "Write a Lambda function that deregisters old AMIs and deletes their snapshots on a schedule",
+      "Configure an EC2 Image Builder lifecycle policy that retains the five most recent images and deletes older AMIs and their snapshots",
+      "Move all of the AMI snapshots to the EBS Snapshots Archive tier",
+      "Create a Recycle Bin retention rule for AMIs with a 7-day retention period"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Image Builder lifecycle policies can automatically deprecate, disable, or delete older images, including their AMIs and snapshots, based on count or age rules, without custom code. A Lambda function works but must be written and maintained. Archiving lowers cost but still keeps every outdated snapshot. Recycle Bin only retains resources after deletion and does not remove anything.",
+    "subtopic": "EC2 Image Builder lifecycle policies"
+  },
+  {
+    "id": "ec2-advanced-010",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An application on an EC2 instance needs to read objects from an Amazon S3 bucket. What is the MOST secure way to provide AWS credentials to the application?",
+    "options": [
+      "Embed the root user access keys in the AMI",
+      "Pass access keys to the instance in user data",
+      "Create an IAM user, generate access keys, and store them in the application configuration file",
+      "Attach an IAM role with the required S3 permissions to the instance through an instance profile"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An IAM role attached through an instance profile delivers temporary credentials that are rotated automatically and retrieved by the SDK from instance metadata, so no long-lived keys exist on the instance. Access keys in configuration files, AMIs, or user data are long-lived and can leak, and root user access keys should never be used for applications.",
+    "subtopic": "Instance roles"
+  },
+  {
+    "id": "ec2-advanced-011",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An engineer creates an IAM role for EC2 with the AWS CLI and then tries to attach it when launching an instance, but the role cannot be selected. The same process works when the role is created in the IAM console. What is the cause?",
+    "options": [
+      "No instance profile was created and the role was not added to one, which the console does automatically",
+      "The role's trust policy must allow lambda.amazonaws.com",
+      "Roles created with the AWS CLI can be used only by Lambda functions",
+      "The role must be tagged with the ID of the instance that will use it"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "EC2 attaches roles through an instance profile, which is a container for a single role. The IAM console automatically creates an instance profile with the same name when you create a role for EC2, but with the CLI or API you must call CreateInstanceProfile and AddRoleToInstanceProfile yourself. The trust policy must allow ec2.amazonaws.com, not Lambda, and roles do not need instance ID tags.",
+    "subtopic": "Instance profiles"
+  },
+  {
+    "id": "ec2-advanced-012",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "How does an application running on an EC2 instance with an attached IAM role obtain AWS credentials when it uses the AWS SDK?",
+    "options": [
+      "The SDK calls AWS STS AssumeRole with access keys stored in user data",
+      "The SDK reads long-lived access keys that AWS writes to the instance's home directory",
+      "The SDK retrieves temporary security credentials from the instance metadata service, and AWS rotates them automatically before they expire",
+      "The SDK requests a password from AWS IAM Identity Center for each API call"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "The SDK default credential provider chain retrieves temporary credentials for the instance role from the instance metadata service, and AWS rotates these credentials automatically before they expire. No long-lived keys are written to disk, IAM Identity Center is used for workforce sign-in, and no stored keys are needed to use the role.",
+    "subtopic": "Instance role credentials"
+  },
+  {
+    "id": "ec2-advanced-013",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A running production EC2 instance needs additional permissions to send messages to an Amazon SQS queue. The instance already has an instance profile whose role grants S3 access. The company cannot tolerate downtime. What is the simplest way to grant the new permission?",
+    "options": [
+      "Launch a new instance with a new role and migrate the application to it",
+      "Store SQS-specific access keys in AWS Systems Manager Parameter Store and update the application to use them",
+      "Stop the instance, attach a different instance profile, and start the instance",
+      "Add a policy that allows the required SQS actions to the role that is already attached to the instance"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Permissions added to the existing role apply to the instance without a restart, because the instance uses temporary credentials for that role and IAM evaluates the role's current policies on each request. Even replacing the instance profile does not require stopping the instance, so a stop is unnecessary. Launching a new instance adds work and risk, and long-lived access keys are less secure than role credentials.",
+    "subtopic": "Updating instance role permissions"
+  },
+  {
+    "id": "ec2-advanced-014",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application on EC2 connects to an Amazon RDS for MySQL database. The security team requires the database password to be rotated automatically every 30 days, and the application must not need code changes after each rotation. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Store the password in AWS Secrets Manager with managed rotation enabled, and have the application retrieve the secret at runtime",
+      "Store the password in an encrypted S3 object and rotate it manually",
+      "Store the password in user data and update the launch template every month",
+      "Store the password as a SecureString parameter in Parameter Store and write a cron job that changes it"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS Secrets Manager provides built-in scheduled rotation for Amazon RDS credentials, and the application retrieves the current value at runtime, so nothing changes in the code after rotation. Parameter Store SecureString parameters have no native rotation and would require custom automation. Manual rotation in S3 or through user data adds work and exposes the secret.",
+    "subtopic": "Secrets Manager rotation"
+  },
+  {
+    "id": "ec2-advanced-015",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company needs a central place to store about 300 non-secret configuration values, such as feature flags and endpoint URLs, for applications running on EC2. Values must be versioned and accessible through IAM-controlled API calls. Which option is the MOST cost-effective?",
+    "options": [
+      "An Amazon RDS table that each application queries",
+      "AWS Systems Manager Parameter Store standard parameters",
+      "An Amazon DynamoDB table with provisioned capacity",
+      "AWS Secrets Manager secrets"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Parameter Store standard parameters have no storage charge, support versioning and IAM access control, and are designed for configuration data. Secrets Manager charges per secret per month and is intended for secrets that need rotation or cross-Region replication. Running a database or a provisioned DynamoDB table for configuration adds cost and management.",
+    "subtopic": "Parameter Store"
+  },
+  {
+    "id": "ec2-advanced-016",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company stores application configuration in AWS Systems Manager Parameter Store under paths such as /payments/prod/ and /payments/dev/. Production instances must be able to read only production parameters, and the database connection string must be encrypted. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Grant the production instance role ssm:GetParametersByPath and ssm:GetParameter only on the /payments/prod/ path, plus kms:Decrypt on the key",
+      "Store all parameters as String parameters and enable S3 default encryption",
+      "Place production and development parameters in separate Regions to isolate them",
+      "Grant the production instance role ssm:* on all parameters and rely on naming conventions",
+      "Store the connection string as a SecureString parameter encrypted with an AWS KMS key"
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "SecureString parameters are encrypted with AWS KMS, and IAM policies can restrict access to a parameter hierarchy path, with kms:Decrypt required to read the decrypted value. String parameters are not encrypted, and S3 encryption has nothing to do with Parameter Store. Separate Regions add complexity without enforcing least privilege, and ssm:* on all parameters violates least privilege.",
+    "subtopic": "Parameter Store hierarchies"
+  },
+  {
+    "id": "ec2-advanced-017",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs its application in us-east-1 with a warm standby in eu-west-1. The application retrieves database credentials from AWS Secrets Manager. During a Regional failover, the standby must be able to read the same secret locally even if us-east-1 is unavailable, and the value must stay in sync after rotation. Which solution meets these requirements?",
+    "options": [
+      "Configure the standby application to call the us-east-1 Secrets Manager endpoint",
+      "Store the credentials in the AMI used in eu-west-1",
+      "Replicate the secret to eu-west-1 with Secrets Manager multi-Region secret replication so that the replica is updated when the primary secret is rotated",
+      "Copy the secret value to Parameter Store in eu-west-1 with a scheduled Lambda function"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Secrets Manager can replicate a secret to other Regions and keeps the replica's value in sync with the primary, including after rotation, so the standby can read it locally. A custom Lambda copy adds code and risks drift. Calling the us-east-1 endpoint fails if that Region is unavailable. Credentials baked into an AMI are insecure and quickly become stale.",
+    "subtopic": "Secrets Manager replication"
+  },
+  {
+    "id": "ec2-advanced-018",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company stores configuration in Parameter Store. One parameter must hold a 6 KB JSON document, and several temporary access tokens must be removed automatically 24 hours after they are created. The company wants to keep costs as low as possible for its many other small parameters. Which approach meets these requirements?",
+    "options": [
+      "Move all of the parameters to AWS Secrets Manager",
+      "Change every parameter in the account to the advanced tier",
+      "Keep all parameters in the standard tier and delete the expired tokens manually",
+      "Use advanced-tier parameters only for the 6 KB document and for the tokens with an Expiration parameter policy, and keep the other parameters in the standard tier"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Standard parameters are limited to 4 KB and do not support parameter policies, while advanced parameters allow values up to 8 KB and policies such as Expiration but are charged per parameter. Using the advanced tier only where it is needed minimizes cost. Moving everything to Secrets Manager or to the advanced tier adds charges for parameters that do not need those features, and manual deletion adds operational effort and does not fit the 6 KB value in the standard tier.",
+    "subtopic": "Parameter Store tiers"
+  },
+  {
+    "id": "ec2-advanced-019",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company wants to remove SSH access from its EC2 fleet. Administrators still need interactive shell access, and every session must be auditable. Which benefits does AWS Systems Manager Session Manager provide for this requirement? (Select TWO.)",
+    "options": [
+      "Instances do not need any inbound ports open in their security groups",
+      "A bastion host is deployed automatically in each VPC to broker sessions",
+      "Sessions can be opened only to instances that have public IP addresses",
+      "Session activity can be logged to Amazon S3 or CloudWatch Logs, and session API calls are recorded in AWS CloudTrail",
+      "Each administrator authenticates with a personal SSH key pair stored by Session Manager"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "The SSM Agent opens outbound connections to the service, so Session Manager needs no inbound ports, bastion hosts, or SSH keys, and access is controlled with IAM. Session output can be logged to S3 or CloudWatch Logs, and the API calls are recorded in CloudTrail. It works for instances in private subnets through a NAT gateway or VPC endpoints, not only for public instances.",
+    "subtopic": "Session Manager"
+  },
+  {
+    "id": "ec2-advanced-020",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "EC2 instances in a private subnet have no internet access and no NAT gateway. The instances run the SSM Agent and have an instance profile with the AmazonSSMManagedInstanceCore policy, but they do not appear as managed nodes in Systems Manager. Which interface VPC endpoints should be created so that administrators can use Session Manager? (Select THREE.)",
+    "options": [
+      "com.amazonaws.region.sts",
+      "com.amazonaws.region.ec2messages",
+      "com.amazonaws.region.ssmmessages",
+      "com.amazonaws.region.ec2",
+      "com.amazonaws.region.ssm",
+      "com.amazonaws.region.kinesis-streams"
+    ],
+    "answer": [
+      1,
+      2,
+      4
+    ],
+    "explanation": "Systems Manager guidance for private subnets without internet access calls for interface endpoints for ssm, ssmmessages, and ec2messages; ssmmessages carries the Session Manager data channel and the others carry agent communication with the service. The ec2 endpoint is needed only for certain other features, and Kinesis and STS endpoints are not required for Session Manager connectivity.",
+    "subtopic": "Systems Manager VPC endpoints"
+  },
+  {
+    "id": "ec2-advanced-021",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An operations team must restart a service and collect a diagnostic file on 400 EC2 instances tagged Role=api, without opening SSH, and must avoid affecting more than 10% of the fleet at a time. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Update the user data of each instance and reboot all of the instances",
+      "Build a new AMI with the fix and replace all of the instances at once",
+      "Use AWS Systems Manager Run Command to target the tag with a concurrency limit of 10% and an error threshold",
+      "Write a script that loops through the instances and connects to them with SSH in batches"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Run Command executes documents on managed instances selected by tags, with rate controls for concurrency and error thresholds, and requires no inbound SSH. An SSH loop needs open ports, keys, and custom scripting. Changing user data and rebooting does not rerun the commands by default and disrupts the fleet. Replacing all instances at once violates the 10% limit.",
+    "subtopic": "Run Command"
+  },
+  {
+    "id": "ec2-advanced-022",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company must automatically install security updates on its Amazon Linux and Windows EC2 instances every Sunday at 02:00 and must approve only critical and important security patches 7 days after their release. Which AWS Systems Manager configuration should a solutions architect use? (Select TWO.)",
+    "options": [
+      "Use AWS Config to install missing patches when instances become noncompliant",
+      "Create a maintenance window scheduled for Sunday at 02:00 that runs the AWS-RunPatchBaseline document against the instances",
+      "Use Session Manager to connect to each instance and run the update commands manually",
+      "Create custom patch baselines with auto-approval rules for critical and important security patches after 7 days",
+      "Use EC2 Image Builder to patch the running instances in place"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Patch baselines define which patches are approved, including severity filters and auto-approval delays, and a maintenance window schedules AWS-RunPatchBaseline to scan for and install those patches at the required time. Manual Session Manager work does not scale. AWS Config evaluates compliance but does not install patches by itself, and Image Builder builds new images rather than patching running instances.",
+    "subtopic": "Patch Manager"
+  },
+  {
+    "id": "ec2-advanced-023",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A newly launched EC2 instance does not appear as a managed node in AWS Systems Manager. The instance has outbound internet access through a NAT gateway. Which requirements must be met for the instance to be managed by Systems Manager? (Select TWO.)",
+    "options": [
+      "The SSM Agent must be installed and running on the instance",
+      "The instance must have IAM permissions for Systems Manager, such as an instance profile that includes AmazonSSMManagedInstanceCore",
+      "The instance must have an Elastic IP address",
+      "The instance must run on a Dedicated Host",
+      "The security group must allow inbound TCP port 22 from the Systems Manager service"
+    ],
+    "answer": [
+      0,
+      1
+    ],
+    "explanation": "Systems Manager requires the SSM Agent on the instance and IAM permissions that let the agent communicate with the service, typically through an instance profile with AmazonSSMManagedInstanceCore. The agent makes outbound connections, so no inbound ports or Elastic IP addresses are needed, and tenancy does not matter.",
+    "subtopic": "Systems Manager prerequisites"
+  },
+  {
+    "id": "ec2-advanced-024",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A solutions architect wants to create an alarm when memory utilization on Linux EC2 instances exceeds 85%, but cannot find a memory utilization metric in the AWS/EC2 namespace. What is the reason?",
+    "options": [
+      "EC2 does not publish operating system memory metrics by default, so the CloudWatch agent must be installed to collect them",
+      "Memory metrics are published only for instances that have instance store volumes",
+      "Memory metrics appear only after an instance has been running for 24 hours",
+      "Memory metrics are available only when detailed monitoring is enabled"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The hypervisor cannot see memory usage inside the guest operating system, so EC2 does not publish memory utilization by default; the CloudWatch agent collects it from inside the OS and publishes it as a custom metric, by default in the CWAgent namespace. Detailed monitoring only increases the frequency of the default metrics. Storage type and uptime do not affect memory metrics.",
+    "subtopic": "CloudWatch agent memory metrics"
+  },
+  {
+    "id": "ec2-advanced-025",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must deploy the same CloudWatch agent configuration, which collects memory, disk, and application log data, to 1,500 EC2 instances and must be able to update it centrally. Which approach requires the LEAST operational overhead?",
+    "options": [
+      "Bake the configuration into the AMI and replace the instances whenever it changes",
+      "Store the agent configuration in Systems Manager Parameter Store and use Systems Manager to install and configure the agent across the fleet",
+      "Configure the agent on each instance manually through the CloudWatch console",
+      "Copy the configuration file to each instance with SCP after every change"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The CloudWatch agent can load its configuration from a Parameter Store parameter, and Systems Manager Run Command or State Manager can install and apply that configuration across the fleet, so updates are made once centrally. Manual copying or per-instance configuration does not scale. Rebuilding AMIs and replacing instances for each configuration change adds significant effort.",
+    "subtopic": "CloudWatch agent configuration"
+  },
+  {
+    "id": "ec2-advanced-026",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A web application on EC2 crashed when its root file system filled up. The company wants to be notified before disk usage on the file system exceeds 80%. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Install the CloudWatch agent and configure it to collect the disk used_percent metric for the file system",
+      "Create a CloudWatch alarm on the agent's disk used_percent metric that publishes to an Amazon SNS topic",
+      "Use the EBSWriteBytes metric to estimate the remaining free space",
+      "Enable Fast Snapshot Restore for the root volume's snapshots",
+      "Enable detailed monitoring on the instance to publish file system utilization"
+    ],
+    "answer": [
+      0,
+      1
+    ],
+    "explanation": "File system usage is visible only from inside the operating system, so the CloudWatch agent must collect the disk used_percent metric, and a CloudWatch alarm on that metric can notify an Amazon SNS topic. Detailed monitoring only increases the frequency of standard metrics and does not add file system usage. EBSWriteBytes measures I/O, not free space, and Fast Snapshot Restore is unrelated.",
+    "subtopic": "CloudWatch agent disk metrics"
+  },
+  {
+    "id": "ec2-advanced-027",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application on a fleet of EC2 instances writes errors to /var/log/app/error.log. When Auto Scaling terminates instances, their logs are lost. The company also wants an alarm when more than 50 errors occur within 5 minutes. Which solution meets these requirements?",
+    "options": [
+      "Store the log file on an instance store volume and copy it to Amazon S3 when the instance stops",
+      "Enable VPC Flow Logs and create an alarm on rejected connections",
+      "Enable detailed monitoring and create an alarm on the StatusCheckFailed metric",
+      "Configure the CloudWatch agent to send the log file to CloudWatch Logs, create a metric filter for error entries, and create an alarm on the resulting metric"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "The CloudWatch agent streams log files to CloudWatch Logs so they persist after instances terminate, and a metric filter turns matching log events into a metric that can trigger an alarm. Instance store data is lost at termination, and a scale-in event may not leave time to copy files. VPC Flow Logs capture network traffic, not application errors. Status check metrics do not reflect application errors.",
+    "subtopic": "CloudWatch Logs"
+  },
+  {
+    "id": "ec2-advanced-028",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs a tightly coupled high performance computing job that requires the lowest possible network latency and the highest packet-per-second throughput between nodes. Which placement strategy should be used?",
+    "options": [
+      "A partition placement group with seven partitions",
+      "A cluster placement group in a single Availability Zone",
+      "No placement group, with instances distributed across several subnets",
+      "A spread placement group across three Availability Zones"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A cluster placement group packs instances close together within one Availability Zone to deliver low latency and high network throughput, which suits tightly coupled HPC. Spread and partition placement groups distribute instances across hardware to reduce correlated failures, which works against minimum latency. Distributing instances without a placement group also increases latency.",
+    "subtopic": "Cluster placement groups"
+  },
+  {
+    "id": "ec2-advanced-029",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs six critical instances that form a small quorum-based cluster. Each instance must run on distinct underlying hardware to minimize the risk of simultaneous failures, and all instances must stay in a single Availability Zone because of a licensing restriction. Which solution meets these requirements?",
+    "options": [
+      "Launch the instances as Dedicated Instances without a placement group",
+      "Launch the instances in a cluster placement group",
+      "Launch the instances in a spread placement group",
+      "Launch the instances on a single Dedicated Host"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A spread placement group places each instance on a distinct rack with its own network and power source and supports up to seven running instances per Availability Zone, which fits six instances in one AZ. A cluster placement group places instances close together and increases correlated failure risk. A single Dedicated Host is one physical server, and Dedicated Instances without a placement group do not guarantee distinct hardware.",
+    "subtopic": "Spread placement groups"
+  },
+  {
+    "id": "ec2-advanced-030",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is deploying a 90-node Apache Cassandra cluster on EC2. The database is rack-aware and needs to know which instances share underlying hardware so that replicas can be placed in different failure domains. Which placement strategy meets these requirements?",
+    "options": [
+      "A partition placement group, with each instance reading its partition number from instance metadata",
+      "Random placement across subnets in one Availability Zone",
+      "A cluster placement group",
+      "A spread placement group"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Partition placement groups divide instances into logical partitions that do not share racks, support hundreds of instances, and expose each instance's partition number through instance metadata, so rack-aware software such as Cassandra, HDFS, or Kafka can place replicas correctly. A spread placement group is limited to seven running instances per Availability Zone. A cluster placement group concentrates failure risk, and random placement gives no visibility into hardware topology.",
+    "subtopic": "Partition placement groups"
+  },
+  {
+    "id": "ec2-advanced-031",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A team launched 4 instances into a cluster placement group and later tries to add 12 more instances of a different instance type. The launch fails with an insufficient capacity error. What is the recommended way to avoid this problem?",
+    "options": [
+      "Launch all of the required instances in a single launch request and use the same instance type for every instance in the placement group",
+      "Change the strategy of the existing placement group from cluster to spread",
+      "Extend the cluster placement group into a second Availability Zone",
+      "Attach smaller EBS volumes to the new instances"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS recommends launching all the instances you need in a single launch request and using the same instance type, because adding instances later or mixing types increases the chance of insufficient capacity errors in a cluster placement group; stopping and starting all instances in the group can also help. A spread placement group would remove the low-latency benefit, a cluster placement group cannot span Availability Zones, and EBS volume size has no effect on host capacity.",
+    "subtopic": "Cluster placement group capacity"
+  },
+  {
+    "id": "ec2-advanced-032",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company must run 24 instances of a distributed application in one Availability Zone. The instances must be grouped so that a single rack failure affects at most one group, and the application needs to know which group each instance belongs to. Which placement group configuration meets these requirements?",
+    "options": [
+      "A single spread placement group that contains all 24 instances",
+      "A partition placement group with multiple partitions",
+      "A cluster placement group that contains all 24 instances",
+      "Three spread placement groups with eight instances each"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A partition placement group in one Availability Zone supports up to seven partitions, each on its own set of racks, with many instances per partition, and each instance can read its partition number from instance metadata. A spread placement group allows at most seven running instances per Availability Zone, so neither one group of 24 nor groups of eight would work. A cluster placement group concentrates instances on nearby hardware, which increases correlated failure risk.",
+    "subtopic": "Spread vs partition placement groups"
+  },
+  {
+    "id": "ec2-advanced-033",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Which EC2 feature uses single root I/O virtualization (SR-IOV) to provide higher bandwidth, higher packet-per-second performance, and lower latency at no additional charge on supported instance types?",
+    "options": [
+      "EC2 Instance Connect",
+      "VPC Flow Logs",
+      "Enhanced networking with the Elastic Network Adapter (ENA)",
+      "Elastic IP addresses"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Enhanced networking uses SR-IOV, most commonly through the Elastic Network Adapter, to deliver high throughput, high packets per second, and consistently low latency on supported instance types with no extra charge. Elastic IP addresses provide static public addresses, EC2 Instance Connect handles SSH access, and Flow Logs capture traffic metadata.",
+    "subtopic": "Enhanced networking (ENA)"
+  },
+  {
+    "id": "ec2-advanced-034",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A research institute runs a weather model that uses MPI across hundreds of nodes, and inter-node communication latency limits how far the model can scale. The team wants inter-node communication to bypass the operating system kernel on supported Linux instances. Which solution meets this requirement?",
+    "options": [
+      "Enable EBS optimization on every node",
+      "Place the nodes in a spread placement group across multiple Availability Zones",
+      "Attach several ENA interfaces to each instance and bond them together",
+      "Use an Elastic Fabric Adapter (EFA) on supported instance types with an MPI library configured to use it"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An Elastic Fabric Adapter provides OS-bypass capabilities so that MPI and NCCL applications communicate directly with the network hardware, giving lower and more consistent latency than TCP over ENA for tightly coupled HPC and ML workloads. Bonding ENA interfaces still uses the kernel network stack. EBS optimization affects storage traffic, and spreading nodes across Availability Zones increases latency.",
+    "subtopic": "Elastic Fabric Adapter"
+  },
+  {
+    "id": "ec2-advanced-035",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company is building a cluster of EC2 instances for computational fluid dynamics simulations that are tightly coupled and very sensitive to network latency between nodes. Which actions should a solutions architect take to achieve the BEST network performance? (Select TWO.)",
+    "options": [
+      "Route node-to-node traffic through a Network Load Balancer",
+      "Use instance types that support Elastic Fabric Adapter and attach an EFA to each instance",
+      "Distribute the instances across three Availability Zones for resilience",
+      "Launch the instances in a cluster placement group",
+      "Use a partition placement group with one instance in each partition"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "A cluster placement group keeps nodes physically close in one Availability Zone for low latency and high bandwidth, and EFA adds OS-bypass networking for MPI traffic. Spreading instances across Availability Zones or partitions increases the distance between nodes and therefore latency. Placing a load balancer between nodes adds hops and does not suit peer-to-peer MPI traffic.",
+    "subtopic": "HPC networking"
+  },
+  {
+    "id": "ec2-advanced-036",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "On a busy database server, heavy network traffic from application clients competes with traffic to the instance's EBS volumes, which causes inconsistent storage latency. What does an EBS-optimized instance provide to address this problem?",
+    "options": [
+      "Local NVMe storage that replaces the EBS volumes",
+      "Dedicated bandwidth between the instance and Amazon EBS that is separate from other network traffic",
+      "Automatic conversion of gp3 volumes to io2 volumes",
+      "Fast Snapshot Restore for all attached volumes at no charge"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "EBS-optimized instances provide dedicated capacity for EBS I/O, so storage traffic does not contend with the instance's other network traffic and EBS performance is more consistent; most current-generation instance types are EBS-optimized by default. EBS optimization does not replace EBS with local storage, change volume types, or enable Fast Snapshot Restore.",
+    "subtopic": "EBS-optimized instances"
+  },
+  {
+    "id": "ec2-advanced-037",
+    "topic": "ec2-advanced",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A database runs on an m6i.large instance with an io2 volume provisioned for 30,000 IOPS. During nightly loads that last several hours, the volume reaches its provisioned IOPS for roughly the first 30 minutes and then drops to a much lower level for the rest of the load, with a high queue length. Which change will MOST likely resolve this?",
+    "options": [
+      "Enable Multi-Attach on the io2 volume so that it can reach its provisioned IOPS",
+      "Enable Fast Snapshot Restore on the snapshot that the volume was created from",
+      "Move to a larger instance size whose baseline EBS IOPS and bandwidth meet the volume's provisioned performance",
+      "Increase the size of the io2 volume beyond 16 TiB"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Smaller instance sizes have a baseline EBS bandwidth and IOPS limit and can burst to their maximum only for a limited time each day, so the instance, not the volume, becomes the bottleneck once the burst is used up. An instance size whose baseline EBS performance covers 30,000 IOPS removes the limit. Multi-Attach shares a volume and does not raise performance, Fast Snapshot Restore only affects initialization after a restore, and io2 IOPS do not depend on the volume being larger than 16 TiB.",
+    "subtopic": "Instance EBS limits"
+  },
+  {
+    "id": "ec2-advanced-038",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "An application uses 150 non-sensitive configuration values and 4 database credentials. The credentials must be rotated automatically, and the company wants to minimize cost. Which storage choices meet these requirements? (Select TWO.)",
+    "options": [
+      "Store the 150 configuration values as Parameter Store standard parameters",
+      "Store all of the values in EC2 user data",
+      "Store the 4 database credentials in AWS Secrets Manager with automatic rotation",
+      "Store the 150 configuration values as AWS Secrets Manager secrets",
+      "Store the 4 database credentials as plaintext String parameters in Parameter Store"
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "Parameter Store standard parameters have no storage charge, which makes them the cost-effective choice for non-sensitive configuration, while Secrets Manager provides automatic rotation for database credentials at a small per-secret monthly charge. Storing 150 configuration values in Secrets Manager adds unnecessary monthly cost. Plaintext String parameters and user data neither protect nor rotate credentials.",
+    "subtopic": "Parameter Store vs Secrets Manager"
+  },
+  {
+    "id": "ec2-advanced-039",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a bastion host with an Elastic IP address in each of three Availability Zones only to give administrators SSH access to private instances. The company wants to reduce cost and operational effort while keeping access auditable. Which solution meets these requirements?",
+    "options": [
+      "Use AWS Systems Manager Session Manager to connect to the private instances and terminate the bastion hosts",
+      "Move the private instances to public subnets and restrict SSH by source IP address",
+      "Replace the bastion hosts with a NAT gateway in each Availability Zone",
+      "Replace the three bastion hosts with one larger bastion host in a single Availability Zone"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Session Manager provides IAM-controlled, audited shell access to private instances without bastion hosts, open inbound ports, or Elastic IP addresses, so the bastion instances and their public IPv4 charges can be removed. A single larger bastion still costs money and becomes a single point of failure. Public subnets increase exposure. NAT gateways provide outbound internet access rather than inbound administrative access, and they are billed hourly.",
+    "subtopic": "Replacing bastion hosts"
+  },
+  {
+    "id": "ec2-advanced-040",
+    "topic": "ec2-advanced",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company installed the CloudWatch agent on 2,000 instances in Auto Scaling groups to collect memory and disk metrics. Because each metric includes the InstanceId dimension and instances are replaced often, the number of custom metrics and the CloudWatch bill are much higher than expected. The operations team needs only fleet-level values per Auto Scaling group. Which change will reduce cost while meeting the requirement?",
+    "options": [
+      "Reduce the agent's metric collection interval to 1 second",
+      "Configure the agent to send the metrics to an S3 bucket instead of CloudWatch",
+      "Enable detailed monitoring on all of the instances",
+      "Configure the agent to publish the metrics with only the AutoScalingGroupName dimension instead of per-instance dimensions"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "CloudWatch bills for each unique custom metric, which is defined by its name and dimension combination, so per-instance dimensions on a frequently replaced fleet create a large number of metrics. Publishing the metrics with only the AutoScalingGroupName dimension provides group-level values with far fewer custom metrics. Detailed monitoring adds cost for the default metrics, a 1-second interval increases API requests and cost, and the agent does not publish metrics to S3.",
+    "subtopic": "CloudWatch agent metric cost"
+  }
+]

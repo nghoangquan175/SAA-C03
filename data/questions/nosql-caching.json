@@ -1,0 +1,875 @@
+[
+  {
+    "id": "nosql-caching-001",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A ride-sharing company stores trip events in an Amazon DynamoDB table using the city name as the partition key. Most traffic comes from three large cities, and the table experiences throttling even though total consumed capacity is well below the table limit. Which change will MOST effectively resolve the throttling?",
+    "options": [
+      "Redesign the table to use a high-cardinality partition key, such as the trip ID, so requests spread evenly across partitions.",
+      "Use a sort key based on the city name in addition to the partition key.",
+      "Enable DynamoDB Streams so writes are buffered before reaching the table.",
+      "Add a local secondary index on the city attribute to absorb the extra traffic."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Throttling despite low overall consumption indicates hot partitions caused by a low-cardinality partition key; a high-cardinality key distributes requests evenly across partitions. A local secondary index shares the same partition key and does not spread load. Streams capture changes after writes and do not buffer them, and adding a city-based sort key leaves the hot partition key unchanged.",
+    "subtopic": "DynamoDB Partition Key Design"
+  },
+  {
+    "id": "nosql-caching-002",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An online bookstore needs to retrieve all orders for a given customer, sorted by order date, and to fetch orders within a date range. Which Amazon DynamoDB primary key design supports this access pattern most efficiently?",
+    "options": [
+      "Partition key of order date and sort key of customer ID",
+      "Partition key of order ID with no sort key",
+      "Partition key of customer ID with no sort key",
+      "Partition key of customer ID and sort key of order date"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A composite primary key with customer ID as the partition key and order date as the sort key stores a customer's orders together in sorted order, so a single Query can return them and apply range conditions on the date. Using order date as the partition key scatters a customer's orders. A simple order ID key or a customer ID key without a sort key cannot store multiple sorted orders per customer for efficient range queries.",
+    "subtopic": "DynamoDB Composite Keys"
+  },
+  {
+    "id": "nosql-caching-003",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup is launching a new mobile app backed by Amazon DynamoDB. Traffic is impossible to predict and may be near zero for long periods. The company wants to pay only for the requests it actually makes and avoid capacity planning. Which capacity mode should be used?",
+    "options": [
+      "Provisioned capacity mode with a fixed high setting",
+      "On-demand capacity mode",
+      "Provisioned capacity mode with burst credits disabled",
+      "Provisioned capacity mode with reserved capacity"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "On-demand mode charges per read and write request and scales automatically, which suits unpredictable or idle-heavy workloads with no capacity planning. Reserved capacity requires a commitment that is wasted when traffic is near zero. A fixed high provisioned setting pays for unused throughput, and there is no option to disable burst capacity to save money.",
+    "subtopic": "DynamoDB On-Demand Capacity"
+  },
+  {
+    "id": "nosql-caching-004",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company runs two Amazon DynamoDB tables. The first serves a production workload with steady, predictable traffic 24 hours a day. The second supports an internal tool that is used sporadically with unpredictable bursts. Which choices are the MOST cost-effective? (Select TWO.)",
+    "options": [
+      "Enable DAX on both tables to lower the read and write request charges.",
+      "Use on-demand capacity mode with reserved capacity for the production table.",
+      "Use provisioned capacity with auto scaling and reserved capacity for the production table.",
+      "Use provisioned capacity sized for the peak burst for the internal tool table.",
+      "Use on-demand capacity mode for the internal tool table."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Steady, predictable traffic is cheapest on provisioned capacity, where auto scaling follows gradual changes and reserved capacity adds a discount. Sporadic, unpredictable traffic fits on-demand mode, where idle time costs nothing for throughput. Reserved capacity applies to provisioned mode only, provisioning for peak wastes money during idle periods, and DAX adds node costs and does not reduce write costs.",
+    "subtopic": "DynamoDB Capacity Modes"
+  },
+  {
+    "id": "nosql-caching-005",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A marketing platform uses an Amazon DynamoDB table in provisioned mode. During flash campaigns, write traffic jumps from 500 to 20,000 writes per second within seconds, and many requests are throttled before auto scaling reacts. A small number of campaign IDs, used as the partition key, receive most of the writes. Which actions will reduce throttling? (Select TWO.)",
+    "options": [
+      "Switch the table to on-demand capacity mode.",
+      "Enable DynamoDB Streams on the table to queue the burst of writes.",
+      "Create a local secondary index on the campaign ID attribute.",
+      "Add a random suffix to the campaign ID partition key (write sharding) to spread writes across partitions.",
+      "Increase the auto scaling cooldown period to reduce scaling events."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "On-demand mode accommodates sudden traffic jumps without waiting for auto scaling, and write sharding spreads writes for hot campaign IDs across many partitions. A local secondary index adds write work rather than spreading it, Streams record changes after they are written and do not queue requests, and a longer cooldown makes scaling even slower.",
+    "subtopic": "DynamoDB Throttling"
+  },
+  {
+    "id": "nosql-caching-006",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A user profile table in Amazon DynamoDB uses user ID as the partition key. A new feature must look up profiles by email address, which is a non-key attribute. The table already exists and holds millions of items. Which solution provides efficient lookups by email?",
+    "options": [
+      "Create a local secondary index with email address as its sort key.",
+      "Enable DynamoDB Streams and filter the stream by email address.",
+      "Create a global secondary index with email address as its partition key.",
+      "Run a Scan operation with a filter expression on the email attribute."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A global secondary index can use a different partition key, such as email, and can be added to an existing table, enabling efficient Query lookups. A local secondary index must keep the table's partition key and can only be created when the table is created. A Scan reads the entire table and is slow and costly, and Streams contain only item changes, not a searchable index.",
+    "subtopic": "DynamoDB Global Secondary Index"
+  },
+  {
+    "id": "nosql-caching-007",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A team needs to query an existing DynamoDB table by the same partition key as the base table but sorted on a different attribute, and the query results must be strongly consistent. What must the team do?",
+    "options": [
+      "Add a global secondary index with the alternate sort key and request strongly consistent reads.",
+      "Create a new table that defines a local secondary index with the alternate sort key, then migrate the data.",
+      "Enable DAX in front of the table and request strongly consistent reads.",
+      "Add a local secondary index to the existing table with an UpdateTable call."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Local secondary indexes support strongly consistent reads but can only be defined when a table is created, so the team must create a new table with the LSI and migrate data. Global secondary indexes support only eventually consistent reads. UpdateTable cannot add an LSI to an existing table, and DAX passes strongly consistent reads through to DynamoDB without improving consistency.",
+    "subtopic": "DynamoDB Local Secondary Index"
+  },
+  {
+    "id": "nosql-caching-008",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "Which statements correctly compare DynamoDB global secondary indexes (GSIs) and local secondary indexes (LSIs)? (Select TWO.)",
+    "options": [
+      "An LSI can be added to an existing table with an UpdateTable call.",
+      "An LSI can use a different partition key from the base table.",
+      "A GSI can be created or deleted at any time after the table is created.",
+      "Queries on a GSI support only eventually consistent reads.",
+      "A GSI always shares the provisioned throughput of the base table."
+    ],
+    "answer": [
+      2,
+      3
+    ],
+    "explanation": "GSIs can be added or removed on existing tables and support eventually consistent reads only. An LSI must share the base table's partition key and must be defined at table creation. In provisioned mode a GSI has its own read and write capacity settings that are separate from the base table.",
+    "subtopic": "GSI vs LSI"
+  },
+  {
+    "id": "nosql-caching-009",
+    "topic": "nosql-caching",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An e-commerce company stores orders in an Amazon DynamoDB table. Whenever a new order item is inserted, a confirmation email must be sent and a loyalty points service must be updated, without changing the code that writes the orders. Which solution will meet these requirements?",
+    "options": [
+      "Enable Time to Live on the table so new items trigger notifications.",
+      "Schedule a Lambda function every minute to scan the table for new orders.",
+      "Enable DynamoDB Streams on the table and configure an AWS Lambda function as a stream trigger.",
+      "Create a global secondary index that sends events to Amazon SNS."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "DynamoDB Streams capture item-level changes in order, and a Lambda trigger can process each new item to send emails and update loyalty points without touching the writer code. Periodic scans are inefficient and introduce delay. TTL deletes expired items rather than reacting to inserts, and indexes do not publish events.",
+    "subtopic": "DynamoDB Streams"
+  },
+  {
+    "id": "nosql-caching-010",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A web application stores session records in Amazon DynamoDB. Sessions are useless after 24 hours, and the table keeps growing. The company wants expired sessions removed automatically at no additional write cost. Which solution will meet these requirements?",
+    "options": [
+      "Enable Time to Live on the table using an attribute that stores each session's expiration timestamp.",
+      "Switch the table to the Standard-Infrequent Access table class.",
+      "Run a nightly Lambda function that scans the table and deletes old sessions.",
+      "Enable point-in-time recovery so old items are purged automatically."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "DynamoDB TTL deletes items after the timestamp in the chosen attribute passes, and TTL deletions do not consume write capacity. A scanning Lambda function consumes read and write capacity and requires code. The Standard-IA table class lowers storage price but keeps the data, and point-in-time recovery is a backup feature that never deletes items.",
+    "subtopic": "DynamoDB Time to Live"
+  },
+  {
+    "id": "nosql-caching-011",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A gaming company uses DynamoDB TTL to remove player match records after 90 days. Regulators now require the expired records to be retained in low-cost storage for 5 years. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Take daily on-demand backups and keep each backup for 5 years.",
+      "Create a global table replica in another Region and disable TTL on the replica.",
+      "Disable TTL and keep all records in the table using the Standard-Infrequent Access table class.",
+      "Enable DynamoDB Streams and use a Lambda function to write records deleted by TTL to an Amazon S3 bucket with a lifecycle policy to an archival storage class."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "TTL deletions appear in DynamoDB Streams as service-initiated removes, so a Lambda function can archive them to S3, where lifecycle rules move them to low-cost archival storage for 5 years. Keeping 5 years of data in the table is more expensive than S3 archival tiers. Daily full backups duplicate most data repeatedly, and TTL deletions in a global table are replicated to every replica, so the replica would not retain the items.",
+    "subtopic": "DynamoDB TTL with Streams"
+  },
+  {
+    "id": "nosql-caching-012",
+    "topic": "nosql-caching",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A multiplayer game stores player state in Amazon DynamoDB. Players are in North America, Europe, and Asia, and each must read and write with low latency in a nearby Region. If one Region fails, players must continue in another Region. Which solution will meet these requirements?",
+    "options": [
+      "Use DynamoDB global tables with replicas in Regions near each player group.",
+      "Use DynamoDB Streams to copy data to independent tables in each Region.",
+      "Use a single DynamoDB table with DAX clusters deployed in each Region.",
+      "Use a single-Region table with point-in-time recovery and cross-Region backups."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Global tables provide fully managed, multi-active replication, so every replica Region can accept reads and writes locally and continue serving if another Region fails. DAX clusters are deployed in the same Region as their table and only cache reads. Building custom stream-based replication adds operational burden, and backups do not give low-latency writes or active failover.",
+    "subtopic": "DynamoDB Global Tables"
+  },
+  {
+    "id": "nosql-caching-013",
+    "topic": "nosql-caching",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A bug in a deployment overwrote attributes in thousands of items in an Amazon DynamoDB table 2 hours ago. Point-in-time recovery is enabled. How can the company recover the data?",
+    "options": [
+      "Roll back the existing table in place to a point in time before the deployment.",
+      "Restore the table to a point in time before the deployment, which creates a new table, and then use it to repair or replace the original.",
+      "Recover the previous item versions from the TTL attribute history.",
+      "Query DynamoDB Streams from 2 hours ago to rebuild the original items with Backtrack."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Point-in-time recovery restores a table to any second within the recovery window into a new table, which can then be used to repair or replace the original. DynamoDB does not roll back a table in place, and Backtrack is an Aurora MySQL feature. TTL is an expiration mechanism and keeps no item history.",
+    "subtopic": "DynamoDB Point-in-Time Recovery"
+  },
+  {
+    "id": "nosql-caching-014",
+    "topic": "nosql-caching",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A financial company must keep monthly backups of its Amazon DynamoDB tables for 3 years and store a copy of each backup in a second AWS Region for disaster recovery, managed centrally with other services. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Enable point-in-time recovery and set the recovery window to 3 years.",
+      "Create global tables and rely on the replica Region as the backup copy.",
+      "Use AWS Backup with a backup plan that includes a monthly rule, 3-year retention, and a cross-Region copy action.",
+      "Write a Lambda function that exports each table to S3 monthly and replicates the bucket."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS Backup supports DynamoDB with scheduled backup plans, long-term retention, and cross-Region copy, all managed centrally. The point-in-time recovery window is at most 35 days. Custom export scripts add operational overhead, and global table replicas mirror changes, including deletions and corruption, so they are not backups.",
+    "subtopic": "DynamoDB Backups"
+  },
+  {
+    "id": "nosql-caching-015",
+    "topic": "nosql-caching",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A digital wallet application stores balances in an Amazon DynamoDB table. A transfer must debit one account and credit another, and both updates must succeed or fail together, including a check that the sender has sufficient funds. Which solution will meet these requirements?",
+    "options": [
+      "Use a BatchWriteItem call that contains both updates.",
+      "Enable DynamoDB Streams and apply the credit when the debit appears in the stream.",
+      "Perform two UpdateItem calls and retry the second one if it fails.",
+      "Use a TransactWriteItems call with condition expressions for the debit and credit updates."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "TransactWriteItems provides ACID, all-or-nothing writes across multiple items, and condition expressions can enforce the sufficient-funds check. BatchWriteItem is not transactional and only supports puts and deletes. Two separate updates can leave the data inconsistent if the second fails, and stream-driven crediting is eventually consistent rather than atomic.",
+    "subtopic": "DynamoDB Transactions"
+  },
+  {
+    "id": "nosql-caching-016",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A real-time bidding application performs millions of repeated reads per second on an Amazon DynamoDB table and needs response times in microseconds. The team wants to minimize application changes. Which solution will meet these requirements?",
+    "options": [
+      "Enable DynamoDB Streams to push frequently read items to the application.",
+      "Deploy a DynamoDB Accelerator (DAX) cluster and use the DAX client in the application.",
+      "Switch the table to on-demand capacity mode to increase read throughput.",
+      "Create additional global secondary indexes for the most frequently read attributes."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "DAX is an in-memory, API-compatible cache for DynamoDB that delivers microsecond read latency for repeated reads with minimal code changes. Additional indexes and on-demand mode still provide single-digit millisecond reads, not microseconds. Streams carry item changes and are not a read-acceleration mechanism.",
+    "subtopic": "DynamoDB Accelerator (DAX)"
+  },
+  {
+    "id": "nosql-caching-017",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A team placed DynamoDB Accelerator (DAX) in front of a table, but the latency of one critical read path did not improve at all. That code path uses GetItem with ConsistentRead set to true. What explains this behavior?",
+    "options": [
+      "DAX passes strongly consistent read requests through to DynamoDB instead of serving them from its cache.",
+      "DAX requires the table to use on-demand capacity before it will cache items.",
+      "DAX only caches Scan results, and GetItem requests are always forwarded to the table.",
+      "DAX caches items only after they are written through a TransactWriteItems call."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "DAX serves eventually consistent reads from its item cache, but strongly consistent reads are passed through to DynamoDB and are not cached, so their latency does not improve. DAX caches GetItem results in its item cache, it does not require transactional writes, and it works with both provisioned and on-demand tables.",
+    "subtopic": "DAX Consistency"
+  },
+  {
+    "id": "nosql-caching-018",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An analytics team wants to run complex SQL queries with Amazon Athena on a full copy of a 2 TB production Amazon DynamoDB table every week. The queries must not consume the table's read capacity or affect production performance. Which solution is the MOST cost-effective?",
+    "options": [
+      "Add a DAX cluster and point Athena at the DAX endpoint for the weekly queries.",
+      "Run a parallel Scan from an EC2 instance every week and write the results to S3.",
+      "Create a global secondary index that projects all attributes and query it from Athena.",
+      "Enable point-in-time recovery and use the DynamoDB export to Amazon S3 feature, then query the exported data with Athena."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "DynamoDB export to S3 uses point-in-time recovery data, does not consume read capacity, and produces files that Athena can query directly. A parallel Scan consumes large amounts of read capacity and can affect production. Athena does not query GSIs or DAX endpoints, and adding them would only add cost.",
+    "subtopic": "DynamoDB Export to S3"
+  },
+  {
+    "id": "nosql-caching-019",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Application servers in private subnets write millions of items per day to Amazon DynamoDB through a NAT gateway, and NAT data processing charges are high. The company wants to keep the servers private and reduce costs. Which solution will meet these requirements?",
+    "options": [
+      "Replace the NAT gateway with a NAT instance on a larger EC2 instance type.",
+      "Create an AWS Direct Connect connection for the DynamoDB traffic.",
+      "Create a gateway VPC endpoint for DynamoDB and add it to the private subnet route tables.",
+      "Move the application servers into public subnets with Elastic IP addresses."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A gateway endpoint for DynamoDB routes traffic privately over the AWS network with no hourly or data processing charge, removing NAT gateway costs for that traffic. A NAT instance adds management overhead and still processes the traffic. Public subnets violate the requirement to keep servers private, and Direct Connect addresses on-premises connectivity, not VPC-to-DynamoDB traffic.",
+    "subtopic": "DynamoDB Gateway Endpoint"
+  },
+  {
+    "id": "nosql-caching-020",
+    "topic": "nosql-caching",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A mobile app authenticates users with Amazon Cognito and lets them read and write directly to an Amazon DynamoDB table whose partition key is the user's Cognito identity ID. Each user must be able to access only their own items. Which solution will meet this requirement?",
+    "options": [
+      "Attach an IAM policy to the authenticated role that uses the dynamodb:LeadingKeys condition key matched to the user's identity ID.",
+      "Create a separate DynamoDB table for each user and grant access by table name.",
+      "Encrypt each user's items with a different AWS KMS key and share keys per user.",
+      "Use a security group that allows each user's IP address to reach the table."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The dynamodb:LeadingKeys condition key restricts access to items whose partition key matches a policy variable such as the Cognito identity ID, enforcing per-user, item-level access. One table per user does not scale and is an anti-pattern. DynamoDB encryption uses a table-level key rather than per-item keys, and security groups do not control access to DynamoDB.",
+    "subtopic": "DynamoDB Fine-Grained Access Control"
+  },
+  {
+    "id": "nosql-caching-021",
+    "topic": "nosql-caching",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A compliance team requires that data in an Amazon DynamoDB table be encrypted at rest with a key the company controls, and that every use of the key be visible in AWS CloudTrail. Which configuration meets these requirements?",
+    "options": [
+      "Enable client-side TLS for all DynamoDB API requests.",
+      "Use the default AWS owned key for DynamoDB encryption.",
+      "Enable DynamoDB Streams with encryption disabled.",
+      "Configure the table to use a customer managed key in AWS KMS."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A customer managed KMS key gives the company control over the key policy, rotation, and disabling, and its use is logged in CloudTrail. The AWS owned key is managed entirely by AWS and is not visible or controllable in the account. TLS protects data in transit, and Streams do not change how table data is encrypted at rest.",
+    "subtopic": "DynamoDB Encryption"
+  },
+  {
+    "id": "nosql-caching-022",
+    "topic": "nosql-caching",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company requires that its Amazon DynamoDB table can be accessed only from workloads inside a specific VPC and never over the public internet. Which actions should the solutions architect take? (Select TWO.)",
+    "options": [
+      "Place the DynamoDB table in a private subnet of the VPC.",
+      "Add a resource-based policy on the table that denies requests unless aws:SourceVpce matches the VPC endpoint ID.",
+      "Enable DynamoDB global tables with the VPC as the only replica.",
+      "Create a gateway VPC endpoint for DynamoDB in the VPC and associate it with the private route tables.",
+      "Attach a security group to the DynamoDB table that allows only the VPC CIDR range."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "A VPC endpoint keeps traffic on the AWS network, and a table resource-based policy (or an equivalent IAM policy) with an aws:SourceVpce condition denies any request that does not arrive through that endpoint. DynamoDB is a Regional service, so tables are not placed in subnets and cannot have security groups. Global tables replicate across Regions and have nothing to do with VPC access.",
+    "subtopic": "DynamoDB Private Access"
+  },
+  {
+    "id": "nosql-caching-023",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A media company keeps 40 TB of historical article metadata in Amazon DynamoDB. The data must stay queryable with the same APIs, but it is rarely read or written, and storage now dominates the table's cost. Which solution is the MOST cost-effective?",
+    "options": [
+      "Switch the table to provisioned capacity with reserved capacity.",
+      "Change the table to the DynamoDB Standard-Infrequent Access table class.",
+      "Enable point-in-time recovery to move older data to cheaper storage.",
+      "Add a DAX cluster to reduce the number of storage reads."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The Standard-IA table class offers lower storage prices for tables where storage is the dominant cost and access is infrequent, while keeping the same APIs and performance. Reserved capacity reduces throughput cost, not storage. DAX adds node costs, and point-in-time recovery is a backup feature that adds cost.",
+    "subtopic": "DynamoDB Table Classes"
+  },
+  {
+    "id": "nosql-caching-024",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A document management system stores metadata in Amazon DynamoDB. Some documents include scanned images up to 20 MB, which exceed the DynamoDB item size limit of 400 KB. Which design choices should the solutions architect use? (Select TWO.)",
+    "options": [
+      "Compress large text attributes before storing them in DynamoDB to reduce item size.",
+      "Store the scanned images in Amazon S3 and keep the S3 object key in the DynamoDB item.",
+      "Split each image across a local secondary index and the base table.",
+      "Increase the item size limit by switching the table to on-demand mode.",
+      "Store the images in DAX, which supports larger items than DynamoDB."
+    ],
+    "answer": [
+      0,
+      1
+    ],
+    "explanation": "The common pattern is to store large binary objects in S3 and keep a pointer plus metadata in DynamoDB, and compressing large attributes helps items stay under the 400 KB limit. Capacity mode does not change the item size limit. Indexes are not a storage extension for large values, and DAX caches DynamoDB items with the same limits.",
+    "subtopic": "DynamoDB Large Items"
+  },
+  {
+    "id": "nosql-caching-025",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company needs an in-memory cache that supports replication across Availability Zones, data persistence, and advanced data structures such as sorted sets and hashes. Which service and engine should the solutions architect choose?",
+    "options": [
+      "Amazon EBS with io2 Block Express volumes",
+      "Amazon ElastiCache for Memcached",
+      "Amazon ElastiCache for Valkey",
+      "Amazon CloudFront with origin shield"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "ElastiCache for Valkey (and Redis OSS) supports replication with Multi-AZ failover, persistence options, and rich data structures such as sorted sets and hashes. Memcached is a simple multithreaded key-value cache with no replication or persistence. CloudFront caches HTTP content at the edge, and EBS is block storage, not an in-memory data store.",
+    "subtopic": "ElastiCache Engine Selection"
+  },
+  {
+    "id": "nosql-caching-026",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A team needs a simple cache for rendered HTML fragments. The data can be regenerated at any time, so persistence and replication are not needed. The team wants the cache to use multiple CPU cores per node and to scale out by adding or removing nodes. Which option is the BEST fit?",
+    "options": [
+      "Amazon ElastiCache for Memcached",
+      "Amazon ElastiCache for Valkey with Multi-AZ",
+      "Amazon MemoryDB",
+      "Amazon DynamoDB with DAX"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Memcached is multithreaded, simple, and scales horizontally by adding nodes, which fits a disposable cache that needs no persistence or replication. MemoryDB is a durable primary database and is more than needed. DAX only caches DynamoDB, and Valkey with Multi-AZ adds replication features the team does not require.",
+    "subtopic": "ElastiCache for Memcached"
+  },
+  {
+    "id": "nosql-caching-027",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An online gaming company needs a real-time leaderboard that ranks millions of players by score and returns the top 100 players in milliseconds. Which solution is the MOST suitable?",
+    "options": [
+      "Use Amazon S3 with S3 Select to query a scores file in real time.",
+      "Use Amazon ElastiCache for Valkey sorted sets to store and rank player scores.",
+      "Use Amazon ElastiCache for Memcached with one key per player.",
+      "Use Amazon RDS for MySQL with an ORDER BY query on every request."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Valkey and Redis OSS sorted sets keep members ordered by score in memory, making leaderboard queries such as top-N retrieval very fast. Sorting millions of rows in a relational database on every request is expensive. S3 is not designed for real-time ranking, and Memcached lacks sorted data structures.",
+    "subtopic": "ElastiCache Use Cases"
+  },
+  {
+    "id": "nosql-caching-028",
+    "topic": "nosql-caching",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A web application runs on EC2 instances in an Auto Scaling group behind an Application Load Balancer. Users are logged out whenever an instance is terminated during scale-in because sessions are stored in local memory. Which solution will make the application tier stateless while keeping session access fast?",
+    "options": [
+      "Store session data on each instance's EBS volume and take hourly snapshots.",
+      "Increase the Auto Scaling group minimum size so instances are never terminated.",
+      "Store session data in Amazon ElastiCache for Valkey and have all instances read and write sessions there.",
+      "Enable sticky sessions on the ALB so users always return to the same instance."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Moving sessions to a shared, low-latency store such as ElastiCache makes instances stateless, so any instance can serve any user and scale-in does not lose sessions. Sticky sessions still lose sessions when an instance terminates. EBS volumes are attached to individual instances, and preventing scale-in removes elasticity without solving the problem.",
+    "subtopic": "Session Store"
+  },
+  {
+    "id": "nosql-caching-029",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A product catalog application reads prices from Amazon RDS through an ElastiCache cache. Price changes must be visible to users immediately, and stale prices in the cache are not acceptable. Which caching strategy should be used?",
+    "options": [
+      "Set a 24-hour TTL on every cached price and accept the delay.",
+      "Lazy loading: populate the cache only when a read results in a cache miss.",
+      "Cache only the prices that are read most often and never update them.",
+      "Write-through: update the cache whenever the application writes a price to the database."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "With write-through, every database write also updates the cache, so cached prices are never stale. Lazy loading only refreshes data after a miss, so cached values can be outdated until they expire. A long TTL and never-updated entries both allow stale prices to be served.",
+    "subtopic": "Caching Strategies"
+  },
+  {
+    "id": "nosql-caching-030",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A developer is implementing lazy loading (cache-aside) for an application that uses Amazon ElastiCache in front of Amazon Aurora. Which statements describe this strategy? (Select TWO.)",
+    "options": [
+      "Every write to the database must also be written to the cache before it is committed.",
+      "A node failure loses no data because the cache is the system of record.",
+      "Cached data is always updated at the same time as the database, so it is never stale.",
+      "A cache miss adds latency because the application must query the database and then write the result to the cache.",
+      "Only data that is actually requested is stored in the cache."
+    ],
+    "answer": [
+      3,
+      4
+    ],
+    "explanation": "Lazy loading fills the cache on demand, so it contains only requested data, but each miss costs extra round trips to the database and the cache. Because the cache is not updated on writes, data can become stale, which is why TTLs are commonly added. Writing to the cache on every database write describes write-through, and the database, not the cache, remains the system of record.",
+    "subtopic": "Lazy Loading"
+  },
+  {
+    "id": "nosql-caching-031",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An application uses a write-through strategy with Amazon ElastiCache. Over time the cache fills with millions of records that were written once and never read, causing evictions of frequently used items. Which change will BEST address this while keeping cached data fresh?",
+    "options": [
+      "Add a TTL to cached items and combine write-through with lazy loading so unread data expires and is reloaded on demand.",
+      "Replace the cache with read replicas of the database to store the unused records.",
+      "Switch to ElastiCache for Memcached so that unused keys are never evicted.",
+      "Disable the cache eviction policy so that frequently used items are never removed."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Write-through can cause cache churn because every write is cached even if it is never read; adding TTLs lets unread data expire, and lazy loading reloads needed items on demand. Memcached also evicts items when memory is full. Disabling eviction causes write errors when memory is exhausted, and read replicas do not solve cache efficiency.",
+    "subtopic": "Caching Strategies with TTL"
+  },
+  {
+    "id": "nosql-caching-032",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application uses Amazon ElastiCache for Valkey with cluster mode disabled. The dataset is approaching the memory of the largest node type, and write throughput is limited by the single primary. Which solution will allow the cache to scale both memory and write capacity?",
+    "options": [
+      "Enable Multi-AZ with automatic failover on the replication group.",
+      "Turn on data tiering for the existing single-shard replication group.",
+      "Add more read replicas to the existing cluster mode disabled replication group.",
+      "Use cluster mode enabled to partition data across multiple shards, each with its own primary."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Cluster mode enabled partitions the keyspace across multiple shards, each with its own primary and replicas, so both memory and write throughput scale horizontally. Read replicas only scale reads and hold the same data. Multi-AZ adds availability, not capacity, and data tiering on one shard does not add write throughput.",
+    "subtopic": "ElastiCache Cluster Mode"
+  },
+  {
+    "id": "nosql-caching-033",
+    "topic": "nosql-caching",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A ticketing website stores seat reservations in Amazon ElastiCache for Redis OSS. The company needs the cache to remain available if the primary node or its Availability Zone fails. Which actions should the solutions architect take? (Select TWO.)",
+    "options": [
+      "Add at least one replica node in a different Availability Zone from the primary.",
+      "Place all nodes in a single Availability Zone to reduce replication lag.",
+      "Enable Multi-AZ with automatic failover on the replication group.",
+      "Switch the engine to Memcached and enable automatic node replacement.",
+      "Schedule hourly snapshots and restore the latest snapshot after a failure."
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "Placing replicas in other Availability Zones and enabling Multi-AZ with automatic failover lets ElastiCache promote a replica if the primary or its AZ fails. Memcached does not replicate data. A single AZ creates a single point of failure, and restoring snapshots is a slow manual recovery rather than high availability.",
+    "subtopic": "ElastiCache High Availability"
+  },
+  {
+    "id": "nosql-caching-034",
+    "topic": "nosql-caching",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A healthcare company uses Amazon ElastiCache for Valkey to cache patient lookups. Security requirements state that cached data must be encrypted and that clients must authenticate before running commands. Which actions will meet these requirements? (Select TWO.)",
+    "options": [
+      "Enable encryption in transit and encryption at rest on the cache.",
+      "Enable authentication using role-based access control with user groups or IAM authentication.",
+      "Enable AWS Shield Advanced on the cache endpoint to block unauthorized clients.",
+      "Place the cache in a public subnet and restrict access with network ACLs.",
+      "Use Amazon Macie to scan the cache contents for sensitive data."
+    ],
+    "answer": [
+      0,
+      1
+    ],
+    "explanation": "ElastiCache supports encryption in transit and at rest, and role-based access control (or IAM authentication) requires clients to authenticate before running commands. Public subnets increase exposure, Shield Advanced protects against DDoS and does not authenticate clients, and Macie scans S3 data rather than caches.",
+    "subtopic": "ElastiCache Security"
+  },
+  {
+    "id": "nosql-caching-035",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs several node-based Amazon ElastiCache for Redis OSS clusters. The applications use only standard open-source commands. The company wants to lower caching costs without rewriting application code. Which solution will meet these requirements?",
+    "options": [
+      "Replace the clusters with DynamoDB Accelerator clusters of the same size.",
+      "Upgrade the clusters in place to ElastiCache for Valkey, which has lower pricing and is compatible with Redis OSS clients.",
+      "Migrate the clusters to Amazon MemoryDB to take advantage of durable storage.",
+      "Add more read replicas so that each node can be a smaller size."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "ElastiCache for Valkey is API-compatible with Redis OSS, supports in-place upgrades from Redis OSS, and is priced lower than Redis OSS on ElastiCache. MemoryDB adds durability at a higher cost. DAX only works with DynamoDB, and adding replicas increases the node count without necessarily reducing cost.",
+    "subtopic": "ElastiCache for Valkey"
+  },
+  {
+    "id": "nosql-caching-036",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is adding a cache to a new application whose traffic pattern is unknown and may vary greatly by hour. The team does not want to choose node types, plan shards, or manage scaling. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Run Valkey on EC2 instances in an Auto Scaling group.",
+      "Create a node-based Memcached cluster and add nodes manually as needed.",
+      "Create an Amazon ElastiCache Serverless cache.",
+      "Create a node-based ElastiCache cluster sized for the highest expected load."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "ElastiCache Serverless removes capacity planning by scaling automatically with demand, and you pay for data stored and compute consumed. Sizing node-based clusters for peak wastes money and still requires planning. Self-managed Valkey on EC2 and manually resized Memcached clusters add operational work.",
+    "subtopic": "ElastiCache Serverless"
+  },
+  {
+    "id": "nosql-caching-037",
+    "topic": "nosql-caching",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is building a microservice that needs a primary database with microsecond read latency, Redis OSS-compatible APIs, and durability so that no acknowledged writes are lost if a node fails. Which service should be used?",
+    "options": [
+      "Amazon MemoryDB",
+      "Amazon DynamoDB Accelerator (DAX)",
+      "Amazon ElastiCache for Memcached",
+      "Amazon ElastiCache for Redis OSS without replicas"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "MemoryDB is a durable in-memory database compatible with Valkey and Redis OSS that stores data in a Multi-AZ transactional log, so acknowledged writes survive node failures while reads stay in microseconds. Memcached has no durability. DAX is a cache in front of DynamoDB, not a Redis-compatible database, and ElastiCache without replicas is a cache that can lose data on failure.",
+    "subtopic": "Amazon MemoryDB"
+  },
+  {
+    "id": "nosql-caching-038",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs a self-managed MongoDB cluster for a content management application that stores flexible JSON documents. The company wants a managed, MongoDB-compatible database on AWS to reduce operational effort. Which service should be used?",
+    "options": [
+      "Amazon Timestream",
+      "Amazon DocumentDB (with MongoDB compatibility)",
+      "Amazon Keyspaces (for Apache Cassandra)",
+      "Amazon Neptune"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Amazon DocumentDB is a managed JSON document database that is compatible with MongoDB drivers and tools, making it the natural target for MongoDB workloads. Keyspaces is Cassandra-compatible wide-column storage, Neptune is a graph database, and Timestream is designed for time-series data.",
+    "subtopic": "Amazon DocumentDB"
+  },
+  {
+    "id": "nosql-caching-039",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company operates a large self-managed Apache Cassandra cluster on Amazon EC2. The team spends significant time on node repairs, scaling, and patching. The company wants a serverless service that keeps its CQL-based application code. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Migrate to Amazon Neptune and model the tables as graph edges.",
+      "Migrate to Amazon DocumentDB and rewrite the queries in MongoDB syntax.",
+      "Migrate to Amazon RDS for PostgreSQL with wide-column extensions.",
+      "Migrate to Amazon Keyspaces (for Apache Cassandra)."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Amazon Keyspaces is a serverless, managed Cassandra-compatible service that supports CQL, eliminating cluster operations while keeping existing code. DocumentDB and Neptune would require rewriting the data model and queries, and RDS for PostgreSQL is not Cassandra-compatible.",
+    "subtopic": "Amazon Keyspaces"
+  },
+  {
+    "id": "nosql-caching-040",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A bank wants to detect fraud rings by analyzing relationships between accounts, devices, phone numbers, and transactions, often traversing many hops of connections in real time. Which database is the BEST fit?",
+    "options": [
+      "Amazon DynamoDB",
+      "Amazon Redshift",
+      "Amazon Neptune",
+      "Amazon ElastiCache for Memcached"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Neptune is a purpose-built graph database that efficiently traverses highly connected data using query languages such as Gremlin and openCypher, which suits fraud ring detection. Redshift is for analytical SQL over large datasets, DynamoDB is optimized for key-based access rather than multi-hop traversals, and Memcached is a simple cache.",
+    "subtopic": "Amazon Neptune"
+  },
+  {
+    "id": "nosql-caching-041",
+    "topic": "nosql-caching",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An industrial IoT company collects temperature and vibration readings from 50,000 sensors every second. The company needs to store the data, run time-window aggregations, and keep recent data fast while older data moves to cheaper storage automatically. Which purpose-built database is the BEST fit?",
+    "options": [
+      "Amazon Neptune",
+      "Amazon Timestream",
+      "Amazon DocumentDB",
+      "Amazon RDS for MySQL with Multi-AZ"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Amazon Timestream is a purpose-built time-series database with built-in time-series functions, high ingestion rates, and retention settings for aging data, which fits high-volume sensor data. Neptune is for graph relationships and DocumentDB for JSON documents. A relational database would require significant tuning and manual data tiering to handle this ingestion rate and lifecycle cost-effectively.",
+    "subtopic": "Time-Series Databases"
+  },
+  {
+    "id": "nosql-caching-042",
+    "topic": "nosql-caching",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company needs a transactional relational database for vehicle title records and an immutable, write-once history of every change that auditors can review for 10 years. Amazon QLDB has reached end of support, so the company needs an alternative. Which solution will meet these requirements?",
+    "options": [
+      "Use Amazon DynamoDB with TTL set to 10 years so old record versions remain immutable.",
+      "Use Amazon Neptune with each change stored as an edge that administrators can delete.",
+      "Use Amazon ElastiCache for Valkey with snapshots retained for 10 years.",
+      "Use Amazon Aurora PostgreSQL for the records and an AWS DMS change data capture task that writes every change to an S3 bucket with S3 Object Lock in compliance mode."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Aurora PostgreSQL provides the transactional relational store, while DMS CDC captures every change and S3 Object Lock in compliance mode makes the change history write-once and undeletable for the retention period. TTL deletes data rather than protecting it. A cache with snapshots is not a durable system of record, and history that administrators can delete is not immutable.",
+    "subtopic": "Ledger Workloads Without QLDB"
+  },
+  {
+    "id": "nosql-caching-043",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A retail company is designing two new services. The product catalog service needs single-digit millisecond key-value lookups at any scale with flexible attributes. The recommendation service needs to find products bought by customers who are connected to each other. Which database choices are the BEST fit? (Select TWO.)",
+    "options": [
+      "Amazon ElastiCache for Memcached as the recommendation system of record",
+      "Amazon Neptune for the recommendation service",
+      "Amazon DynamoDB for the product catalog service",
+      "Amazon Timestream for the product catalog service",
+      "Amazon Keyspaces for the relationship traversal queries"
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "DynamoDB delivers consistent single-digit millisecond key-value access at virtually any scale with a flexible schema, and Neptune efficiently traverses relationships such as customers connected to customers. Timestream targets time-series data, Memcached is not durable, and Keyspaces is a wide-column store not designed for graph traversals.",
+    "subtopic": "Choosing Purpose-Built Databases"
+  },
+  {
+    "id": "nosql-caching-044",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A ticketing company needs a database for a high-traffic API that looks up reservations by reservation ID. Traffic can reach hundreds of thousands of requests per second, and the company wants consistent single-digit millisecond latency without managing servers. Which database should be used?",
+    "options": [
+      "Amazon Redshift Serverless",
+      "Amazon Neptune",
+      "Amazon DynamoDB",
+      "Amazon RDS for MySQL on a single large instance"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "DynamoDB is a serverless key-value database that delivers consistent single-digit millisecond performance at very high request rates, ideal for lookups by ID. A single relational instance is harder to scale to this request rate. Redshift is optimized for analytics rather than high-volume transactional lookups, and Neptune is designed for graph queries.",
+    "subtopic": "DynamoDB vs Relational"
+  },
+  {
+    "id": "nosql-caching-045",
+    "topic": "nosql-caching",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An online marketplace stores product listings in Amazon DynamoDB. The company now needs full-text search with fuzzy matching and relevance ranking on listing descriptions, kept in sync with the table, without building custom replication code. Which solution will meet these requirements?",
+    "options": [
+      "Use the DynamoDB zero-ETL integration with Amazon OpenSearch Service to sync the table into an OpenSearch index.",
+      "Enable DAX and run text searches against the cached items.",
+      "Use a Scan operation with a contains filter expression for each search request.",
+      "Create a global secondary index on the description attribute and use Query with begins_with."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The zero-ETL integration with Amazon OpenSearch Service continuously replicates DynamoDB data into OpenSearch, which provides full-text search, fuzzy matching, and relevance ranking without custom pipelines. GSIs support only key-based conditions, Scan with contains is slow and expensive and lacks relevance ranking, and DAX caches items without adding search features.",
+    "subtopic": "DynamoDB Zero-ETL to OpenSearch"
+  }
+]

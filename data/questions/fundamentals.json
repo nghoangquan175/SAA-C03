@@ -1,0 +1,879 @@
+[
+  {
+    "id": "fundamentals-001",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a data-processing application on Amazon EC2 instances in private subnets that have no route to the internet. The application must read and write several terabytes of data each day to an Amazon S3 bucket in the same Region, and the traffic must not traverse the public internet. Which solution will meet these requirements MOST cost-effectively?",
+    "options": [
+      "Create an interface VPC endpoint for Amazon S3 in each private subnet and enable private DNS for the endpoint.",
+      "Create a gateway VPC endpoint for Amazon S3 and associate it with the route tables of the private subnets.",
+      "Deploy a NAT gateway in a public subnet and route the private subnets' traffic for S3 through the NAT gateway.",
+      "Attach an internet gateway to the VPC, move the instances to public subnets, and assign Elastic IP addresses."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "S3 is a public service, so private instances need a path to its endpoints; a gateway endpoint adds a route to the S3 prefix list, keeps traffic on the AWS network, and has no hourly or per-GB charge. An interface endpoint also provides private access but adds hourly and per-GB processing charges for terabytes of data. A NAT gateway adds per-GB processing charges and relies on internet routing, and moving instances to public subnets with Elastic IPs uses the public internet path that the requirements prohibit.",
+    "subtopic": "Public vs Private Services"
+  },
+  {
+    "id": "fundamentals-002",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A solutions architect is explaining the difference between AWS public services and private services to a new operations team. Which statement correctly compares Amazon S3 and Amazon EC2?",
+    "options": [
+      "S3 runs in the AWS public zone and is reached through public endpoints, while EC2 instances run inside a VPC and are reachable only through the paths the VPC allows.",
+      "S3 buckets are created inside a subnet of a customer VPC, while EC2 instances run in the AWS public zone unless they are placed in a private subnet.",
+      "Both S3 and EC2 are private services, so neither can be reached from outside AWS without an AWS Direct Connect connection.",
+      "S3 objects are readable by anyone by default because S3 is a public service, while EC2 instances are private by default."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "S3 is a public service whose endpoints sit in the AWS public zone, while EC2 is a private service that runs in VPC subnets and is reachable only as the VPC's routing and security controls allow. Public refers to network location, not permissions: S3 requests still need authorization, and buckets and objects are private by default with Block Public Access enabled. S3 buckets are never placed in subnets, and Direct Connect is not required to reach either service.",
+    "subtopic": "Public vs Private Services"
+  },
+  {
+    "id": "fundamentals-003",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company is deploying a web application on Amazon EC2. The application must remain available if a single data center fails, and the web tier must keep single-digit millisecond latency to its database tier. Which deployment approach meets these requirements?",
+    "options": [
+      "Deploy all web instances in one Availability Zone inside a spread placement group so each instance runs on separate hardware.",
+      "Deploy the web and database tiers across at least two Availability Zones in one Region, with the web tier behind an Application Load Balancer.",
+      "Deploy the web tier in one AWS Region and the database tier in a second Region, connected through inter-Region VPC peering.",
+      "Deploy the web tier in a single Availability Zone and serve it through Amazon CloudFront edge locations to absorb failures."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Availability Zones are isolated groups of data centers in a Region connected by low-latency links, so spreading both tiers across multiple AZs survives the loss of a data center while keeping latency low. A spread placement group in one AZ protects against rack-level hardware failure but not the loss of the AZ. Splitting tiers across Regions adds inter-Region latency on every database call, and CloudFront caching does not keep a single-AZ dynamic application running when that AZ fails.",
+    "subtopic": "Availability Zones"
+  },
+  {
+    "id": "fundamentals-004",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A visual effects studio in a large metropolitan area runs rendering and editing workstations on Amazon EC2. Its artists need single-digit millisecond latency to the instances, but the nearest AWS Region is several hundred kilometers away. The studio does not want to buy, install, or manage any hardware. Which solution meets these requirements?",
+    "options": [
+      "Order AWS Outposts racks for the studio's office and launch the instances on the Outposts capacity.",
+      "Place an Amazon CloudFront distribution in front of the EC2 instances to serve the sessions from edge locations.",
+      "Extend the VPC to an AWS Local Zone in the studio's metro area and launch the instances in a subnet in that Local Zone.",
+      "Launch the instances in an AWS Wavelength Zone and connect the artists over the studio's wired office network."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Local Zones extend a parent Region by placing compute and storage close to large population centers, so the studio can create a subnet there and get single-digit millisecond latency without owning hardware. Outposts would also give low latency but requires installing AWS-provided racks on premises. CloudFront caches and accelerates content delivery but does not host interactive workstation instances, and Wavelength Zones are embedded in telecom 5G networks for mobile devices, not wired office connections.",
+    "subtopic": "Local Zones"
+  },
+  {
+    "id": "fundamentals-005",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company is selecting an AWS Region for a new customer-facing application that will store personal data about customers in Europe. Which factors should the company evaluate when choosing the Region? (Select THREE.)",
+    "options": [
+      "Whether the default VPC in the Region uses a CIDR block that differs from other Regions",
+      "Whether IAM users created in the Region can be used to sign in to other Regions",
+      "Whether the Region's Availability Zone names map to the same data centers for every account",
+      "Whether every AWS service and feature the application needs is available in the Region",
+      "Network latency between the Region and the majority of the application's users",
+      "Data residency and regulatory requirements that apply to the customer data"
+    ],
+    "answer": [
+      3,
+      4,
+      5
+    ],
+    "explanation": "Region selection is driven by compliance and data residency, proximity to users for latency, service and feature availability, and pricing. IAM is a global service, so identities are not tied to a Region. Every default VPC uses 172.31.0.0/16 regardless of Region, and AZ names are mapped independently per account in every Region, so neither is a selection factor.",
+    "subtopic": "Choosing a Region"
+  },
+  {
+    "id": "fundamentals-006",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Two AWS accounts in the same organization run tightly coupled services that must exchange traffic with the lowest possible latency and without cross-AZ data transfer charges. An engineer in each account launched instances in subnets in us-east-1a, but monitoring shows the traffic is crossing Availability Zones. What should the engineers do?",
+    "options": [
+      "Select subnets by Availability Zone ID (for example, use1-az2) in both accounts, because AZ names are mapped to physical zones independently for each account.",
+      "Recreate the default VPC in both accounts so the 172.31.0.0/16 subnets resolve to the same physical Availability Zone.",
+      "Peer the two VPCs and enable DNS resolution over the peering connection so traffic stays within one Availability Zone.",
+      "Open a case with AWS Support to align the us-east-1a name in both accounts to the same physical Availability Zone."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS maps AZ names such as us-east-1a to physical zones independently for each account, so the same name can refer to different zones; AZ IDs such as use1-az2 identify the same physical zone in every account. Recreating default VPCs does not change the name-to-zone mapping. VPC peering and DNS settings do not control which AZ an instance runs in, and Support does not remap AZ names because AZ IDs already solve this.",
+    "subtopic": "Availability Zone IDs"
+  },
+  {
+    "id": "fundamentals-007",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "Which statements about the default VPC that AWS creates in each Region are true? (Select TWO.)",
+    "options": [
+      "Its default security group allows all inbound traffic from the internet.",
+      "Its default subnets route 0.0.0.0/0 to an attached internet gateway and assign public IPv4 addresses to instances by default.",
+      "Each Availability Zone in a Region has its own separate default VPC.",
+      "It uses the 172.31.0.0/16 IPv4 CIDR block and has one default subnet in each Availability Zone.",
+      "Its default subnets are private and reach the internet through a NAT gateway that AWS manages."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Each Region has one default VPC with the 172.31.0.0/16 CIDR, one /20 default subnet per AZ, and an internet gateway, and instances launched into default subnets get public IPv4 addresses, which is why teams should be careful launching sensitive workloads there. There is no AWS-managed NAT gateway in a default VPC, and there is one default VPC per Region, not per AZ. The default security group allows inbound traffic only from members of the same security group.",
+    "subtopic": "Default VPC"
+  },
+  {
+    "id": "fundamentals-008",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A research lab runs nightly genomics batch jobs on Amazon EC2. The jobs checkpoint their progress to Amazon S3 every few minutes and can resume on any instance if they are interrupted. The lab wants to minimize compute costs. Which purchasing option should the lab use?",
+    "options": [
+      "On-Demand Instances in a single Availability Zone for the duration of each job",
+      "Dedicated Hosts purchased with a 3-year All Upfront reservation",
+      "Spot Instances diversified across multiple instance types and Availability Zones",
+      "On-Demand Capacity Reservations covering the full nightly processing window"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Spot Instances offer the largest discount and suit fault-tolerant, interruptible work, and checkpointing to S3 lets jobs resume after an interruption; diversifying instance types and AZs improves the chance of getting capacity. On-Demand Instances work but cost much more. Dedicated Hosts are for licensing or compliance needs and are expensive, and Capacity Reservations guarantee capacity at On-Demand prices rather than reducing cost.",
+    "subtopic": "EC2 Purchasing Options"
+  },
+  {
+    "id": "fundamentals-009",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a steady 24/7 baseline of compute across Amazon EC2, AWS Fargate, and AWS Lambda. Over the next 3 years it expects to change EC2 instance families and possibly move workloads to other Regions. Which option provides a significant discount while keeping this flexibility?",
+    "options": [
+      "A 3-year EC2 Instance Savings Plan for the current instance family",
+      "A 3-year Compute Savings Plan sized to the steady baseline",
+      "3-year Standard Reserved Instances for the current instance types",
+      "Spot Instances managed by an EC2 Fleet with a capacity-optimized strategy"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Compute Savings Plans apply automatically to EC2 usage regardless of instance family, size, OS, or Region, and also cover Fargate and Lambda. EC2 Instance Savings Plans and Standard Reserved Instances are tied to an instance family in a Region and do not cover Fargate or Lambda. Spot Instances can be interrupted and do not apply to Lambda, so they are not suitable for a guaranteed steady baseline.",
+    "subtopic": "EC2 Purchasing Options"
+  },
+  {
+    "id": "fundamentals-010",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security review finds that a web application running on Amazon EC2 could be vulnerable to server-side request forgery (SSRF), which might let an attacker retrieve the instance role's temporary credentials from the instance metadata service. Which change BEST reduces this risk?",
+    "options": [
+      "Remove the instance profile and store long-term IAM access keys in the application's configuration file instead.",
+      "Require IMDSv2 on the instances so that metadata requests must include a session token obtained through a PUT request.",
+      "Move the instances to private subnets so that the instance metadata service cannot be reached from the internet.",
+      "Add a security group rule that denies outbound traffic from the instances to the address 169.254.169.254."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "IMDSv2 requires a session token obtained with a PUT request and a custom header, which defeats most SSRF attacks that can only make simple GET requests. Replacing roles with long-term keys makes credential exposure worse. The metadata service is reachable only from the instance itself, so moving subnets does not help against SSRF, and security groups support only allow rules and cannot block metadata traffic.",
+    "subtopic": "Instance Metadata Service"
+  },
+  {
+    "id": "fundamentals-011",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An engineering firm runs a tightly coupled computational fluid dynamics application on Amazon EC2. The nodes exchange large volumes of data with each other and need the lowest latency and the highest per-flow network throughput possible. Which configuration should a solutions architect recommend?",
+    "options": [
+      "Launch the instances in a spread placement group across three Availability Zones.",
+      "Launch the instances in a partition placement group with one instance in each partition.",
+      "Launch the instances in a cluster placement group in a single Availability Zone.",
+      "Launch the instances across two Regions and connect them with inter-Region VPC peering."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A cluster placement group packs instances close together in one AZ on a low-latency, high-bandwidth network segment, which is ideal for tightly coupled HPC. Spread placement groups place instances on distinct hardware for resilience, which increases distance between nodes. Partition placement groups isolate groups of instances for large distributed systems such as HDFS, and spanning Regions adds significant latency.",
+    "subtopic": "Placement Groups"
+  },
+  {
+    "id": "fundamentals-012",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A legacy licensing server runs on a single Amazon EC2 instance with an EBS root volume and cannot be placed behind a load balancer. If the underlying host hardware fails, the instance must come back automatically with the same instance ID, private IP address, and Elastic IP address. Which solution meets these requirements?",
+    "options": [
+      "Create a CloudWatch alarm on the StatusCheckFailed_System metric with the EC2 recover action.",
+      "Create a CloudWatch alarm on the StatusCheckFailed_Instance metric with the EC2 terminate action.",
+      "Place the instance in an Auto Scaling group with a minimum, maximum, and desired capacity of one.",
+      "Enable termination protection and detailed monitoring on the instance and its root volume."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The recover action moves the instance to new hardware while keeping its instance ID, private IP addresses, Elastic IP addresses, and metadata, and it is triggered by system status check failures that indicate host problems. Terminating on an instance status check failure destroys the instance. An Auto Scaling group replaces the instance with a new one that has a new ID and IP address, and termination protection with detailed monitoring does not recover anything.",
+    "subtopic": "EC2 Instance Recovery"
+  },
+  {
+    "id": "fundamentals-013",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application writes a new object to an Amazon S3 bucket and immediately issues a GET request for that object and a LIST request on its prefix. A developer is adding retry loops with delays because they expect to receive stale results. What should a solutions architect tell the developer?",
+    "options": [
+      "S3 is eventually consistent for new objects, so the retries should wait at least one second before reading the object or listing the prefix.",
+      "S3 is strongly consistent for GET requests but eventually consistent for LIST requests, so only the LIST request needs a retry loop.",
+      "S3 provides strong read-after-write consistency for GET and LIST requests, so the new object is returned immediately and the delays are unnecessary.",
+      "S3 is strongly consistent only when versioning is enabled on the bucket, so versioning should be turned on before removing the retries."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Since December 2020, S3 delivers strong read-after-write consistency for PUTs and DELETEs of objects, and subsequent GET and LIST requests reflect the change immediately at no extra cost. The eventual-consistency behaviors described in the other options are outdated, and consistency does not depend on versioning being enabled.",
+    "subtopic": "S3 Consistency Model"
+  },
+  {
+    "id": "fundamentals-014",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A satellite imaging company uploads files of 2 to 4 TB each to Amazon S3 from its ground station. The network connection occasionally drops, and failed uploads must restart from the beginning, which wastes hours. Which approach will improve upload reliability and throughput?",
+    "options": [
+      "Use S3 multipart upload so that parts are uploaded in parallel and only failed parts need to be retried.",
+      "Use a single PUT request for each file and increase the client timeout to several hours.",
+      "Enable S3 Versioning on the bucket so that an interrupted upload resumes from the last stored version.",
+      "Enable S3 Object Lock on the bucket so that partially uploaded data is preserved until the upload completes."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Multipart upload splits a large object into parts that can be uploaded in parallel and retried individually, which increases throughput and avoids restarting the whole file after a network failure; it is required for objects larger than 5 GB. A single PUT is limited to 5 GB and has no partial retry. Versioning and Object Lock act only on completed objects and do not resume interrupted uploads.",
+    "subtopic": "S3 Multipart Upload"
+  },
+  {
+    "id": "fundamentals-015",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company stores quarterly financial statements in Amazon S3. Each statement is accessed about once per quarter, must be retrievable within milliseconds when requested, and must remain available if an entire Availability Zone is lost. Which storage class is MOST cost-effective?",
+    "options": [
+      "S3 Standard-Infrequent Access",
+      "S3 One Zone-Infrequent Access",
+      "S3 Glacier Deep Archive",
+      "S3 Glacier Instant Retrieval"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "S3 Glacier Instant Retrieval is designed for long-lived data accessed about once per quarter, offers millisecond retrieval, stores data across multiple AZs, and has lower storage cost than Standard-IA. Standard-IA meets the requirements but costs more to store for data accessed this rarely. One Zone-IA does not survive the loss of an AZ, and Glacier Deep Archive retrievals take hours.",
+    "subtopic": "S3 Storage Classes"
+  },
+  {
+    "id": "fundamentals-016",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A media startup stores user-uploaded content in Amazon S3. Access patterns are unpredictable: some objects stay popular for weeks while others are never read again. The company wants to reduce storage costs automatically without building lifecycle rules or analyzing access patterns. Which storage class should the company use?",
+    "options": [
+      "S3 Standard with a lifecycle rule that transitions objects to S3 Glacier Flexible Retrieval after 30 days",
+      "S3 One Zone-Infrequent Access",
+      "S3 Intelligent-Tiering",
+      "S3 Express One Zone"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "S3 Intelligent-Tiering monitors access and automatically moves each object between access tiers, with no retrieval fees, which suits unknown or changing access patterns. A fixed lifecycle rule would move still-popular objects to an archive tier where retrievals are slow and incur fees. One Zone-IA charges retrieval fees and stores data in a single AZ, and Express One Zone is a high-performance class that costs more, not less.",
+    "subtopic": "S3 Storage Classes"
+  },
+  {
+    "id": "fundamentals-017",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company writes application logs to an Amazon S3 bucket. Engineers read the logs frequently during the first 30 days, rarely after that but sometimes need immediate access, and the logs must be deleted after 365 days. Which solution meets these requirements MOST cost-effectively with the LEAST operational overhead?",
+    "options": [
+      "Write a scheduled AWS Lambda function that copies logs older than 30 days to S3 Glacier Deep Archive and deletes them after 365 days.",
+      "Enable S3 Versioning and configure a noncurrent version expiration of 365 days on the bucket.",
+      "Store the logs in S3 One Zone-IA from the start and delete them manually at the end of each year.",
+      "Create an S3 Lifecycle rule that transitions objects to S3 Standard-IA after 30 days and expires them after 365 days."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A lifecycle rule handles both the transition to Standard-IA, which keeps millisecond access at a lower storage price, and the expiration at 365 days with no code to maintain. A Lambda function adds operational overhead, and Deep Archive does not provide immediate access. Noncurrent version expiration does not delete current objects, and One Zone-IA from day one adds retrieval fees during the busy first 30 days and requires manual deletion.",
+    "subtopic": "S3 Lifecycle"
+  },
+  {
+    "id": "fundamentals-018",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A user accidentally deletes an important object from an Amazon S3 bucket that has versioning enabled. The DELETE request did not specify a version ID. How can the object be recovered?",
+    "options": [
+      "Delete the delete marker that S3 created, which makes the previous version of the object current again.",
+      "Restore the object from the S3 recycle bin within 24 hours of the deletion.",
+      "No recovery is possible, because a DELETE request permanently removes every version of the object.",
+      "Open a case with AWS Support to restore the object from internal S3 backups."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "In a versioned bucket, a DELETE without a version ID inserts a delete marker as the current version, and all earlier versions remain; removing the delete marker restores the most recent version. S3 has no recycle bin feature. Only a DELETE that specifies a version ID permanently removes that version, and AWS Support cannot restore deleted customer objects.",
+    "subtopic": "S3 Versioning"
+  },
+  {
+    "id": "fundamentals-019",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company hosts a static marketing website by using the Amazon S3 static website endpoint with a public bucket. The security team now requires HTTPS on a custom domain name and requires that the bucket no longer be publicly accessible. Which solution meets these requirements?",
+    "options": [
+      "Request an ACM certificate for the custom domain, attach it to the S3 website endpoint, and enable S3 Block Public Access on the bucket.",
+      "Keep the bucket public and add a bucket policy that denies requests unless the aws:SecureTransport condition key is true.",
+      "Create an Amazon CloudFront distribution with an ACM certificate and an S3 REST API origin that uses origin access control (OAC), and enable S3 Block Public Access.",
+      "Create a CloudFront distribution that uses the S3 website endpoint as a custom origin protected by an origin access identity (OAI)."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "CloudFront provides HTTPS with an ACM certificate on the custom domain, and OAC lets CloudFront read from a private bucket through the REST API endpoint so Block Public Access can stay on. S3 website endpoints do not support HTTPS or ACM certificates. Keeping the bucket public violates the requirement, and OAI (and OAC) only work with the S3 REST endpoint, not a website endpoint configured as a custom origin.",
+    "subtopic": "S3 Static Website Hosting"
+  },
+  {
+    "id": "fundamentals-020",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has hundreds of S3 buckets in one AWS account. The security team must guarantee that no bucket or object in the account can be made public, even if a developer later adds a public bucket policy or a public ACL. Which solution meets this requirement with the LEAST operational overhead?",
+    "options": [
+      "Enable default encryption with SSE-KMS on every bucket in the account.",
+      "Enable S3 Object Lock in compliance mode on every bucket in the account.",
+      "Set Object Ownership to bucket owner enforced on every bucket to disable ACLs.",
+      "Enable all four S3 Block Public Access settings at the account level."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Account-level Block Public Access overrides bucket policies and ACLs that would grant public access for all current and future buckets in the account. Encryption controls how data is stored, not who can read it. Object Lock prevents deletion or overwrite, not public reads, and disabling ACLs does not stop a public bucket policy.",
+    "subtopic": "S3 Block Public Access"
+  },
+  {
+    "id": "fundamentals-021",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A web application runs on Amazon EC2 instances behind an Application Load Balancer. The security team requires that the instances accept HTTP traffic only from the load balancer and from nowhere else. Which configuration meets this requirement?",
+    "options": [
+      "Add a network ACL rule that allows inbound HTTP only from the load balancer's DNS name.",
+      "Add a deny rule for 0.0.0.0/0 to the instances' security group and allow all other inbound traffic.",
+      "Assign Elastic IP addresses to the instances and restrict access by using load balancer listener rules.",
+      "Allow inbound HTTP in the instances' security group only from the security group attached to the load balancer."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Referencing the load balancer's security group as the source allows only traffic from the load balancer nodes, even as their IP addresses change. Network ACLs work with CIDR ranges, not DNS names. Security groups support only allow rules, and listener rules control routing on the load balancer, not direct access to instances with Elastic IP addresses.",
+    "subtopic": "EC2 Security Groups"
+  },
+  {
+    "id": "fundamentals-022",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company stores critical design files in an Amazon S3 bucket in us-east-1. It must be able to recover from accidental overwrites and deletions, and it must keep a copy of the data in another Region for disaster recovery. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Enable S3 server access logging to a bucket in another Region.",
+      "Configure S3 Cross-Region Replication from the source bucket to the destination bucket.",
+      "Enable S3 Versioning on the source bucket and on a destination bucket in another Region.",
+      "Enable S3 Transfer Acceleration on the source bucket.",
+      "Change the storage class of the objects to S3 One Zone-Infrequent Access."
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "Versioning keeps previous versions after overwrites and deletions, and it is a prerequisite for replication on both buckets. Cross-Region Replication copies new objects to a bucket in another Region for DR. Transfer Acceleration only speeds up long-distance transfers, One Zone-IA reduces resilience, and server access logs record requests but do not copy data.",
+    "subtopic": "S3 Versioning and Replication"
+  },
+  {
+    "id": "fundamentals-023",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company deploys its security groups with AWS CloudFormation. An auditor suspects that engineers have modified some security group rules directly in the Amazon EC2 console. How can the company identify which resources no longer match their expected template configuration?",
+    "options": [
+      "Run drift detection on the stack and review the resources that are reported as MODIFIED.",
+      "Create a change set from the current template and review it to see the manual changes.",
+      "Review the stack's Events tab for UPDATE_COMPLETE entries on the security groups.",
+      "Enable termination protection on the stack and redeploy it with the original template."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Drift detection compares the actual configuration of stack resources with the expected configuration from the template and reports resources as MODIFIED or DELETED. A change set compares a new template with the stack's last deployed template, not with the live resources, so it does not reveal out-of-band changes. Stack events only show CloudFormation operations, and termination protection only prevents stack deletion.",
+    "subtopic": "CloudFormation Drift Detection"
+  },
+  {
+    "id": "fundamentals-024",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses AWS Organizations with 120 member accounts. The security team must deploy the same set of IAM roles and baseline resources to every account in three Regions, and to every new account that joins the organization, with the LEAST operational overhead. Which solution meets these requirements?",
+    "options": [
+      "Use CloudFormation StackSets with self-managed permissions and add each new account as a deployment target when it is created.",
+      "Use CloudFormation StackSets with service-managed permissions targeting the organization's OUs and enable automatic deployment.",
+      "Run a scheduled AWS Lambda function that assumes a role in each account and creates a CloudFormation stack in each Region.",
+      "Share the CloudFormation template with all member accounts through AWS RAM so each account team deploys the stack."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "StackSets deploy one template to many accounts and Regions, and service-managed permissions integrate with Organizations so automatic deployment adds stack instances when accounts join a targeted OU. Self-managed permissions require creating roles and adding accounts manually. A custom Lambda function adds code to maintain, and CloudFormation templates are not shared through AWS RAM.",
+    "subtopic": "CloudFormation StackSets"
+  },
+  {
+    "id": "fundamentals-025",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A platform team maintains one AWS CloudFormation template that launches Amazon EC2 instances in many Regions. The template must always use the latest Amazon Linux AMI in each Region, and the team does not want to edit AMI IDs in the template when new AMIs are released. Which approach meets these requirements?",
+    "options": [
+      "Add a Mappings section that lists the current Amazon Linux AMI ID for each Region and look it up with Fn::FindInMap.",
+      "Define a parameter of type AWS::SSM::Parameter::Value<AWS::EC2::Image::Id> whose default value is the public Systems Manager parameter for the latest Amazon Linux AMI.",
+      "Use the Fn::GetAZs intrinsic function in the ImageId property so CloudFormation selects the AMI for the Availability Zone.",
+      "Define a String parameter whose AllowedValues list contains the Amazon Linux AMI ID for every Region."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS publishes the latest AMI IDs as public Systems Manager parameters, and an SSM parameter type in CloudFormation resolves the current value in each Region at deployment time. Mappings and AllowedValues hard-code AMI IDs that must be edited whenever a new AMI is released. Fn::GetAZs returns Availability Zone names and has nothing to do with AMI selection.",
+    "subtopic": "CloudFormation Parameters"
+  },
+  {
+    "id": "fundamentals-026",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An AWS CloudFormation stack contains an Amazon RDS DB instance that stores production data. The company must ensure that a final snapshot of the database is kept if the stack is deleted or if the DB instance resource is removed from the template. What should the solutions architect do?",
+    "options": [
+      "Enable termination protection on the stack that contains the DB instance.",
+      "Set the UpdateReplacePolicy attribute of the DB instance resource to Delete.",
+      "Set the DeletionPolicy attribute of the DB instance resource to Snapshot.",
+      "Add a DependsOn attribute that ties the DB instance to an S3 backup bucket."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A DeletionPolicy of Snapshot makes CloudFormation create a final snapshot whenever it deletes the resource, whether because the stack is deleted or the resource is removed from the template. Termination protection only blocks stack deletion and does not cover removing the resource during an update. UpdateReplacePolicy of Delete discards the old resource on replacement, and DependsOn only controls creation order.",
+    "subtopic": "CloudFormation DeletionPolicy"
+  },
+  {
+    "id": "fundamentals-027",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An AWS CloudFormation template creates an Amazon RDS database. The master password is passed as a plaintext parameter and appears in the team's deployment scripts and pipeline logs. The company wants to stop exposing the password while keeping deployments fully automated. Which approach is MOST secure?",
+    "options": [
+      "Store the password in AWS Secrets Manager and retrieve it in the template with a dynamic reference.",
+      "Keep the parameter, set NoEcho to true, and continue storing the value in the deployment scripts.",
+      "Hard-code the password in the template and store the template in a private S3 bucket.",
+      "Export the password as an output of a separate stack and import it with Fn::ImportValue."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A dynamic reference to Secrets Manager resolves the secret at deployment time so it never appears in the template, scripts, or parameters, and the secret can be rotated. NoEcho masks the value in the console but the plaintext still lives in the scripts. Hard-coding the password exposes it to anyone who can read the template, and stack outputs are visible in plaintext to anyone who can describe the stack.",
+    "subtopic": "CloudFormation Dynamic References"
+  },
+  {
+    "id": "fundamentals-028",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A platform team manages a CloudFormation stack that creates a shared VPC and its subnets. Several application teams deploy their own stacks that must reference the subnet IDs, and the platform team must not be able to delete or change subnets while application stacks still use them. Which combination of actions meets these requirements? (Select TWO.)",
+    "options": [
+      "Set a DeletionPolicy of Retain on the entire network stack.",
+      "Export the subnet IDs from the Outputs section of the network stack.",
+      "Reference the exported values in the application stacks by using Fn::ImportValue.",
+      "Reference the subnets in the application stacks by using Fn::GetAtt on the network stack's resources.",
+      "Copy the subnet IDs into a Mappings section in each application template."
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "Exporting outputs and importing them with Fn::ImportValue creates cross-stack references, and CloudFormation blocks deleting the exporting stack or changing an exported value while another stack imports it. Fn::GetAtt only works for resources in the same template. Hard-coded mappings do not protect the subnets, and DeletionPolicy is a resource attribute, not a stack setting, and would not stop modifications.",
+    "subtopic": "CloudFormation Cross-Stack References"
+  },
+  {
+    "id": "fundamentals-029",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company monitors its Amazon EC2 instances with Amazon CloudWatch. The operations team sees CPU utilization, network, and disk I/O metrics but cannot find memory utilization or the percentage of disk space used. How can the team collect these metrics?",
+    "options": [
+      "Enable detailed monitoring on the instances so that memory and disk space metrics are added.",
+      "Install and configure the CloudWatch agent on the instances to publish memory and disk space metrics.",
+      "Enable VPC Flow Logs and create metric filters that extract memory and disk usage.",
+      "Enable AWS CloudTrail data events for the instances to record memory and disk usage."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Memory and file system usage are visible only inside the guest OS, so the CloudWatch agent must collect them and publish them as custom metrics. Detailed monitoring only increases the frequency of the default hypervisor-level metrics to 1 minute. Flow Logs capture network traffic metadata, and CloudTrail records API calls, not OS-level resource usage.",
+    "subtopic": "CloudWatch Metrics"
+  },
+  {
+    "id": "fundamentals-030",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An operations team receives too many pages because separate Amazon CloudWatch alarms fire for high latency and for elevated 5xx errors on the same application, even when only one metric briefly spikes. The team wants to be paged only when latency and error rate are in the ALARM state at the same time. Which solution meets this requirement?",
+    "options": [
+      "Increase the period of each alarm to 1 hour so that brief spikes no longer cause the alarms to change state.",
+      "Create a CloudWatch Logs metric filter that combines the latency and error metrics into one log stream.",
+      "Configure both alarms to treat missing data as breaching and keep notifications on each alarm.",
+      "Create a composite alarm with an AND rule over the latency and error-rate alarms, and send notifications only from the composite alarm."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Composite alarms evaluate a rule expression over the states of other alarms, so an AND rule pages only when both underlying alarms are in ALARM, reducing noise. A 1-hour period delays detection of real incidents. Metric filters turn log data into metrics and cannot combine alarm states, and treating missing data as breaching would increase alarms rather than reduce them.",
+    "subtopic": "CloudWatch Alarms"
+  },
+  {
+    "id": "fundamentals-031",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A startup wants the finance team to receive an email as soon as the company's estimated AWS charges for the current month exceed USD 500. Which solutions will meet this requirement? (Select TWO.)",
+    "options": [
+      "Create a CloudWatch alarm on the EstimatedCharges metric in the Region where most of the company's resources run.",
+      "Create an AWS Budgets cost budget of USD 500 with an alert that emails the finance team when actual costs exceed the threshold.",
+      "Configure Cost Explorer to email a daily cost report and have the finance team check the total each morning.",
+      "Use AWS Trusted Advisor to send an email when the monthly spending threshold is exceeded.",
+      "Enable billing alerts and create a CloudWatch alarm on the EstimatedCharges metric in us-east-1 that notifies an SNS topic with an email subscription."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "AWS Budgets can alert by email when actual or forecasted costs cross a threshold. Billing metrics such as EstimatedCharges are published only in us-east-1 once billing alerts are enabled, so a CloudWatch alarm there with SNS email works. The metric does not exist in other Regions, a manual daily review is not an automatic alert, and Trusted Advisor checks do not send spending threshold alerts.",
+    "subtopic": "Billing Alarms"
+  },
+  {
+    "id": "fundamentals-032",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A hospital's patient monitoring system must continue operating with no interruption and no loss of data when a component fails, because even a brief outage could put patients at risk. Which design characteristic does this requirement describe?",
+    "options": [
+      "High availability",
+      "Disaster recovery",
+      "Fault tolerance",
+      "Elasticity"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Fault tolerance means the system keeps operating through component failures without interruption, which usually requires active redundancy and costs more. High availability aims to maximize uptime and recover quickly but can tolerate brief disruption during failover. Disaster recovery is about restoring service after a major event, and elasticity is about scaling capacity with demand.",
+    "subtopic": "High Availability vs Fault Tolerance"
+  },
+  {
+    "id": "fundamentals-033",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs an internal reporting application in one AWS Region. After a Regional disaster, the business can tolerate an RTO of 24 hours and an RPO of 12 hours. The company wants the LOWEST-cost disaster recovery strategy that uses a second Region. Which strategy should it choose?",
+    "options": [
+      "Pilot light, with a continuously replicated database running in the second Region",
+      "Backup and restore, copying database snapshots and AMIs to the second Region on a schedule",
+      "Warm standby, with a scaled-down copy of the full environment always running in the second Region",
+      "Multi-site active/active, with both Regions serving production traffic at all times"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "With an RTO of a day and an RPO of hours, backup and restore is sufficient and cheapest because no compute runs in the recovery Region until it is needed; backups just need to be copied at least every 12 hours. Pilot light, warm standby, and multi-site keep progressively more resources running in the second Region, which lowers RTO and RPO but costs more than the requirements justify.",
+    "subtopic": "DR Strategies"
+  },
+  {
+    "id": "fundamentals-034",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An e-commerce company requires an RPO of under 1 minute and an RTO of about 1 hour for its order platform if the primary Region fails. The company wants to minimize the cost of resources that run in the recovery Region before a disaster occurs. Which disaster recovery strategy BEST meets these requirements?",
+    "options": [
+      "Pilot light: continuously replicate the database to the recovery Region and keep the application tier defined in infrastructure as code but not running until failover.",
+      "Backup and restore: take nightly database snapshots, copy them to the recovery Region, and rebuild the environment from templates after a disaster.",
+      "Warm standby: run a scaled-down but fully functional copy of the entire stack in the recovery Region at all times and scale it out during failover.",
+      "Multi-site active/active: serve production traffic from both Regions at full capacity with bidirectional data replication between them."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Pilot light keeps only the core data layer replicating continuously, which achieves a near-zero RPO, while the rest of the environment is provisioned during failover within tens of minutes, meeting a 1-hour RTO at low standby cost. Nightly backups give an RPO of up to 24 hours. Warm standby and active/active also meet the targets but keep far more resources running, so they cost more.",
+    "subtopic": "DR Strategies"
+  },
+  {
+    "id": "fundamentals-035",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company implements a warm standby disaster recovery strategy for a web application in a secondary AWS Region. Which statements describe this strategy? (Select TWO.)",
+    "options": [
+      "Both Regions serve production traffic at full capacity at all times.",
+      "Only the data layer is replicated, and application servers are launched from AMIs only after a disaster is declared.",
+      "Data is restored from periodic backups, which results in an RPO measured in hours.",
+      "A scaled-down but fully functional copy of the production environment is always running in the secondary Region.",
+      "During failover, the secondary environment is scaled out to handle full production load and traffic is redirected to it."
+    ],
+    "answer": [
+      3,
+      4
+    ],
+    "explanation": "Warm standby keeps a smaller, fully working copy of the whole stack running so it can take traffic immediately and then scale out, giving an RTO of minutes. Replicating only the data layer and launching servers later describes pilot light. Full capacity in both Regions describes multi-site active/active, and restoring from periodic backups describes backup and restore.",
+    "subtopic": "DR Strategies"
+  },
+  {
+    "id": "fundamentals-036",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company is redesigning a web application that currently runs on a single Amazon EC2 instance with a self-managed database on the same instance. The application must be highly available within one AWS Region. Which actions should a solutions architect take? (Select THREE.)",
+    "options": [
+      "Move the application to a larger instance type that supports enhanced networking.",
+      "Run the web tier in an Auto Scaling group that spans multiple Availability Zones.",
+      "Migrate the database to Amazon RDS with a Multi-AZ deployment.",
+      "Launch all web servers in a cluster placement group in one Availability Zone.",
+      "Place an Application Load Balancer in front of the Auto Scaling group.",
+      "Store user session state on each instance's instance store volume."
+    ],
+    "answer": [
+      1,
+      2,
+      4
+    ],
+    "explanation": "An Auto Scaling group across AZs replaces failed instances and survives an AZ outage, the load balancer distributes traffic only to healthy instances, and RDS Multi-AZ fails over the database automatically. A larger instance is still a single point of failure, and a cluster placement group concentrates instances in one AZ. Session state on instance store is lost when an instance fails, so it should be moved to a shared store.",
+    "subtopic": "High Availability Design"
+  },
+  {
+    "id": "fundamentals-037",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants users to reach its application by browsing to example.com, the zone apex. The application runs behind an Application Load Balancer whose IP addresses can change. The company also wants to avoid Route 53 query charges for this record. Which record should be created in the public hosted zone?",
+    "options": [
+      "An alias A record at the zone apex that targets the Application Load Balancer",
+      "A CNAME record at the zone apex that points to the load balancer's DNS name",
+      "An A record at the zone apex that lists the load balancer's current IP addresses",
+      "An NS record at the zone apex that delegates the domain to the load balancer"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Alias records can be created at the zone apex, track the changing IP addresses of AWS resources such as load balancers, and queries to alias records that point to AWS resources are free. DNS does not allow a CNAME at the zone apex. Hard-coded IP addresses break when the load balancer's addresses change, and NS records delegate to name servers, not load balancers.",
+    "subtopic": "Route 53 Alias Records"
+  },
+  {
+    "id": "fundamentals-038",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company is configuring DNS for its domain in Amazon Route 53. Only Amazon certificate authorities may issue TLS certificates for the domain, and the company must prove domain ownership to a SaaS email provider that supplies a verification string. Which record types should the company create? (Select TWO.)",
+    "options": [
+      "A PTR record that maps the domain to AWS Certificate Manager",
+      "An MX record that contains the email provider's verification string",
+      "A TXT record that contains the email provider's verification string",
+      "A CAA record that authorizes Amazon as the certificate authority for the domain",
+      "An SRV record that lists the approved certificate authorities"
+    ],
+    "answer": [
+      2,
+      3
+    ],
+    "explanation": "CAA records specify which certificate authorities may issue certificates for a domain, and TXT records hold arbitrary text such as domain verification strings and SPF data. MX records route email to mail servers rather than store verification strings. PTR records are for reverse DNS lookups, and SRV records describe service locations, not certificate authorities.",
+    "subtopic": "DNS Record Types"
+  },
+  {
+    "id": "fundamentals-039",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs its website in us-east-1 and keeps a static maintenance page in an S3 bucket configured for website hosting in us-west-2. If the primary site becomes unhealthy, users must be sent to the maintenance page automatically. Which Amazon Route 53 configuration meets this requirement?",
+    "options": [
+      "Weighted routing with a weight of 100 on the primary record and 0 on the S3 record, without health checks",
+      "Failover routing with a health check on the primary record and the S3 website endpoint as the secondary record",
+      "Latency-based routing records in us-east-1 and us-west-2 that point to the website and the bucket",
+      "Geolocation routing with a default location record that points to the S3 website endpoint"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Failover routing returns the primary record while its health check passes and switches to the secondary record when it fails, which is the active-passive pattern needed here. Weighted routing without health checks never shifts traffic away from an unhealthy endpoint. Latency-based routing would send some users to the maintenance page during normal operation, and geolocation routing selects records by user location rather than health.",
+    "subtopic": "Route 53 Failover Routing"
+  },
+  {
+    "id": "fundamentals-040",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company will move its website to a new Application Load Balancer next week. The current non-alias A record for www has a TTL of 86,400 seconds. The company wants clients to start using the new endpoint as quickly as possible on migration day. What should a solutions architect do?",
+    "options": [
+      "Change the record to point to the new load balancer on migration day and set its TTL to 60 seconds in the same update.",
+      "Increase the record's TTL before the migration so that resolvers keep the new value cached longer after the change.",
+      "Delete the hosted zone on migration day and create a new hosted zone that contains the updated record.",
+      "Lower the record's TTL to a short value such as 60 seconds at least a day before the migration, then change the record on migration day."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Resolvers cache a record for its TTL, so the TTL must be lowered at least one old TTL period (24 hours) before the change; then the update propagates within about a minute. Lowering the TTL at the same time as the change does not help because resolvers still hold the old answer for up to 24 hours. Increasing the TTL slows the switch, and deleting the hosted zone changes its name servers and can break resolution.",
+    "subtopic": "Route 53 TTL"
+  },
+  {
+    "id": "fundamentals-041",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company registered example.com through Amazon Route 53 Domains, which created a public hosted zone automatically. An administrator accidentally deleted the hosted zone and then created a new hosted zone for example.com with the same records. The domain still does not resolve. What is the MOST likely cause?",
+    "options": [
+      "Records in a recreated hosted zone take up to 72 hours to become active, so the domain will resolve after that period.",
+      "Route 53 Domains supports only one hosted zone per domain registration, so the domain must be registered again.",
+      "The new hosted zone was created as a public zone and must be associated with a VPC before it can answer queries.",
+      "The new hosted zone has a different set of name servers, so the domain's registration must be updated to use the name servers in the new zone's NS record."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Each new hosted zone receives its own set of four name servers, and the domain registration still points to the name servers of the deleted zone, so the registered domain's name servers must be updated to match the new zone. Route 53 records become available quickly rather than after days. The domain does not need to be re-registered, and only private hosted zones are associated with VPCs.",
+    "subtopic": "Registering Domains"
+  },
+  {
+    "id": "fundamentals-042",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A financial services company hosts its public domain in Amazon Route 53. The security team wants resolvers to be able to verify that DNS responses for the domain are authentic and have not been spoofed or altered in transit. Which solution meets this requirement?",
+    "options": [
+      "Create CAA records in the hosted zone that list the resolvers that are allowed to query the domain.",
+      "Enable Route 53 Resolver DNS Firewall for the public hosted zone to block spoofed responses.",
+      "Enable DNSSEC signing for the public hosted zone and add the delegation signer (DS) record to the parent zone to establish a chain of trust.",
+      "Convert the public hosted zone to a private hosted zone and associate it with every VPC in the company."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "DNSSEC signing adds cryptographic signatures to responses, and publishing the DS record in the parent zone lets validating resolvers build a chain of trust to detect spoofed or tampered answers. CAA records control certificate issuance, not resolvers. DNS Firewall filters outbound queries from VPCs rather than protecting a public zone, and a private hosted zone would make the domain unresolvable from the internet.",
+    "subtopic": "Route 53 DNSSEC"
+  },
+  {
+    "id": "fundamentals-043",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An IAM policy must allow an application to list the objects in an S3 bucket named finance-reports and to read any object in that bucket. Which Resource elements must the policy include?",
+    "options": [
+      "arn:aws:s3:::finance-reports/* for both the s3:ListBucket and s3:GetObject actions",
+      "arn:aws:s3:us-east-1:123456789012:finance-reports for both the s3:ListBucket and s3:GetObject actions",
+      "arn:aws:s3:::finance-reports for both the s3:ListBucket and s3:GetObject actions",
+      "arn:aws:s3:::finance-reports for s3:ListBucket and arn:aws:s3:::finance-reports/* for s3:GetObject"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "s3:ListBucket is a bucket-level action whose resource is the bucket ARN, while s3:GetObject is an object-level action whose resource is the object ARN pattern ending in /*. Using only one of the two ARNs leaves one action without a matching resource. S3 bucket ARNs omit the Region and account ID because bucket names are globally unique.",
+    "subtopic": "ARNs"
+  },
+  {
+    "id": "fundamentals-044",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company's Amazon EC2 launch requests in one Region fail with an error stating that the account has reached its vCPU limit for Running On-Demand Standard instances. The company needs to launch more instances in that Region for an upcoming event. What should a solutions architect do?",
+    "options": [
+      "Launch the additional instances in another Availability Zone, which has its own separate vCPU quota.",
+      "Enable detailed monitoring so that AWS raises the quota automatically as usage grows.",
+      "Create a new VPC in the Region, because vCPU quotas are applied separately to each VPC.",
+      "Request an increase to the Running On-Demand Standard instances quota through Service Quotas."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "On-Demand instance quotas are measured in vCPUs per instance family group per Region per account, and increases are requested through the Service Quotas console or API. The quota applies to the whole Region, not per AZ or per VPC, so launching elsewhere in the Region does not help. Monitoring settings have no effect on quotas.",
+    "subtopic": "Service Quotas"
+  },
+  {
+    "id": "fundamentals-045",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company that creates many new AWS accounts through AWS Organizations keeps hitting default service quotas soon after the accounts go live, which causes failed deployments. The company wants to prevent these failures proactively with minimal manual effort. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Use AWS Trusted Advisor to raise quotas automatically when usage reaches 80 percent of the limit.",
+      "Attach an SCP to the new accounts that removes the default service quotas for the accounts.",
+      "Deploy all workloads into the management account, which is not subject to service quotas.",
+      "Configure a Service Quotas quota request template so increases are requested automatically when new accounts are created in the organization.",
+      "Create CloudWatch alarms on Service Quotas usage metrics to notify the team before quotas are reached."
+    ],
+    "answer": [
+      3,
+      4
+    ],
+    "explanation": "A quota request template in Service Quotas automatically submits the configured increase requests for new accounts created in the organization, and CloudWatch alarms on quota utilization give early warning for quotas that are still approaching their limits. Trusted Advisor reports on service limits but does not raise them. SCPs restrict permissions and cannot change quotas, and the management account has quotas like any other account and should not run workloads.",
+    "subtopic": "Service Quotas"
+  }
+]

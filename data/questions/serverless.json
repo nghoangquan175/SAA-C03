@@ -1,0 +1,1455 @@
+[
+  {
+    "id": "serverless-001",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A retail company runs a monolithic order application on a single EC2 instance. When the payment, inventory, and email components slow down, the whole application stops accepting new orders. The company wants each component to fail and scale independently while keeping order intake available. Which approach will meet these requirements?",
+    "options": [
+      "Refactor the components into separate services that communicate through events published to Amazon SNS and buffered in Amazon SQS queues",
+      "Move the monolith to a larger EC2 instance type and enable detailed monitoring in Amazon CloudWatch",
+      "Split the application into web, application, and database tiers that call each other synchronously over HTTP",
+      "Place the monolith in an Auto Scaling group with a minimum of two instances behind a Network Load Balancer"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Publishing events to SNS and buffering them in SQS decouples the components, so a slow consumer only grows its own queue and order intake stays available. A larger instance is still a single point of failure and every component still scales together. A synchronous tiered design passes failures from one tier to the next. Scaling copies of the monolith adds capacity, but the components stay tightly coupled.",
+    "subtopic": "Event-driven architecture"
+  },
+  {
+    "id": "serverless-002",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A media company wants to move a video transcoding step to serverless compute. Each job reads a 20 GB source file and takes 40 to 70 minutes to finish on a 4 vCPU machine. Jobs arrive a few times per hour. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Run the transcoder in an AWS Lambda function configured with 10,240 MB of memory and the maximum timeout",
+      "Run the transcoder as Amazon ECS tasks on AWS Fargate, started by an Amazon EventBridge rule when a file arrives",
+      "Run the transcoder in an AWS Lambda function and use provisioned concurrency to extend the execution time",
+      "Run the transcoder in AWS Step Functions Express Workflows that call the transcoder code directly for each job"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Fargate tasks have no 15-minute execution limit and need no server management, so a 40-70 minute transcode fits well, and an EventBridge rule can start a task when a file is uploaded. Lambda functions can run for at most 15 minutes whatever memory is configured, and provisioned concurrency only reduces cold starts; it does not extend the timeout. Express Workflows are limited to 5 minutes per execution.",
+    "subtopic": "Lambda limits"
+  },
+  {
+    "id": "serverless-003",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs dozens of AWS Lambda functions in one account and Region. During a marketing campaign, a function that resizes images scaled up and used most of the account's concurrency, and the company's payment-processing function was throttled. The company must make sure the payment function can always scale to at least 200 concurrent executions. What should a solutions architect do?",
+    "options": [
+      "Configure provisioned concurrency of 200 on the image-resizing function",
+      "Increase the memory of the payment-processing function so that each invocation finishes faster",
+      "Move the payment-processing function to a different Availability Zone in the same Region",
+      "Configure reserved concurrency of 200 on the payment-processing function"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Reserved concurrency sets aside part of the account's concurrency for one function, so other functions cannot use it up. Provisioned concurrency on the image function pre-initializes environments for that function; it does not stop it from consuming the shared pool. More memory may shorten run time but does not guarantee capacity. Lambda functions are Regional and are not placed in a specific Availability Zone.",
+    "subtopic": "Lambda reserved concurrency"
+  },
+  {
+    "id": "serverless-004",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A fintech company exposes an Amazon API Gateway REST API backed by a Java AWS Lambda function. Users notice slow responses on the first requests each weekday at 09:00 when traffic jumps from almost zero to about 300 concurrent requests. The company wants consistent low latency during business hours at a reasonable cost. Which solution will meet these requirements?",
+    "options": [
+      "Configure provisioned concurrency on a function alias and use Application Auto Scaling to schedule it up before 09:00 and down after business hours",
+      "Configure reserved concurrency of 300 on the function so that execution environments are always initialized",
+      "Enable API Gateway caching on the stage so that requests are answered before they reach the function",
+      "Increase the function timeout to 15 minutes so that slow initializations do not cause errors"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Provisioned concurrency keeps execution environments initialized, which removes cold-start latency, and scheduling it with Application Auto Scaling limits the cost to business hours. Reserved concurrency only guarantees and caps capacity; it does not pre-initialize environments. Caching helps only with repeated identical GET requests and does not fix cold starts. A longer timeout does not make initialization any faster.",
+    "subtopic": "Lambda provisioned concurrency"
+  },
+  {
+    "id": "serverless-005",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An AWS Lambda function must query an Amazon RDS database in private subnets and also call a third-party payment API on the internet. The company does not want the database exposed to the internet. How should a solutions architect configure the function?",
+    "options": [
+      "Attach the function to the VPC's private subnets and route those subnets' internet traffic through a NAT gateway in a public subnet",
+      "Attach the function to the VPC's public subnets so that it receives a public IP address for outbound internet calls",
+      "Keep the function outside the VPC and make the RDS database publicly accessible with a restrictive security group",
+      "Attach the function to the private subnets and create a gateway VPC endpoint for the third-party payment API"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A VPC-attached Lambda function uses ENIs in the chosen subnets, so it reaches the private database directly and reaches the internet through a NAT gateway. Lambda functions never receive public IP addresses, so placing them in public subnets does not give internet access. Making the database public goes against the requirement. Gateway endpoints exist only for Amazon S3 and DynamoDB, not for third-party APIs.",
+    "subtopic": "Lambda VPC networking"
+  },
+  {
+    "id": "serverless-006",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A ticketing website uses AWS Lambda functions that open connections to an Amazon Aurora MySQL database. During ticket releases, thousands of concurrent invocations cause 'too many connections' errors and the database CPU spikes. Which solution will resolve the issue with the LEAST change to the application code?",
+    "options": [
+      "Increase the Lambda function memory so that each invocation closes its connection more quickly",
+      "Add an Aurora Replica and configure the functions to send write traffic to the reader endpoint",
+      "Put Amazon RDS Proxy in front of the database and point the functions at the proxy endpoint",
+      "Move connection handling into a Lambda layer that every function shares at runtime"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "RDS Proxy pools and shares database connections, so a burst of Lambda invocations does not open thousands of separate connections, and it only requires changing the endpoint. Adding memory does not reduce the number of concurrent connections. The reader endpoint does not accept writes. A layer only packages shared code; each execution environment would still open its own connection.",
+    "subtopic": "Lambda with RDS Proxy"
+  },
+  {
+    "id": "serverless-007",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A development team maintains 30 Python AWS Lambda functions that all bundle the same data-validation library and a large set of dependencies. Each update to the library means rebuilding and redeploying every function package. What should the team use to share this code more efficiently?",
+    "options": [
+      "Store the library in Amazon S3 and download it to the /tmp directory during every invocation",
+      "Use Lambda destinations to send the library to each function when the function is invoked",
+      "Store the library in an environment variable that every function decodes at startup",
+      "Package the library and dependencies as a Lambda layer and attach the layer to each function"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Lambda layers package shared libraries separately from function code, so the library is published once and referenced by every function. Downloading code from S3 on each invocation adds latency and complexity. Destinations route invocation results; they do not distribute code. Environment variables have a small total size limit and are meant for configuration, not libraries.",
+    "subtopic": "Lambda layers"
+  },
+  {
+    "id": "serverless-008",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application invokes an AWS Lambda function asynchronously to generate PDF invoices. Some invocations fail after all retries, and the operations team needs the original event plus details about the error and the function response so that they can investigate. Which solution will meet these requirements?",
+    "options": [
+      "Configure a dead-letter queue on the function so that failed events are written to an Amazon SNS topic",
+      "Increase the maximum retry attempts for asynchronous invocations to a higher value",
+      "Configure an on-failure destination for asynchronous invocations that sends records to an Amazon SQS queue",
+      "Enable AWS X-Ray active tracing on the function and review traces of failed invocations"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Lambda destinations send an invocation record that includes the request payload and the response or error details, so the team can see why an event failed. A dead-letter queue keeps only the original event payload, without the response context. Asynchronous invocations allow at most two retries, and extra retries would not capture failures anyway. X-Ray traces show timing and errors, but they do not hold failed events for reprocessing.",
+    "subtopic": "Lambda destinations"
+  },
+  {
+    "id": "serverless-009",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An AWS Lambda function processes messages from an Amazon SQS standard queue in batches of 10. When one message in a batch fails validation, the whole batch returns to the queue and the nine messages that succeeded are processed again, which creates duplicate shipments. How can a solutions architect fix this problem with minimal code changes?",
+    "options": [
+      "Enable ReportBatchItemFailures on the event source mapping and return the IDs of only the failed messages from the function",
+      "Set the event source mapping batch size to 10,000 so that failed messages are spread across more batches",
+      "Reduce the queue visibility timeout to 0 seconds so that failed messages are retried right away",
+      "Convert the queue to a FIFO queue so that every message in a batch is processed only once"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "With ReportBatchItemFailures, the function returns a list of failed message IDs, and only those messages become visible again while the successful ones are deleted. A larger batch makes the problem worse. A zero visibility timeout causes in-flight messages to be redelivered to other invocations, creating more duplicates. A FIFO queue does not change the fact that a failed batch returns all of its messages.",
+    "subtopic": "Lambda SQS event source mapping"
+  },
+  {
+    "id": "serverless-010",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A Lambda function connects to a third-party SaaS API with an API key. The security team requires that the key be encrypted, rotated regularly, and never stored in source code or deployment packages. Which solution meets these requirements?",
+    "options": [
+      "Store the key in a Lambda environment variable encrypted with the default AWS managed key",
+      "Store the key in AWS Secrets Manager with rotation enabled and grant the function's execution role permission to read the secret",
+      "Store the key in a configuration file inside a Lambda layer that is shared by the function",
+      "Store the key in an Amazon S3 object with server-side encryption and a public read bucket policy"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Secrets Manager encrypts secrets with AWS KMS, supports automatic rotation, and access can be limited to the function's execution role. Environment variables are encrypted at rest but give no rotation, and the value is visible to anyone who can read the configuration. A file in a layer is still part of a deployment package. A public read bucket policy exposes the key.",
+    "subtopic": "Lambda secrets"
+  },
+  {
+    "id": "serverless-011",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company wants an AWS Lambda function to run each time a new object is uploaded to an Amazon S3 bucket. The function must read the uploaded object. Which combination of permissions is required following the principle of least privilege? (Select TWO.)",
+    "options": [
+      "A bucket policy that grants the Lambda service principal the lambda:InvokeFunction action",
+      "An IAM user whose access keys are stored in the function's environment variables",
+      "A resource-based policy on the function that allows s3.amazonaws.com to invoke it, limited to the source bucket ARN and account",
+      "An S3 access control list that grants the Lambda service full control of the bucket",
+      "An execution role for the function that allows s3:GetObject on the objects in that bucket"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Amazon S3 needs permission to invoke the function, which is given through the function's resource-based policy limited to the source bucket. The function itself reads the object using the permissions of its execution role. A bucket policy controls access to S3, not to Lambda. Long-term IAM user keys are an anti-pattern for Lambda, and ACLs are disabled by default and would grant far too much access.",
+    "subtopic": "Lambda permissions"
+  },
+  {
+    "id": "serverless-012",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "An AWS Lambda function consumes an Amazon Kinesis data stream. A malformed record causes the function to throw an error, and processing on that shard stops for hours while the same batch is retried. The company wants the remaining records to keep flowing and wants to keep the bad records for later analysis. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Increase the data retention period of the stream so that the batch can be retried for longer",
+      "Configure an on-failure destination such as an Amazon SQS queue on the event source mapping",
+      "Configure a dead-letter queue directly on the Kinesis data stream to capture failed records",
+      "Enable bisect batch on function error and set a maximum retry attempts value on the event source mapping",
+      "Increase the function's reserved concurrency so that more instances retry the batch in parallel"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Bisecting failed batches isolates the bad record, and a maximum retry count stops the shard from being blocked indefinitely. An on-failure destination keeps details about the discarded records so they can be analyzed later. Longer retention only prolongs the blocking. Kinesis streams do not have dead-letter queues. Each shard is processed in order by one invocation at a time by default, so more concurrency does not skip the bad record.",
+    "subtopic": "Lambda Kinesis event source mapping"
+  },
+  {
+    "id": "serverless-013",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A data science team wants to run a machine learning inference model in AWS Lambda. The model and its libraries total 3 GB, which is larger than the .zip deployment package limit. Which solution will allow the team to keep using Lambda?",
+    "options": [
+      "Split the model into several Lambda layers that together hold the 3 GB of files",
+      "Increase the function's memory to 10,240 MB so that the larger package can be uploaded",
+      "Package the function as a container image stored in Amazon ECR and deploy it as a Lambda container image",
+      "Compress the model further and upload the .zip file directly through the Lambda console"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Lambda supports container images up to 10 GB from Amazon ECR, which comfortably fits a 3 GB model. Layers count toward the same 250 MB unzipped limit as the function code. Memory size has nothing to do with deployment package limits. Compression does not change the unzipped size limit for .zip packages.",
+    "subtopic": "Lambda container images"
+  },
+  {
+    "id": "serverless-014",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Several AWS Lambda functions need to read and update a shared 40 GB reference dataset during processing. Changes made by one function must be visible to the others right away, and the data must persist between invocations. Which storage option should a solutions architect use?",
+    "options": [
+      "Mount an Amazon EFS file system to the functions through an EFS access point",
+      "Increase each function's ephemeral /tmp storage to 10 GB and copy the dataset into it",
+      "Package the dataset into a Lambda layer that every function references",
+      "Store the dataset in function environment variables split into several parts"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Amazon EFS gives Lambda functions a shared, persistent POSIX file system that all functions can read and write concurrently. Ephemeral /tmp storage is per execution environment, holds at most 10 GB, and is not shared or durable. Layers are read-only and limited in size. Environment variables are far too small and are read-only at run time.",
+    "subtopic": "Lambda with Amazon EFS"
+  },
+  {
+    "id": "serverless-015",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs hundreds of Python AWS Lambda functions with steady traffic. The functions use only pure Python libraries. The company wants to reduce Lambda compute costs without rewriting the code. Which action should a solutions architect recommend?",
+    "options": [
+      "Change the function architecture from x86_64 to arm64 so that the functions run on AWS Graviton processors",
+      "Turn on provisioned concurrency for every function so that invocations no longer incur cold starts",
+      "Set the memory of every function to the maximum value so that each invocation finishes faster",
+      "Attach every function to a VPC so that traffic stays on the AWS network and costs less"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Lambda on arm64 (Graviton) is billed at a lower price per GB-second and often performs better, and pure Python code usually runs unchanged. Provisioned concurrency adds a charge for keeping environments warm. Maximum memory raises the price per millisecond and rarely lowers the total cost for every function. Attaching functions to a VPC does not lower Lambda pricing and may add NAT gateway costs.",
+    "subtopic": "Lambda Graviton"
+  },
+  {
+    "id": "serverless-016",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company's Java AWS Lambda functions load a large framework at startup, and cold starts take several seconds. Traffic is spiky and unpredictable, so the company does not want to pay to keep environments warm all the time. Which feature should a solutions architect enable to reduce startup latency?",
+    "options": [
+      "Lambda SnapStart on published function versions",
+      "Provisioned concurrency set to the peak expected traffic",
+      "Reserved concurrency set to the peak expected traffic",
+      "A Lambda layer that contains the Java framework"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "SnapStart takes a snapshot of the initialized execution environment when a version is published and restores from it, which greatly shortens Java cold starts without paying to keep idle environments warm. Provisioned concurrency also removes cold starts but costs money even when idle, which the company wants to avoid. Reserved concurrency does not pre-initialize anything. Moving the framework into a layer does not change how long it takes to initialize.",
+    "subtopic": "Lambda SnapStart"
+  },
+  {
+    "id": "serverless-017",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A small team needs a single HTTPS endpoint that receives webhook calls from a payment provider a few hundred times a day and passes them to an AWS Lambda function. The team does not need request transformation, caching, usage plans, or custom domain names. Which option is the MOST cost-effective and simplest to manage?",
+    "options": [
+      "Create an Amazon API Gateway REST API with a Lambda proxy integration",
+      "Place an Application Load Balancer in front of the function with a Lambda target group",
+      "Configure a Lambda function URL for the function",
+      "Run a small Amazon EC2 instance with Nginx that forwards requests to the function"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A Lambda function URL gives the function a built-in HTTPS endpoint at no extra charge beyond normal Lambda usage, which suits a simple webhook. A REST API adds per-request charges and features the team does not need. An Application Load Balancer is billed by the hour even when idle. An EC2 proxy adds both cost and server maintenance.",
+    "subtopic": "Lambda function URLs"
+  },
+  {
+    "id": "serverless-018",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs a cron job on an always-on Amazon EC2 instance only to start a 2-minute cleanup script every night at 02:00. The company wants to remove the instance and reduce costs. Which solution meets these requirements?",
+    "options": [
+      "Move the script into an AWS Lambda function and invoke it from an Amazon SQS delay queue",
+      "Keep the script on the EC2 instance and stop the instance with an Auto Scaling scheduled action",
+      "Move the script into an AWS Lambda function and invoke it with an Amazon EventBridge Scheduler schedule",
+      "Move the script into an AWS Batch job that runs on an always-on compute environment"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "EventBridge Scheduler can call a Lambda function on a cron schedule, so the company pays only for a short nightly run. SQS delay queues hold messages for at most 15 minutes and cannot be used as a daily scheduler. Something would still have to start the instance before the job, and the instance would keep incurring storage costs. An always-on Batch compute environment does not remove the idle cost.",
+    "subtopic": "EventBridge Scheduler"
+  },
+  {
+    "id": "serverless-019",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A subscription platform must send a reminder to each of its 3 million customers exactly at a time the customer chooses, in the customer's own time zone. Most reminders run once, but some repeat monthly. The company wants a serverless solution that does not require polling a database. Which solution will meet these requirements?",
+    "options": [
+      "Create an Amazon EventBridge rule with a cron expression for each reminder on the default event bus",
+      "Store reminders in an Amazon DynamoDB table and run a Lambda function every minute that scans for due reminders",
+      "Send each reminder to an Amazon SQS delay queue with a delay equal to the time until the reminder is due",
+      "Create an Amazon EventBridge Scheduler schedule for each reminder, using one-time or recurring expressions with a time zone, that targets an AWS Lambda function"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "EventBridge Scheduler is built for very large numbers of one-time and recurring schedules, supports time zones, and invokes targets directly without polling. Event bus rules have a much lower per-bus quota and are not meant for millions of individual schedules. Scanning a table every minute is the polling approach the company wants to avoid. SQS delays are capped at 15 minutes.",
+    "subtopic": "EventBridge Scheduler"
+  },
+  {
+    "id": "serverless-020",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company with 40 AWS accounts wants all security-related events from every account to arrive on a single Amazon EventBridge event bus in a central security account, with no custom code. Which solution meets these requirements?",
+    "options": [
+      "Create an IAM user in the central account and store its access keys in each member account to call PutEvents",
+      "Configure Amazon SQS queues in each member account and have the central account poll them with AWS Lambda",
+      "Create an EventBridge archive in each member account and replay the archives into the central account every hour",
+      "Add a resource-based policy on the central event bus that allows the member accounts to put events, and create rules in each member account that target the central bus ARN"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "EventBridge supports cross-account delivery: the target bus's resource policy allows the source accounts (or the whole organization), and rules in the source accounts send matching events to the central bus. Sharing IAM user keys is insecure and needs code. Polling SQS queues needs custom code and adds latency. Archives replay events only into the bus they were archived from, and hourly replays are not near real time.",
+    "subtopic": "EventBridge cross-account"
+  },
+  {
+    "id": "serverless-021",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses a supported third-party SaaS monitoring platform and wants alerts from that platform to start AWS Lambda remediation functions in near real time. The company does not want to build or host a webhook receiver. Which solution should a solutions architect recommend?",
+    "options": [
+      "Create an Amazon SQS queue and give the SaaS platform IAM user credentials so that it can send messages",
+      "Set up the SaaS partner event source in Amazon EventBridge and create rules on the partner event bus that target the Lambda functions",
+      "Deploy an Amazon EC2 instance that polls the SaaS platform API every minute and invokes Lambda",
+      "Use AWS Glue crawlers to read alerts from the SaaS platform and trigger Lambda functions"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "EventBridge partner event sources let supported SaaS providers deliver events straight to an event bus in the customer's account, where rules route them to targets such as Lambda. Handing IAM credentials to a third party is insecure. A polling EC2 instance adds hosting work and delay. Glue crawlers catalog data stores; they do not receive alerts.",
+    "subtopic": "EventBridge partner integrations"
+  },
+  {
+    "id": "serverless-022",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A bug in a downstream consumer caused it to process six hours of order events from an Amazon EventBridge custom event bus incorrectly. After the bug is fixed, the company wants to process those same events again. Which feature should have been enabled ahead of time to make this possible?",
+    "options": [
+      "A dead-letter queue on the EventBridge rule target that keeps all delivered events",
+      "An EventBridge archive on the event bus, which can be replayed for a chosen time window",
+      "Amazon SNS message filtering on the subscription that receives the order events",
+      "An Amazon SQS FIFO queue between the event bus and the consumer"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An EventBridge archive stores events that match a pattern, and a replay sends them back to the bus for a selected time range. A rule's dead-letter queue keeps only events that could not be delivered, not ones that were delivered and processed incorrectly. SNS filtering decides who receives a message; it does not keep history. An SQS queue deletes messages once they are consumed.",
+    "subtopic": "EventBridge archive and replay"
+  },
+  {
+    "id": "serverless-023",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security team wants to respond automatically when Amazon GuardDuty reports a high-severity finding about an EC2 instance, by isolating the instance with a restrictive security group. Which solution meets this requirement with the LEAST operational overhead?",
+    "options": [
+      "Export GuardDuty findings to Amazon S3 and run an hourly AWS Glue job that changes the security groups",
+      "Configure GuardDuty to send findings to an Amazon SQS queue that an EC2 worker polls every 15 minutes",
+      "Ask the security team to review the GuardDuty console each morning and update the security groups",
+      "Create an Amazon EventBridge rule that matches GuardDuty findings by severity and invokes an AWS Lambda function that changes the instance's security groups"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "GuardDuty publishes findings to EventBridge, where a rule can filter on severity and trigger a Lambda function within seconds. An hourly Glue job is slow and Glue is not meant for remediation. A polling EC2 worker adds infrastructure to manage and delays the response. A manual daily review is not automatic.",
+    "subtopic": "EventBridge automated remediation"
+  },
+  {
+    "id": "serverless-024",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "When an order is placed, an e-commerce application must notify a fulfillment service, an analytics service, and a fraud-detection service. Each service must receive every order even if it is offline for up to an hour, and the services must not depend on each other. Which design meets these requirements?",
+    "options": [
+      "Send each order to a single Amazon SQS queue that all three services poll",
+      "Publish each order to an Amazon SNS topic that has a separate Amazon SQS queue subscribed for each service",
+      "Publish each order to an Amazon SNS topic that sends email notifications to each service team",
+      "Invoke the three services synchronously from the order application with retries"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "SNS-to-SQS fan-out copies each message into a durable queue per service, so every service gets every order and can catch up after downtime. With one shared queue, each message is delivered to only one of the consumers. Email notifications cannot be processed reliably by applications. Synchronous calls couple the services together and fail if one of them is offline.",
+    "subtopic": "SNS fan-out"
+  },
+  {
+    "id": "serverless-025",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Amazon SNS topic receives all inventory events for a warehouse company. One subscriber, an AWS Lambda function, cares only about events where the attribute 'eventType' equals 'LOW_STOCK', but it is currently invoked for every event and discards 95% of them. How can a solutions architect reduce cost with the LEAST effort?",
+    "options": [
+      "Create a separate SNS topic for every event type and change all publishers to choose the right topic",
+      "Insert an Amazon SQS queue between the topic and the function and increase the batch size",
+      "Configure reserved concurrency on the function so that it processes fewer events at a time",
+      "Add a subscription filter policy that matches eventType equal to LOW_STOCK on the Lambda subscription"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An SNS filter policy on the subscription delivers only matching messages, so the function is no longer invoked for unwanted events. Separate topics work but require changes to every publisher. A queue with batching lowers the number of invocations but still processes and pays for every event. Reserved concurrency limits throughput and can cause throttling without filtering anything.",
+    "subtopic": "SNS message filtering"
+  },
+  {
+    "id": "serverless-026",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A trading platform publishes account balance updates that must be processed in the exact order they were sent for each account, without duplicates, by three independent downstream systems. Which architecture meets these requirements?",
+    "options": [
+      "Publish to an Amazon SNS standard topic and subscribe an Amazon SQS FIFO queue for each downstream system",
+      "Publish to a single Amazon SQS FIFO queue and have the three systems poll it with different consumer IDs",
+      "Publish to an Amazon SNS FIFO topic with the account ID as the message group ID and subscribe an Amazon SQS FIFO queue for each downstream system",
+      "Publish to an Amazon SNS standard topic with message filtering on the account ID attribute"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "SNS FIFO topics keep strict ordering per message group and remove duplicates, and they fan out to SQS FIFO queues so each system gets its own ordered copy. A standard SNS topic does not guarantee order or exactly-once delivery, and SQS FIFO queues cannot subscribe to it. Consumers of one SQS queue compete for messages rather than each getting a copy. Filtering does not provide ordering.",
+    "subtopic": "SNS FIFO topics"
+  },
+  {
+    "id": "serverless-027",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company enabled server-side encryption with the AWS managed key (aws/sqs) on an Amazon SQS queue that is subscribed to an Amazon SNS topic. Since then, no messages from the topic reach the queue. What should a solutions architect do to restore delivery while keeping the queue encrypted?",
+    "options": [
+      "Turn off encryption on the queue and enable encryption only on the SNS topic",
+      "Encrypt the queue with a customer managed KMS key whose key policy allows the SNS service principal to use kms:GenerateDataKey and kms:Decrypt",
+      "Add an IAM policy to the SNS topic owner's role that allows kms:Encrypt on the aws/sqs key",
+      "Recreate the subscription as an HTTPS subscription that points to the SQS queue URL"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The key policy of an AWS managed key cannot be changed, so SNS cannot be allowed to use aws/sqs; a customer managed key with a key policy that grants the SNS service principal the needed KMS actions fixes delivery. Turning off queue encryption removes the required protection. IAM permissions on a role cannot override a key policy that does not trust the SNS service. An HTTPS subscription to the queue URL is not how SNS delivers to SQS.",
+    "subtopic": "SNS and SQS encryption"
+  },
+  {
+    "id": "serverless-028",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An IoT company needs to orchestrate three short AWS Lambda steps for each of about 50,000 sensor events per second. Each workflow finishes in under 2 seconds, and processing an event more than once is acceptable because the steps are idempotent. Which option is the MOST cost-effective?",
+    "options": [
+      "AWS Step Functions Standard Workflows",
+      "Amazon EC2 instances that run a custom workflow engine",
+      "AWS Step Functions Express Workflows",
+      "AWS Batch array jobs with one child job per event"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Express Workflows are designed for high-volume, short-lived event processing and are billed by the number of executions, duration, and memory, which is far cheaper at this scale. Standard Workflows are billed per state transition and have lower start rates, which makes them expensive here. A custom engine on EC2 adds operational work. Batch jobs take far too long to start for 2-second workflows.",
+    "subtopic": "Step Functions Express"
+  },
+  {
+    "id": "serverless-029",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A loan-processing workflow has to pause for a human underwriter to approve each application, which can take up to 10 days, and then continue with the remaining steps. The company needs a full, auditable execution history. Which solution meets these requirements?",
+    "options": [
+      "An AWS Step Functions Express Workflow with a Wait state that lasts 10 days",
+      "An AWS Step Functions Standard Workflow that uses a task with a callback task token to wait for the approval",
+      "An AWS Lambda function that sleeps until the underwriter approves the application",
+      "An Amazon SQS delay queue that holds each application for 10 days before processing"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Standard Workflows can run for up to one year, keep a full execution history, and support the callback pattern, where the workflow pauses until an external system returns the task token. Express Workflows run for at most 5 minutes. Lambda functions time out after 15 minutes. SQS delay queues hold messages for at most 15 minutes.",
+    "subtopic": "Step Functions Standard"
+  },
+  {
+    "id": "serverless-030",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company chains five AWS Lambda functions by having each one call the next directly. When a step fails, it is hard to find out where the failure happened, and retries are written separately in each function. The company wants central orchestration with built-in retries and error handling. Which solution meets these requirements with the LEAST custom code?",
+    "options": [
+      "Define the process as an AWS Step Functions state machine and use Retry and Catch fields on the task states",
+      "Insert an Amazon SQS queue between each pair of functions and add dead-letter queues",
+      "Combine the five functions into one larger Lambda function with try/catch blocks",
+      "Use Amazon EventBridge rules to call each function when the previous function writes a log line"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Step Functions orchestrates the steps, shows where each execution failed, and offers declarative Retry and Catch with backoff, so retry code can be removed from the functions. Queues between the steps decouple them but do not give a central view of the whole process. One large function puts all the logic in one place and is still limited to 15 minutes. Triggering steps from log lines is fragile and does not add retry logic.",
+    "subtopic": "Step Functions error handling"
+  },
+  {
+    "id": "serverless-031",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A research company must run the same validation logic on 8 million small JSON files in an Amazon S3 bucket as quickly as possible, using serverless services. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "A single AWS Lambda function that lists the bucket and processes every file in a loop",
+      "An AWS Step Functions workflow with a Distributed Map state that reads the S3 objects and runs child workflows in parallel",
+      "An Amazon SQS queue that receives one message per file from a script on an EC2 instance",
+      "An AWS Step Functions Standard workflow with a Parallel state that has one branch per file"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A Distributed Map state can iterate over an S3 prefix or inventory and run thousands of child workflows in parallel, which suits millions of objects. A single Lambda function would hit its 15-minute limit. A custom script that enqueues every file adds infrastructure and code. A Parallel state has fixed branches set at design time and cannot scale to millions of items.",
+    "subtopic": "Step Functions Distributed Map"
+  },
+  {
+    "id": "serverless-032",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A startup is building a mobile backend that sends requests to AWS Lambda functions and validates JSON Web Tokens issued by an OpenID Connect provider. The startup does not need caching, usage plans, or AWS WAF on the API. Which option has the LOWEST cost?",
+    "options": [
+      "An Amazon API Gateway REST API with a Lambda authorizer",
+      "An Amazon API Gateway REST API with a Cognito user pool authorizer",
+      "An Amazon API Gateway HTTP API with a JWT authorizer",
+      "An Application Load Balancer with an OIDC authentication action"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "HTTP APIs cost less per request than REST APIs and include a native JWT authorizer for OIDC providers. REST APIs add features the startup does not need at a higher price, and a Lambda authorizer adds invocation cost too. An Application Load Balancer has a fixed hourly charge, which is costly for a startup with low or variable traffic.",
+    "subtopic": "API Gateway HTTP APIs"
+  },
+  {
+    "id": "serverless-033",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A weather API built on Amazon API Gateway REST API and AWS Lambda gets millions of GET requests per hour for the same city forecasts, which change only every 10 minutes. The Lambda costs and latency are too high. What should a solutions architect do?",
+    "options": [
+      "Increase the Lambda function memory so that each forecast is calculated faster",
+      "Turn on provisioned concurrency for the Lambda function during peak hours",
+      "Configure usage plans that limit each client to a few requests per hour",
+      "Enable API Gateway caching on the stage with a TTL of about 10 minutes and include the city parameter in the cache key"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Stage caching answers repeated requests for the same city from the API Gateway cache, which removes most Lambda invocations and lowers latency; using the city as a cache key keeps the answers correct. More memory or provisioned concurrency still runs the function for every request. Strict usage plans would hurt legitimate clients instead of serving them efficiently.",
+    "subtopic": "API Gateway caching"
+  },
+  {
+    "id": "serverless-034",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A data provider sells access to its Amazon API Gateway REST API in three tiers: Basic (10 requests per second), Pro (100 requests per second), and Enterprise (1,000 requests per second) with monthly quotas. Which feature should the provider use to enforce these limits per customer?",
+    "options": [
+      "Usage plans associated with API keys for each customer",
+      "Stage-level throttling settings for each deployment stage",
+      "Lambda reserved concurrency for each customer tier",
+      "AWS WAF rate-based rules for each API method"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Usage plans set throttling and quotas, and associating each customer's API key with a plan enforces the tier limits for that customer. Stage throttling applies to all callers of a stage together. Reserved concurrency limits the function as a whole and does not know about customers. WAF rate-based rules block abusive IP addresses but do not support per-customer monthly quotas.",
+    "subtopic": "API Gateway usage plans"
+  },
+  {
+    "id": "serverless-035",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A gaming company needs a serverless backend that keeps long-lived, two-way connections with browsers so that the server can push leaderboard updates to players instantly. Which service should the company use?",
+    "options": [
+      "Amazon API Gateway HTTP API with AWS Lambda integrations",
+      "Amazon API Gateway REST API with an edge-optimized endpoint",
+      "Amazon SQS with long polling from the browser clients",
+      "Amazon API Gateway WebSocket API with AWS Lambda integrations"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "WebSocket APIs keep persistent two-way connections, and the backend can push messages to connected clients through the connection management API. HTTP and REST APIs follow a request-response model, so the server cannot push data. Browsers polling SQS would need AWS credentials and would not be instant.",
+    "subtopic": "API Gateway WebSocket APIs"
+  },
+  {
+    "id": "serverless-036",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company wants an internal Amazon API Gateway REST API to be reachable only from applications in one VPC, never from the internet. Which steps should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Set the API endpoint type to private and attach a resource policy that allows access only through that VPC endpoint",
+      "Create a gateway VPC endpoint for API Gateway and add it to the private route tables",
+      "Deploy the API as an HTTP API with a private endpoint type",
+      "Associate an AWS WAF web ACL that blocks every request that does not come from a private IP address",
+      "Create an interface VPC endpoint for the execute-api service in the VPC"
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "Private REST APIs are reached through an interface VPC endpoint for execute-api, and a resource policy that checks the source VPC endpoint limits who can call the API. Gateway endpoints exist only for S3 and DynamoDB. HTTP APIs do not offer a private endpoint type. A WAF rule on a public endpoint still leaves the API on the internet and is not equivalent to a private API.",
+    "subtopic": "API Gateway private APIs"
+  },
+  {
+    "id": "serverless-037",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has a REST API in Amazon API Gateway and stores its customer accounts in an Amazon Cognito user pool. Only signed-in customers may call the API. Which solution meets this requirement with the LEAST custom code?",
+    "options": [
+      "Configure a Cognito user pool authorizer on the API methods and have clients send their user pool tokens",
+      "Write a Lambda authorizer that queries the user pool for each request to check the user's password",
+      "Require IAM authorization on the methods and create an IAM user for every customer",
+      "Turn on API keys and email a key to each customer when they register"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A Cognito user pool authorizer validates tokens issued by the user pool without any custom code. A Lambda authorizer could work but adds code and per-request invocations. IAM users for every customer do not scale and are not meant for application end users. API keys identify callers for usage plans and are not a secure authentication method.",
+    "subtopic": "API Gateway Cognito authorizer"
+  },
+  {
+    "id": "serverless-038",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A REST API must accept bearer tokens issued by a partner's proprietary identity system that uses a custom token format and requires a lookup in the partner's revocation list. Which API Gateway feature should be used to authorize requests?",
+    "options": [
+      "A Cognito user pool authorizer configured with the partner's issuer URL",
+      "Resource policies that allow only the partner's IP address ranges",
+      "Mutual TLS with a certificate that the partner uploads for each user",
+      "A Lambda authorizer that validates the token and returns an IAM policy"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A Lambda authorizer runs custom code, so it can parse a proprietary token, check a revocation list, and return an allow or deny policy that API Gateway can cache. Cognito authorizers only validate tokens from Cognito user pools. IP-based resource policies do not authenticate individual users. Mutual TLS authenticates client certificates, not the partner's tokens.",
+    "subtopic": "API Gateway Lambda authorizer"
+  },
+  {
+    "id": "serverless-039",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Amazon API Gateway REST API sends requests to a legacy backend on EC2 that becomes unstable above 500 requests per second. During a flash sale, request volume reached 2,000 requests per second and the backend crashed. Which solution protects the backend with the LEAST effort?",
+    "options": [
+      "Increase the default account-level throttling limit by requesting a quota increase",
+      "Enable AWS X-Ray tracing on the API stage to find which requests are slow",
+      "Change the API endpoint type from regional to edge-optimized",
+      "Set stage or method throttling limits on the API so that excess requests receive HTTP 429 responses"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "API Gateway throttling rejects requests above the configured rate with 429 Too Many Requests, which protects the fragile backend, and clients can retry later. Raising the account limit would let even more traffic through. X-Ray helps find problems but does not limit traffic. An edge-optimized endpoint changes where requests enter AWS but does not reduce their number.",
+    "subtopic": "API Gateway throttling"
+  },
+  {
+    "id": "serverless-040",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A public Amazon API Gateway REST API is being hit with SQL injection attempts and requests from a few known malicious IP addresses. Which service should a solutions architect associate with the API stage to block these requests?",
+    "options": [
+      "AWS Shield Standard",
+      "Amazon GuardDuty",
+      "AWS WAF with a web ACL",
+      "Amazon Inspector"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS WAF web ACLs can be associated with REST API stages and include managed rules for SQL injection as well as IP set rules. Shield Standard protects against network and transport layer DDoS attacks, not application payloads. GuardDuty detects threats but does not block requests inline. Inspector scans workloads for vulnerabilities.",
+    "subtopic": "API Gateway with AWS WAF"
+  },
+  {
+    "id": "serverless-041",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A photo-sharing company's web tier sends image-processing requests directly to a fleet of worker EC2 instances. During traffic spikes the workers are overloaded and some requests are lost. The company wants no requests to be lost and wants the workers to process requests at their own pace. Which solution meets these requirements?",
+    "options": [
+      "Have the web tier publish requests to an Amazon SNS topic with HTTP subscriptions for each worker",
+      "Place an Application Load Balancer in front of the workers and add more target groups",
+      "Have the web tier invoke the workers through Amazon EventBridge rules with synchronous calls",
+      "Have the web tier send requests to an Amazon SQS queue and have the workers poll the queue"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An SQS queue durably stores requests until a worker is ready, which absorbs spikes and decouples the web tier from the workers. SNS pushes messages to subscribers and only retries for a limited time, so overloaded HTTP endpoints can still lose work. A load balancer spreads traffic but does not buffer it. EventBridge also pushes events to targets and does not let workers pull at their own pace.",
+    "subtopic": "SQS decoupling"
+  },
+  {
+    "id": "serverless-042",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "Workers poll an Amazon SQS standard queue that uses the default visibility timeout. Each message takes 3 to 8 minutes to process, and the team notices that many messages are processed two or three times. Which actions should a solutions architect recommend? (Select TWO.)",
+    "options": [
+      "Enable long polling by setting the receive message wait time to 20 seconds",
+      "Configure the queue as a delay queue with an 8-minute delivery delay",
+      "Reduce the message retention period of the queue to 8 minutes",
+      "Set the queue's visibility timeout to a value longer than the maximum processing time",
+      "Have workers call ChangeMessageVisibility to extend the timeout when a job runs longer than expected"
+    ],
+    "answer": [
+      3,
+      4
+    ],
+    "explanation": "If the visibility timeout ends before processing finishes, the message becomes visible again and another worker receives it, so the timeout must exceed the processing time. Workers can also extend the timeout for an individual long-running message. Long polling reduces empty responses but does not affect redelivery. A delivery delay only postpones the first delivery. A short retention period would delete messages before they are processed.",
+    "subtopic": "SQS visibility timeout"
+  },
+  {
+    "id": "serverless-043",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company's consumers call ReceiveMessage on an Amazon SQS queue in a tight loop. Most calls return no messages, and the SQS request charges are higher than expected. How can the company reduce costs with the LEAST effort?",
+    "options": [
+      "Enable short polling and add more consumers so that each call returns faster",
+      "Convert the queue to a FIFO queue so that messages are delivered in batches",
+      "Configure a delivery delay on the queue so that messages arrive less often",
+      "Enable long polling by setting the queue's receive message wait time to 20 seconds"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Long polling makes ReceiveMessage wait up to 20 seconds for messages to arrive, which sharply reduces the number of empty responses and billed requests. Short polling with more consumers increases the number of requests. A FIFO queue does not reduce empty receives and has lower throughput limits. A delivery delay holds messages back but does not stop consumers from polling an empty queue.",
+    "subtopic": "SQS long polling"
+  },
+  {
+    "id": "serverless-044",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An online grocery store lets customers cancel an order within 5 minutes of placing it. Orders are sent to an Amazon SQS queue, and the fulfillment service must not see an order until 5 minutes after it was placed. Which SQS feature should be used?",
+    "options": [
+      "A visibility timeout of 5 minutes on the queue",
+      "A message retention period of 5 minutes on the queue",
+      "A receive message wait time of 5 minutes on the queue",
+      "A delay queue with a delivery delay of 5 minutes"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A delivery delay keeps new messages invisible to consumers for the configured time, up to 15 minutes, which gives customers time to cancel. The visibility timeout starts only after a consumer receives a message. A 5-minute retention period would delete orders. The receive wait time for long polling is limited to 20 seconds and does not delay messages.",
+    "subtopic": "SQS delay queues"
+  },
+  {
+    "id": "serverless-045",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A few malformed messages in an Amazon SQS queue cause the consumer application to fail every time it processes them. These messages are received again and again, which wastes capacity and hides real problems. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Increase the message retention period of the source queue to 14 days",
+      "Set the visibility timeout of the source queue to 0 seconds",
+      "Create an Amazon CloudWatch alarm on the number of visible messages in the dead-letter queue",
+      "Enable long polling on the source queue with a 20-second wait time",
+      "Configure a dead-letter queue with a redrive policy that sets a maximum receive count of 5"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "A redrive policy moves a message to the dead-letter queue after it has been received the maximum number of times, which removes poison messages from normal processing. An alarm on the dead-letter queue tells the team when messages fail so they can fix the cause and redrive them. A longer retention period keeps the bad messages around longer. A zero visibility timeout causes more repeated deliveries. Long polling does not affect failed messages.",
+    "subtopic": "SQS dead-letter queues"
+  },
+  {
+    "id": "serverless-046",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A banking application sends account transactions to an Amazon SQS FIFO queue. Transactions for each account must be processed in order, and accidental duplicate submissions within a few minutes must be ignored. Today every message uses the same message group ID, and throughput is too low. Which change will increase throughput while keeping the requirements?",
+    "options": [
+      "Switch to an Amazon SQS standard queue and send a deduplication ID with each message",
+      "Keep a single message group ID and increase the number of consumers that poll the queue",
+      "Use the account ID as the message group ID and enable content-based deduplication or send a deduplication ID",
+      "Add a delivery delay to the queue so that duplicates arrive after the deduplication interval"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "FIFO queues keep order within a message group, so using the account ID as the group lets different accounts be processed in parallel while each account stays in order, and deduplication IDs drop repeats within the 5-minute deduplication interval. Standard queues do not support deduplication or strict ordering. With a single message group, messages are released strictly in sequence, so more consumers cannot speed things up. A delivery delay only slows processing and provides neither ordering nor deduplication.",
+    "subtopic": "SQS FIFO message groups"
+  },
+  {
+    "id": "serverless-047",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Auto Scaling group of EC2 instances processes messages from an Amazon SQS queue. Each message takes about 2 seconds to process on one instance, and the business accepts up to 60 seconds of queue latency. Scaling on CPU usage reacts poorly to the queue load. Which scaling approach should a solutions architect use?",
+    "options": [
+      "Use target tracking scaling on average CPU usage of 50% across the Auto Scaling group",
+      "Publish a custom backlog-per-instance metric (visible messages divided by running instances) and use target tracking with a target of 30",
+      "Use step scaling based on the NumberOfMessagesSent metric of the queue",
+      "Use scheduled scaling actions that add instances during business hours"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Backlog per instance shows how many messages each instance must work through, and a target of 60 seconds divided by 2 seconds per message, or 30, keeps latency within the limit as the load changes. CPU usage does not reflect how many messages are waiting. NumberOfMessagesSent measures incoming traffic, not the backlog relative to capacity. Scheduled scaling cannot follow unpredictable queue depth.",
+    "subtopic": "Auto Scaling on SQS queue depth"
+  },
+  {
+    "id": "serverless-048",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "Applications on EC2 instances in private subnets with no internet access must send messages to Amazon SQS. The traffic must not go over the internet, and the messages must be encrypted at rest with a key that the company controls and can audit. Which actions meet these requirements? (Select TWO.)",
+    "options": [
+      "Create an interface VPC endpoint for Amazon SQS in the VPC",
+      "Create a gateway VPC endpoint for Amazon SQS and update the route tables",
+      "Add a NAT gateway so that the instances can reach the public SQS endpoint",
+      "Enable server-side encryption on the queue with a customer managed AWS KMS key",
+      "Enable server-side encryption on the queue with SQS-owned encryption keys (SSE-SQS)"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "An interface VPC endpoint (AWS PrivateLink) lets private instances reach SQS without internet access, and a customer managed KMS key gives the company control over the key policy and CloudTrail records of key use. Gateway endpoints are only for S3 and DynamoDB. A NAT gateway sends traffic to the public endpoint, which the requirement does not allow. SSE-SQS encrypts data but uses keys that SQS manages, not the company.",
+    "subtopic": "SQS security"
+  },
+  {
+    "id": "serverless-049",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An AWS Lambda function processes messages from an Amazon SQS queue and calls a partner API that allows at most 50 concurrent connections. When the team set reserved concurrency to 50, throttled invocations sent messages back to the queue and many ended up in the dead-letter queue. What should a solutions architect do instead?",
+    "options": [
+      "Increase the batch size of the event source mapping to 50 messages",
+      "Convert the queue to a FIFO queue that uses 50 message groups",
+      "Set the maximum concurrency on the SQS event source mapping to 50",
+      "Set provisioned concurrency to 50 and remove the dead-letter queue"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Maximum concurrency on the SQS event source mapping limits how many concurrent invocations the poller starts, so messages stay in the queue instead of being throttled and counted against the receive limit. Reserved concurrency alone lets the poller receive more messages than the function can run, which causes throttling. Batch size changes how many messages each invocation gets, not how many run at the same time. Message groups and provisioned concurrency do not cap concurrency, and removing the dead-letter queue hides failures.",
+    "subtopic": "Lambda SQS maximum concurrency"
+  },
+  {
+    "id": "serverless-050",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company configures Amazon S3 event notifications to send a message to an Amazon SQS standard queue whenever an object is created in a specific bucket. The notification configuration fails to save because the destination cannot be validated. What should a solutions architect do?",
+    "options": [
+      "Add a statement to the queue's access policy that allows s3.amazonaws.com to call sqs:SendMessage with a condition on the source bucket ARN",
+      "Attach an IAM role to the S3 bucket that has permission to call sqs:SendMessage on the queue",
+      "Add a statement to the bucket policy that allows the queue to call s3:PutObject on the bucket",
+      "Enable S3 Object Lock on the bucket so that the event notifications are delivered reliably"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "S3 delivers notifications as the S3 service principal, so the queue policy must allow s3.amazonaws.com to send messages, and a source ARN or source account condition limits it to the intended bucket. S3 buckets cannot assume IAM roles for event notifications. A bucket policy controls access to the bucket, not to the queue. Object Lock protects object versions and has nothing to do with notifications.",
+    "subtopic": "SQS access policies"
+  },
+  {
+    "id": "serverless-051",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A streaming analytics company collects clickstream events. Three separate applications must each read all events, events for the same user session must be processed in order, and the company must be able to reprocess the last 3 days of events after a bug fix. Which actions meet these requirements? (Select TWO.)",
+    "options": [
+      "Ingest the events into Amazon Kinesis Data Streams using the session ID as the partition key",
+      "Increase the stream's data retention period to at least 3 days",
+      "Ingest the events into an Amazon SQS standard queue with a 3-day message retention period",
+      "Ingest the events into Amazon Data Firehose and use its replay feature to reprocess data",
+      "Publish the events to an Amazon SNS standard topic that the three applications subscribe to"
+    ],
+    "answer": [
+      0,
+      1
+    ],
+    "explanation": "Kinesis Data Streams lets many consumers read the same records independently, keeps records with the same partition key in order within a shard, and supports retention well beyond the 24-hour default, so data can be reread. SQS deletes messages after one consumer processes them and does not support replay. Firehose delivers data to destinations and has no replay feature. SNS standard topics do not keep messages or guarantee order.",
+    "subtopic": "Kinesis Data Streams vs SQS"
+  },
+  {
+    "id": "serverless-052",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "Producers writing to an Amazon Kinesis Data Streams stream in provisioned mode get ProvisionedThroughputExceededException errors. CloudWatch metrics show that two shards receive most of the traffic while the other shards are almost idle, because the partition key is the country code and most users are in two countries. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Register the consumers for enhanced fan-out so that each consumer has its own read throughput",
+      "Increase the number of shards or switch the stream to on-demand capacity mode to add write capacity",
+      "Increase the data retention period of the stream from 24 hours to 7 days",
+      "Enable server-side encryption on the stream with an AWS KMS key",
+      "Change the partition key to a value with many more distinct values, such as the user ID"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "Records with the same partition key go to the same shard, so a low-cardinality key creates hot shards; a high-cardinality key spreads writes evenly. Adding shards or using on-demand mode raises the total write capacity of the stream. Enhanced fan-out improves read throughput, not write throughput. Retention and encryption do not affect throughput limits.",
+    "subtopic": "Kinesis Data Streams shards"
+  },
+  {
+    "id": "serverless-053",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Six consumer applications read from the same Amazon Kinesis data stream with the standard GetRecords API. As more consumers were added, read latency grew and consumers started to receive ReadProvisionedThroughputExceeded errors. Which solution will give every consumer low-latency reads?",
+    "options": [
+      "Increase the data retention period of the stream so that consumers can read more slowly",
+      "Register each consumer for enhanced fan-out so that it gets dedicated read throughput per shard",
+      "Change the partition key of the producers so that records are spread more evenly",
+      "Replace the consumers with an Amazon Data Firehose delivery stream for each application"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "With standard consumers, all applications share the per-shard read throughput, so adding consumers slows everyone down; enhanced fan-out gives each registered consumer its own throughput per shard and pushes records over HTTP/2. Longer retention does not raise read throughput. The partition key affects how writes are spread, not the shared read limit. Firehose delivers to storage and analytics destinations and does not replace custom real-time consumers.",
+    "subtopic": "Kinesis enhanced fan-out"
+  },
+  {
+    "id": "serverless-054",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is launching a new mobile game and will stream gameplay events to Amazon Kinesis Data Streams. Traffic is unknown and expected to swing widely, and the team does not want to plan shard capacity or pay for capacity that sits unused. Which option is the MOST suitable?",
+    "options": [
+      "Create the stream in on-demand capacity mode",
+      "Create the stream in provisioned mode with enough shards for the highest possible peak",
+      "Create the stream in provisioned mode and add shards manually when errors appear",
+      "Use Amazon Kinesis Video Streams with on-demand capacity"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "On-demand mode scales the stream automatically with traffic and bills for the data written and read, so no shard planning is needed for unknown, spiky traffic. Provisioning for the highest peak wastes money most of the time. Adding shards manually after errors means data is throttled first and requires constant attention. Kinesis Video Streams is for video and media, not gameplay events.",
+    "subtopic": "Kinesis on-demand mode"
+  },
+  {
+    "id": "serverless-055",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "Producers in private subnets send records that contain personal data to an Amazon Kinesis data stream. The data must be encrypted at rest, and traffic from the producers must not leave the AWS network or go through the internet. Which actions meet these requirements? (Select TWO.)",
+    "options": [
+      "Create a gateway VPC endpoint for Kinesis Data Streams in the producers' VPC",
+      "Enable server-side encryption on the stream with an AWS KMS key",
+      "Turn on default encryption for the Amazon S3 bucket that stores the stream's shards",
+      "Move the producers to public subnets and allow only the Kinesis endpoint in their security groups",
+      "Create an interface VPC endpoint for Kinesis Data Streams in the producers' VPC"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "Kinesis Data Streams supports server-side encryption with KMS keys, and an interface VPC endpoint keeps producer traffic on private connectivity without internet access. Gateway endpoints exist only for S3 and DynamoDB. Stream data is not stored in a customer S3 bucket. Public subnets send traffic toward public endpoints, and security groups cannot filter by service name in this way.",
+    "subtopic": "Kinesis Data Streams security"
+  },
+  {
+    "id": "serverless-056",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Amazon Data Firehose stream delivers JSON application logs to Amazon S3, and analysts query the data with Amazon Athena. Athena costs are rising because queries scan large amounts of data even though they read only a few fields. Which change will reduce query costs with the LEAST effort?",
+    "options": [
+      "Add an S3 Lifecycle rule that moves the log objects to S3 Glacier Flexible Retrieval after one day",
+      "Enable record format conversion in Firehose to write Apache Parquet using a schema from the AWS Glue Data Catalog",
+      "Increase the Firehose buffer size so that fewer and larger objects are written to S3",
+      "Replace Firehose with Kinesis Data Streams that has more shards for faster delivery"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Parquet is a columnar format, so Athena reads only the columns a query needs, which greatly cuts the data scanned; Firehose can convert JSON to Parquet using a Glue table schema. Athena cannot query objects in Glacier Flexible Retrieval directly. Larger objects help a little but the queries still scan every field. More shards do not change the storage format.",
+    "subtopic": "Amazon Data Firehose format conversion"
+  },
+  {
+    "id": "serverless-057",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company wants to deliver application log events to Amazon S3 in near real time. The company does not want to write consumer code or manage shards, servers, or scaling. Which service should a solutions architect choose?",
+    "options": [
+      "Amazon Kinesis Data Streams with a consumer application on EC2",
+      "Amazon Data Firehose",
+      "Amazon SQS with an AWS Lambda function that writes to S3",
+      "Amazon Kinesis Video Streams"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Firehose is a fully managed delivery service that buffers streaming data and writes it to destinations such as S3 with no consumer code or capacity planning. Kinesis Data Streams needs a consumer application and, in provisioned mode, shard management. SQS with Lambda works but requires custom code to batch and write objects. Kinesis Video Streams is for video and media.",
+    "subtopic": "Amazon Data Firehose"
+  },
+  {
+    "id": "serverless-058",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A healthcare company streams patient monitoring records through Amazon Data Firehose to Amazon S3 and Amazon OpenSearch Service. Compliance rules require that patient names and national ID numbers be masked before any data is stored. Which solution meets this requirement?",
+    "options": [
+      "Store the raw records in S3 and use S3 Object Lambda to mask the fields when they are read",
+      "Enable Amazon Macie on the destination bucket to find and report the sensitive fields",
+      "Configure Firehose data transformation with an AWS Lambda function that masks the fields before delivery",
+      "Enable Firehose dynamic partitioning on the patient ID so that records are grouped by patient"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Firehose can call a Lambda function to transform each batch of records before delivery, so sensitive fields are masked before they reach any destination. S3 Object Lambda masks data at read time, but the unmasked data would already be stored. Macie discovers sensitive data but does not change it. Dynamic partitioning groups data by key and does not mask anything.",
+    "subtopic": "Amazon Data Firehose transformation"
+  },
+  {
+    "id": "serverless-059",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A retail chain wants to stream live video from 500 in-store cameras to AWS, store it for playback, and run computer vision analysis on it with Amazon Rekognition Video. Which service should be used to ingest the video?",
+    "options": [
+      "Amazon Kinesis Video Streams",
+      "Amazon Kinesis Data Streams",
+      "Amazon Data Firehose",
+      "Amazon SQS FIFO queues"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Kinesis Video Streams is built to ingest, store, and index video from devices, and it works with Rekognition Video and playback APIs. Kinesis Data Streams handles data records rather than media streams. Firehose delivers records to storage and analytics destinations. SQS is for messages and cannot carry continuous video.",
+    "subtopic": "Kinesis Video Streams"
+  },
+  {
+    "id": "serverless-060",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A mobile photo app lets signed-in users upload photos directly to Amazon S3. Each user must be able to write only to their own prefix in the bucket, and no long-term AWS credentials may be stored in the app. Which solution meets these requirements?",
+    "options": [
+      "Create an IAM user for each app user and embed that user's access keys in the app after sign-in",
+      "Use Amazon Cognito user pool groups to grant each user write access to a bucket prefix",
+      "Use an Amazon Cognito identity pool to give users temporary credentials through an IAM role whose policy uses the cognito-identity.amazonaws.com:sub variable in the S3 resource path",
+      "Make the bucket publicly writable and rely on the app to choose the correct prefix for each user"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Identity pools exchange a login for temporary AWS credentials, and a policy variable for the identity ID limits each user to their own prefix. Embedding IAM user keys in an app breaks the no-long-term-credentials rule and does not scale. User pool groups can be mapped to IAM roles only through an identity pool and do not by themselves give AWS credentials. A publicly writable bucket is insecure.",
+    "subtopic": "Cognito identity pools"
+  },
+  {
+    "id": "serverless-061",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company is building a customer-facing web application and needs sign-up and sign-in, password reset, multi-factor authentication, and sign-in with Google and Apple accounts. The company wants the LEAST development effort. Which service should a solutions architect recommend?",
+    "options": [
+      "Amazon Cognito identity pools alone",
+      "Amazon Cognito user pools",
+      "AWS IAM Identity Center",
+      "AWS Directory Service for Microsoft Active Directory"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Cognito user pools are a managed user directory with sign-up, sign-in, MFA, password recovery, social identity providers, and managed login pages. Identity pools give out AWS credentials but do not store users or run sign-in flows. IAM Identity Center manages workforce access to AWS accounts and business apps, not customer sign-up. Managed Microsoft AD is for corporate directories and does not offer social sign-in.",
+    "subtopic": "Cognito user pools"
+  },
+  {
+    "id": "serverless-062",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A news app lets readers save reading preferences to an Amazon DynamoDB table before they create an account. The app must call DynamoDB directly with limited permissions for these anonymous readers. Which solution meets this requirement?",
+    "options": [
+      "Create a shared Amazon Cognito user pool account that every anonymous reader signs in with",
+      "Issue an Amazon API Gateway API key to the app and use it to sign DynamoDB requests",
+      "Create an IAM user with DynamoDB access and include its access keys in the app",
+      "Enable unauthenticated (guest) identities in an Amazon Cognito identity pool and attach a restricted IAM role for them"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Identity pools can issue temporary credentials to unauthenticated guest identities through a separate, tightly scoped IAM role. A shared user pool account cannot sign DynamoDB requests on its own and mixes all users together. API keys cannot sign requests to AWS services. Embedding IAM user keys in an app exposes long-term credentials.",
+    "subtopic": "Cognito guest access"
+  },
+  {
+    "id": "serverless-063",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A fitness app lets users sign in with their email address or with Facebook. After sign-in, the app must write workout data directly to an Amazon DynamoDB table by using temporary AWS credentials that are scoped to each user's items. Which combination of steps meets these requirements? (Select TWO.)",
+    "options": [
+      "Create an Amazon Cognito identity pool that trusts the user pool and maps users to an IAM role with a fine-grained DynamoDB policy",
+      "Create an Amazon Cognito user pool with Facebook configured as a social identity provider",
+      "Create an IAM Identity Center permission set for each app user",
+      "Configure a Lambda authorizer that returns DynamoDB access keys to the app",
+      "Create IAM users for Facebook users and store their access keys in Amazon DynamoDB"
+    ],
+    "answer": [
+      0,
+      1
+    ],
+    "explanation": "The user pool handles sign-in with email or Facebook and issues tokens, and the identity pool exchanges those tokens for temporary credentials whose IAM policy can limit access to items keyed by the user's identity. IAM Identity Center is for workforce users, not app customers. Lambda authorizers return API Gateway policies, not AWS credentials for the app. IAM users with stored keys are insecure and do not scale.",
+    "subtopic": "Cognito user pools and identity pools"
+  },
+  {
+    "id": "serverless-064",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company receives CSV files in an Amazon S3 bucket every day and wants to convert them to Apache Parquet, keep their schemas in a central catalog, and query them with SQL. The company wants a serverless solution with no clusters to manage. Which actions should a solutions architect take? (Select THREE.)",
+    "options": [
+      "Launch an Amazon EMR cluster that runs continuously to host the metadata catalog",
+      "Run an AWS Glue crawler to discover the schemas and create tables in the AWS Glue Data Catalog",
+      "Load the files into a provisioned Amazon Redshift cluster to store the schemas",
+      "Stream the files through Amazon Kinesis Video Streams to infer their schemas",
+      "Create an AWS Glue ETL job that converts the CSV files to Parquet and writes them to S3",
+      "Query the Parquet data with Amazon Athena by using the Data Catalog tables"
+    ],
+    "answer": [
+      1,
+      4,
+      5
+    ],
+    "explanation": "Glue crawlers infer schemas and populate the Data Catalog, Glue ETL jobs run serverless Spark to convert formats, and Athena queries S3 data through the catalog, all without managing clusters. A continuously running EMR cluster and a provisioned Redshift cluster add infrastructure and constant cost. Kinesis Video Streams handles video, not CSV files.",
+    "subtopic": "AWS Glue"
+  },
+  {
+    "id": "serverless-065",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A nightly AWS Glue ETL job reads every file under an S3 prefix, even though only a few hundred new files arrive each day. The job runs longer and costs more each month and sometimes writes duplicate output. Which change will fix this with the LEAST effort?",
+    "options": [
+      "Enable job bookmarks on the Glue job so that it processes only data that has not been processed before",
+      "Increase the number of DPUs for the job so that it finishes faster each night",
+      "Run the Glue crawler more often so that the Data Catalog is always up to date",
+      "Add an S3 Lifecycle rule that moves processed files to S3 Glacier Deep Archive after one day"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Job bookmarks track what a job has already processed, so later runs read only new data, which reduces cost and avoids duplicate output. More DPUs speed up the job but still reprocess everything and cost more. Running crawlers more often only updates metadata. Moving files to Glacier Deep Archive would make the job fail to read them rather than skip them cleanly.",
+    "subtopic": "AWS Glue job bookmarks"
+  },
+  {
+    "id": "serverless-066",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company is migrating an on-premises order system to AWS. The applications exchange messages through Apache ActiveMQ by using JMS and STOMP, and the company does not want to change application code. The messaging layer must stay available if one Availability Zone fails. Which solution meets these requirements?",
+    "options": [
+      "Amazon SQS FIFO queues with a client library added to each application",
+      "Amazon SNS topics with HTTPS subscriptions to each application",
+      "Amazon MQ for ActiveMQ with an active/standby broker deployed across two Availability Zones",
+      "Amazon Kinesis Data Streams with the applications rewritten to use the KCL"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Amazon MQ is a managed message broker for ActiveMQ and RabbitMQ that supports standard protocols such as JMS, STOMP, AMQP, and MQTT, so existing applications can move with little or no code change, and active/standby mode spans two Availability Zones. SQS, SNS, and Kinesis use AWS APIs, so the applications would need changes; they are better choices for new cloud-native designs.",
+    "subtopic": "Amazon MQ"
+  },
+  {
+    "id": "serverless-067",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A sales operations team needs Salesforce opportunity data copied into Amazon S3 every night for analytics. The company does not want to write or maintain integration code, the data must be encrypted with a company-managed AWS KMS key, and the transfer should use private connectivity where the SaaS application supports it. Which solution meets these requirements?",
+    "options": [
+      "Write an AWS Lambda function that calls the Salesforce API with credentials stored in the function code",
+      "Create an Amazon AppFlow flow from Salesforce to S3 on a schedule, with AWS PrivateLink and a customer managed KMS key",
+      "Configure an AWS DataSync task with Salesforce as the source location and S3 as the destination",
+      "Run an AWS Glue crawler directly against the Salesforce web interface every night"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AppFlow is a no-code service for moving data between SaaS applications such as Salesforce and AWS services, with scheduled flows, KMS encryption, and PrivateLink support for supported sources. A custom Lambda function is code to maintain, and storing credentials in code is insecure. DataSync moves data between storage systems, not from Salesforce objects. Glue crawlers catalog data stores and do not pull data from a SaaS web interface.",
+    "subtopic": "Amazon AppFlow"
+  },
+  {
+    "id": "serverless-068",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A microservices application uses Amazon API Gateway, several AWS Lambda functions, and Amazon DynamoDB. Some requests take 6 seconds, and the team cannot tell which service causes the delay. Which service helps the team trace each request end to end and find the slow component?",
+    "options": [
+      "AWS CloudTrail",
+      "AWS X-Ray",
+      "VPC Flow Logs",
+      "AWS Config"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "X-Ray records traces of requests as they pass through services and shows a service map with latency for each segment, which reveals the slow component. CloudTrail logs API calls for auditing, not request latency. VPC Flow Logs capture IP traffic metadata. AWS Config records resource configuration changes.",
+    "subtopic": "AWS X-Ray"
+  },
+  {
+    "id": "serverless-069",
+    "topic": "serverless",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A team wants to see traces for requests that pass through an Amazon API Gateway REST API, an AWS Lambda function, and the DynamoDB calls the function makes. Which steps should the team take? (Select TWO.)",
+    "options": [
+      "Enable active tracing on the Lambda function and instrument its AWS SDK calls",
+      "Enable AWS CloudTrail data events for the DynamoDB table",
+      "Enable VPC Flow Logs on the subnets that the function uses",
+      "Enable X-Ray tracing on the API Gateway stage",
+      "Install the CloudWatch agent inside the Lambda function's execution environment"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Turning on X-Ray tracing for the API stage and active tracing for the function creates connected trace segments, and instrumenting the SDK records the downstream DynamoDB calls as subsegments. CloudTrail data events are audit logs, not traces. Flow Logs show network traffic only. The CloudWatch agent is not installed in Lambda and does not produce traces.",
+    "subtopic": "AWS X-Ray"
+  },
+  {
+    "id": "serverless-070",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A platform team has built a reusable serverless log-processing application defined with AWS SAM. Other teams in the company's AWS Organizations accounts should be able to find it and deploy it with their own parameters in a few clicks. Which service should the platform team use?",
+    "options": [
+      "Publish the application privately in the AWS Serverless Application Repository and share it with the organization",
+      "List the application publicly in AWS Marketplace so that the other teams can subscribe to it",
+      "Email the deployment package to each team and ask them to create the functions manually",
+      "Package the application as an AWS Elastic Beanstalk environment and clone it for each team"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The Serverless Application Repository stores SAM applications that can be shared privately with specific accounts or an organization and deployed with parameters. Marketplace is for selling software to external customers. Emailing packages invites manual errors and version drift. Elastic Beanstalk manages web application environments, not shared serverless applications.",
+    "subtopic": "AWS Serverless Application Repository"
+  },
+  {
+    "id": "serverless-071",
+    "topic": "serverless",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A mobile banking company wants to test each release of its Android and iOS apps on many real phones and tablets in parallel before publishing to the app stores. The company does not want to buy and maintain its own device lab. Which AWS service should it use?",
+    "options": [
+      "Amazon AppStream 2.0",
+      "Amazon CloudWatch Synthetics",
+      "AWS Device Farm",
+      "Amazon WorkSpaces"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Device Farm runs automated and manual tests of mobile and web apps on real devices hosted by AWS, and tests can run in parallel. AppStream 2.0 streams desktop applications to users. CloudWatch Synthetics runs scripted checks against endpoints, not on real mobile devices. WorkSpaces provides virtual desktops.",
+    "subtopic": "AWS Device Farm"
+  },
+  {
+    "id": "serverless-072",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A financial firm runs about 2,000 risk simulations every night. Each simulation takes 3 to 6 hours, is containerized, and can be restarted if interrupted. The firm wants to minimize cost and avoid managing a scheduler or servers. Which actions meet these requirements? (Select TWO.)",
+    "options": [
+      "Configure the compute environment to use EC2 Spot Instances",
+      "Submit the simulations as jobs to an AWS Batch job queue with a managed compute environment",
+      "Run each simulation as an AWS Lambda function with the largest memory setting",
+      "Run each simulation in an AWS Step Functions Express Workflow",
+      "Keep a fleet of On-Demand EC2 instances running all day to hold the jobs"
+    ],
+    "answer": [
+      0,
+      1
+    ],
+    "explanation": "AWS Batch queues and schedules containerized jobs and provisions compute automatically, and Spot Instances cut cost for jobs that can be restarted. Lambda functions stop after 15 minutes, which is far too short. Express Workflows are limited to 5 minutes. An always-on On-Demand fleet pays for idle capacity during the day.",
+    "subtopic": "AWS Batch"
+  },
+  {
+    "id": "serverless-073",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A regulated company requires that only code approved and signed by its release team can be deployed to its production AWS Lambda functions. Any unsigned or modified package must be rejected at deployment time. Which solution meets this requirement?",
+    "options": [
+      "Package all approved code as Lambda layers and allow developers to update only the layers",
+      "Encrypt the function environment variables with a customer managed AWS KMS key",
+      "Restrict lambda:UpdateFunctionCode to the release team through an IAM policy",
+      "Create a signing profile in AWS Signer and attach a Lambda code signing configuration that enforces it to the functions"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Lambda code signing checks the signature of each deployment package against the allowed AWS Signer profiles and rejects unsigned or altered code when the enforcement policy is set. Layers are still unsigned code that can be changed. Encrypting environment variables protects configuration, not code integrity. An IAM policy limits who deploys but does not prove the package was approved or unchanged.",
+    "subtopic": "Lambda code signing"
+  },
+  {
+    "id": "serverless-074",
+    "topic": "serverless",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A logistics partner needs to publish shipment status messages to an Amazon SNS topic that is owned by a company's AWS account. The partner uses its own AWS account. Which solution allows this access in the MOST secure way?",
+    "options": [
+      "Create an IAM user in the company account for the partner and send the partner the user's access keys",
+      "Add a statement to the SNS topic's access policy that allows the partner account's principal to call sns:Publish on the topic",
+      "Share the SNS topic with the partner account by using AWS Resource Access Manager",
+      "Create a VPC peering connection between the two accounts so that the partner can reach the topic"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An SNS topic policy is a resource-based policy that can grant another account permission to publish, and the partner then uses its own credentials. Sharing long-term IAM user keys with an outside party is risky. SNS topics are not shared through AWS Resource Access Manager. Network connectivity such as VPC peering does not grant API permissions.",
+    "subtopic": "SNS access policies"
+  },
+  {
+    "id": "serverless-075",
+    "topic": "serverless",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A VPC-attached AWS Lambda function in private subnets reads and writes several terabytes of data in Amazon S3 each day. The traffic goes through a NAT gateway, and NAT gateway data processing charges have become a large part of the bill. Which change will reduce costs the MOST?",
+    "options": [
+      "Create a gateway VPC endpoint for Amazon S3 and add it to the private subnets' route tables",
+      "Create an interface VPC endpoint for Amazon S3 in each private subnet",
+      "Move the NAT gateway to a different Availability Zone from the function",
+      "Increase the memory of the Lambda function so that transfers finish sooner"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A gateway endpoint for S3 routes S3 traffic privately and has no hourly or data processing charge, so it removes the NAT gateway costs for this traffic. Interface endpoints for S3 work but charge per hour and per GB. Moving the NAT gateway to another Availability Zone adds cross-AZ data charges. More memory does not reduce the amount of data that passes through the NAT gateway.",
+    "subtopic": "Lambda VPC networking"
+  }
+]

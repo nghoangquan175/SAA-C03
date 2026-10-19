@@ -1,0 +1,1073 @@
+[
+  {
+    "id": "ha-scaling-001",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs a web application behind a Classic Load Balancer. The company is splitting the application into several services and needs to route requests for /api/* and /images/* to different groups of instances. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Migrate to an Application Load Balancer and create listener rules with path-based conditions that forward to separate target groups.",
+      "Create one Classic Load Balancer per service and use Route 53 weighted records to split traffic by path.",
+      "Migrate to a Network Load Balancer and configure path-based routing rules on its TCP listener.",
+      "Keep the Classic Load Balancer and add a second listener on a different port for each service path."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Application Load Balancers operate at layer 7 and support content-based routing, including path and host conditions that forward to different target groups. Classic Load Balancers have no path-based routing, so extra listeners or extra CLBs cannot route by URL path. A Network Load Balancer works at layer 4 and cannot inspect HTTP paths, and Route 53 weighted records split traffic by percentage, not by path.",
+    "subtopic": "ELB Evolution"
+  },
+  {
+    "id": "ha-scaling-002",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A Network Load Balancer is enabled in two Availability Zones. Two instances are registered in AZ-a and six instances are registered in AZ-b. Monitoring shows that the two instances in AZ-a are overloaded while the instances in AZ-b are lightly used. Which change will distribute traffic evenly across all eight instances?",
+    "options": [
+      "Change the target group routing algorithm to least outstanding requests.",
+      "Enable sticky sessions based on source IP address on the target group.",
+      "Create a Route 53 weighted record that sends 75 percent of traffic to the AZ-b load balancer node.",
+      "Enable cross-zone load balancing for the Network Load Balancer."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "With cross-zone load balancing disabled, which is the default for a Network Load Balancer, each load balancer node only sends traffic to targets in its own AZ, so the two AZ-a instances receive half of all traffic. Enabling cross-zone load balancing lets every node distribute across all registered targets in all enabled AZs. Least outstanding requests is an Application Load Balancer algorithm, stickiness would make the imbalance worse, and manipulating DNS for individual load balancer nodes is not a supported or reliable approach.",
+    "subtopic": "Cross-Zone Load Balancing"
+  },
+  {
+    "id": "ha-scaling-003",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company runs a three-tier application. The web tier runs in public-facing infrastructure and must call the application tier through a load balancer. The application tier must never be reachable from the internet. Which combination of steps will meet these requirements? (Select TWO.)",
+    "options": [
+      "Place the application tier instances in public subnets and remove their public IP addresses after launch.",
+      "Create an internal Application Load Balancer in private subnets in front of the application tier.",
+      "Create a Network Load Balancer with Elastic IP addresses in front of the application tier.",
+      "Create an internet-facing Application Load Balancer for the application tier and block internet traffic with a network ACL.",
+      "Configure the application tier security group to allow inbound traffic only from the internal load balancer security group."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "An internal load balancer has only private IP addresses and its DNS name resolves to private IPs, so it cannot be reached from the internet. Restricting the application tier security group to the load balancer security group ensures only the load balancer can reach the instances. An internet-facing load balancer or one with Elastic IP addresses is publicly reachable by design, and relying on network ACLs or removing public IPs from instances in public subnets is weaker and error-prone.",
+    "subtopic": "Internal Load Balancer"
+  },
+  {
+    "id": "ha-scaling-004",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A financial services company exposes a TCP-based trading API to partners. Each partner allows outbound connections only to a fixed list of IP addresses in its firewall. The API runs on EC2 instances in an Auto Scaling group across two Availability Zones and must handle sudden spikes of millions of connections. Which solution will meet these requirements?",
+    "options": [
+      "Deploy an Application Load Balancer and associate an Elastic IP address with each of its subnets.",
+      "Deploy a Classic Load Balancer and give the partners the IP addresses returned by its DNS name.",
+      "Deploy an internet-facing Network Load Balancer and assign an Elastic IP address to it in each Availability Zone.",
+      "Assign Elastic IP addresses to each instance and publish all of them to the partners."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A Network Load Balancer provides one static IP address per enabled AZ, and for an internet-facing NLB you can bring your own Elastic IP addresses, which partners can allowlist. It is designed for millions of requests per second at layer 4. Application and Classic Load Balancers do not support static or Elastic IP addresses and their IPs change over time, and per-instance Elastic IPs break as the Auto Scaling group replaces instances.",
+    "subtopic": "NLB Static IPs"
+  },
+  {
+    "id": "ha-scaling-005",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A media company serves a global user base from an Application Load Balancer in us-east-1. The application uses host-based and path-based routing rules. Several enterprise customers require two fixed IP addresses to allowlist, and the company wants to reduce latency for users in Asia and Europe. Which solution will meet these requirements?",
+    "options": [
+      "Allocate two Elastic IP addresses and associate them directly with the Application Load Balancer.",
+      "Create an AWS Global Accelerator standard accelerator with the Application Load Balancer as an endpoint and give customers the accelerator's static anycast IP addresses.",
+      "Create a Route 53 alias record for the Application Load Balancer and give customers the IP addresses that the alias resolves to.",
+      "Replace the Application Load Balancer with a Network Load Balancer with Elastic IP addresses and move the routing rules to it."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Global Accelerator provides two static anycast IP addresses and routes users onto the AWS global network at the nearest edge location, improving latency while keeping the ALB and its layer 7 routing rules. Elastic IP addresses cannot be attached to an ALB. A Network Load Balancer cannot evaluate host or path rules, and the IP addresses behind an alias to an ALB change over time and must not be allowlisted.",
+    "subtopic": "Global Accelerator with ALB"
+  },
+  {
+    "id": "ha-scaling-006",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security team requires the web application to record the original IP address of every client for audit purposes. The application runs on EC2 instances behind an Application Load Balancer, and the application logs currently show only private IP addresses. What should a solutions architect recommend?",
+    "options": [
+      "Change the target type of the target group from instance to ip so the client IP is preserved.",
+      "Enable proxy protocol version 2 on the Application Load Balancer target group.",
+      "Enable VPC Flow Logs on the instance network interfaces to capture the client IP addresses.",
+      "Configure the application to log the value of the X-Forwarded-For request header."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An Application Load Balancer terminates the client connection and opens a new connection to the target, so the source IP the instance sees is the load balancer node. The ALB adds the original client IP in the X-Forwarded-For header, which the application can log. Proxy protocol v2 is a Network Load Balancer feature, the ip target type does not change ALB behavior, and flow logs on the instances would also show the load balancer addresses.",
+    "subtopic": "X-Forwarded-For"
+  },
+  {
+    "id": "ha-scaling-007",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company hosts three websites with different domain names on the same fleet of EC2 instances. All traffic must use HTTPS, and the company wants to offload TLS processing from the instances and manage certificates with minimal effort. Which solution meets these requirements MOST cost-effectively?",
+    "options": [
+      "Use a single Application Load Balancer with an HTTPS listener, attach three AWS Certificate Manager certificates, and rely on Server Name Indication to select the correct certificate.",
+      "Use a Network Load Balancer with a TCP listener on port 443 and install the certificates on each EC2 instance.",
+      "Create three Application Load Balancers, each with one ACM certificate, and point each domain to its own load balancer.",
+      "Use a single Classic Load Balancer with one HTTPS listener per domain on port 443."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Application Load Balancers support multiple certificates on one HTTPS listener and use SNI to present the right certificate for each hostname, and ACM handles certificate renewal. TLS is terminated at the load balancer, offloading the instances. Three ALBs add unnecessary cost, a TCP passthrough listener leaves TLS work on the instances, and a Classic Load Balancer cannot have several listeners on the same port and does not support SNI.",
+    "subtopic": "TLS Termination and SNI"
+  },
+  {
+    "id": "ha-scaling-008",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A healthcare company has a compliance requirement that TLS traffic must be encrypted end to end and must not be decrypted by any intermediate device, including the load balancer. The backend servers validate client certificates themselves. Which load balancer configuration meets this requirement?",
+    "options": [
+      "An Application Load Balancer with an HTTPS listener that re-encrypts traffic to targets using an HTTPS target group.",
+      "A Network Load Balancer with a TCP listener on port 443 that forwards the encrypted traffic to the instances, which terminate TLS.",
+      "A Network Load Balancer with a TLS listener that uses an AWS Certificate Manager certificate.",
+      "An Application Load Balancer with mutual TLS verification enabled on its HTTPS listener."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A TCP listener on a Network Load Balancer passes the encrypted bytes through without decrypting them, so TLS, including client certificate validation, is handled only by the backend servers. Any HTTPS listener on an ALB, including with mutual TLS or re-encryption, terminates TLS at the load balancer. An NLB TLS listener also terminates TLS at the load balancer, which violates the requirement.",
+    "subtopic": "TLS Passthrough on NLB"
+  },
+  {
+    "id": "ha-scaling-009",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "An application runs on EC2 instances in an Auto Scaling group behind an Application Load Balancer. Sometimes the application process hangs while the instance itself stays running. Users receive errors, but the Auto Scaling group never replaces the broken instances. Which combination of actions will resolve this? (Select TWO.)",
+    "options": [
+      "Change the Auto Scaling group health check type to include Elastic Load Balancing health checks.",
+      "Configure the target group health check to call an application endpoint such as /health that verifies the application is responding.",
+      "Increase the health check grace period of the Auto Scaling group to one hour.",
+      "Enable detailed monitoring on the instances so status checks run every minute.",
+      "Create a CloudWatch alarm on the EC2 system status check that reboots the instance."
+    ],
+    "answer": [
+      0,
+      1
+    ],
+    "explanation": "By default an Auto Scaling group only uses EC2 status checks, which pass as long as the instance is running, so a hung application is never detected. Enabling ELB health checks on the group makes it replace instances that the load balancer marks unhealthy, and a meaningful health check path ensures an unresponsive application fails the check. A longer grace period delays detection, detailed monitoring only changes metric frequency, and system status checks do not detect application failures.",
+    "subtopic": "ASG Health Checks"
+  },
+  {
+    "id": "ha-scaling-010",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must inspect all traffic entering and leaving several application VPCs with a fleet of third-party firewall virtual appliances. The appliances must scale horizontally and the solution must be transparent to the applications. Which solution will meet these requirements?",
+    "options": [
+      "Deploy the appliances behind an Application Load Balancer and point each application's DNS records at the load balancer.",
+      "Deploy the appliances behind a Network Load Balancer with a TLS listener and enable proxy protocol on the targets.",
+      "Deploy the appliances behind a Gateway Load Balancer in an inspection VPC and route traffic from each application VPC through Gateway Load Balancer endpoints.",
+      "Run one appliance per VPC as a NAT instance and update the default route to point to it."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Gateway Load Balancer is designed to deploy, scale, and manage third-party virtual appliances such as firewalls and IDS/IPS. It acts as a transparent bump in the wire, and Gateway Load Balancer endpoints let route tables in other VPCs send traffic to the inspection fleet. ALB and NLB are not transparent network hops and would require application changes, and single NAT instances do not scale and are a single point of failure.",
+    "subtopic": "Gateway Load Balancer"
+  },
+  {
+    "id": "ha-scaling-011",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Which statement correctly describes how a Gateway Load Balancer works?",
+    "options": [
+      "It operates at layer 7 and routes HTTP requests to firewall appliances based on URL paths.",
+      "It operates at layer 3 and forwards IP packets to virtual appliances encapsulated with the GENEVE protocol on port 6081.",
+      "It terminates TLS connections and forwards decrypted traffic to intrusion detection appliances.",
+      "It provides two static anycast IP addresses that route traffic to the nearest AWS Region."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Gateway Load Balancer works at the network layer, listens for all IP packets on all ports, and sends them to registered appliances using GENEVE encapsulation on UDP port 6081 while keeping flows sticky to one appliance. It does not inspect HTTP paths or terminate TLS. Static anycast IP addresses describe AWS Global Accelerator.",
+    "subtopic": "Gateway Load Balancer"
+  },
+  {
+    "id": "ha-scaling-012",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company currently uses launch configurations for its Auto Scaling groups. The company wants to run a mix of On-Demand and Spot Instances across several instance types in one group and keep a versioned history of its instance settings. What should the company do?",
+    "options": [
+      "Create a new version of each launch configuration that specifies both On-Demand and Spot pricing.",
+      "Use launch configurations with a Spot maximum price and attach multiple configurations to the same group.",
+      "Keep the launch configurations and create a separate Spot Fleet request alongside each Auto Scaling group.",
+      "Replace the launch configurations with launch templates and configure a mixed instances policy on the Auto Scaling group."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Launch templates support versioning and are required for mixed instances policies, which combine On-Demand and Spot capacity across multiple instance types in a single Auto Scaling group. Launch configurations are a legacy feature that cannot be versioned or modified and do not support mixed instances. An Auto Scaling group can reference only one launch configuration, and a separate Spot Fleet would not be managed by the group.",
+    "subtopic": "Launch Templates"
+  },
+  {
+    "id": "ha-scaling-013",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a stateless application in an Auto Scaling group across three Availability Zones. The application must keep at least four instances running at all times, even if an entire Availability Zone fails. Which configuration meets this requirement MOST cost-effectively?",
+    "options": [
+      "Set the minimum capacity to 4 and spread the instances across the three Availability Zones.",
+      "Set the minimum capacity to 4 and spread the instances across two Availability Zones.",
+      "Set the minimum capacity to 6 and spread the instances across the three Availability Zones.",
+      "Set the minimum capacity to 8 and spread the instances across two Availability Zones."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With six instances spread evenly over three AZs, losing one AZ still leaves four instances running. A minimum of four across three or two AZs could drop to two or three instances after an AZ failure. Eight instances across two AZs also survives an AZ failure but requires two more instances than necessary, so it is less cost-effective.",
+    "subtopic": "ASG Capacity Across AZs"
+  },
+  {
+    "id": "ha-scaling-014",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company wants its Auto Scaling group to automatically add and remove instances to keep the average CPU utilization of the group close to 50 percent, without managing CloudWatch alarms or step definitions. Which scaling policy should be used?",
+    "options": [
+      "A target tracking scaling policy using the ASGAverageCPUUtilization metric with a target value of 50.",
+      "A simple scaling policy that adds one instance when CPU exceeds 50 percent.",
+      "A step scaling policy with separate alarms for each CPU range.",
+      "A scheduled scaling action that sets desired capacity based on expected CPU."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Target tracking policies work like a thermostat: you choose a metric and target value, and Auto Scaling creates and manages the CloudWatch alarms and adjusts capacity to stay near the target. Simple and step scaling require you to define alarms and adjustments yourself. Scheduled actions change capacity at set times and do not react to actual CPU utilization.",
+    "subtopic": "Target Tracking Scaling"
+  },
+  {
+    "id": "ha-scaling-015",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An internal reporting application is used only by office staff. Load rises sharply every weekday at 08:00 and drops to almost zero after 19:00 and on weekends. The company wants to reduce costs while keeping performance acceptable during office hours. Which solution meets these requirements with the LEAST operational effort?",
+    "options": [
+      "Create scheduled actions on the Auto Scaling group that increase capacity shortly before 08:00 on weekdays and reduce it after 19:00.",
+      "Purchase Reserved Instances for the peak capacity and keep all instances running continuously.",
+      "Create a step scaling policy based on network traffic with a long cooldown period.",
+      "Have an operator manually change the desired capacity at the start and end of each workday."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "When load follows a known, fixed calendar, scheduled scaling actions adjust capacity automatically at the right times, including scaling down outside business hours. Reserved Instances for peak capacity pay for idle instances at night and on weekends. A reactive step policy scales only after load arrives, and manual changes add operational effort and risk being forgotten.",
+    "subtopic": "Scheduled Scaling"
+  },
+  {
+    "id": "ha-scaling-016",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An e-commerce application has a strong daily traffic cycle that gradually shifts over the weeks. New instances take about 10 minutes to initialize, so a target tracking policy alone adds capacity too late during the morning ramp-up. Which solution will improve performance during the ramp-up with the LEAST ongoing maintenance?",
+    "options": [
+      "Lower the target value of the target tracking policy to 10 percent CPU utilization.",
+      "Add a predictive scaling policy that forecasts load from historical data and launches capacity ahead of the forecasted demand, alongside the target tracking policy.",
+      "Create scheduled actions for every hour of the day and update them each week as the pattern shifts.",
+      "Replace target tracking with a simple scaling policy that has a shorter cooldown period."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Predictive scaling analyzes historical load to forecast daily and weekly patterns and launches instances in advance, which suits applications with long initialization times; it works alongside target tracking for unexpected changes. Hourly scheduled actions require constant manual updating as the pattern shifts. An extremely low target wastes money all day, and simple scaling still reacts only after load arrives.",
+    "subtopic": "Predictive Scaling"
+  },
+  {
+    "id": "ha-scaling-017",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants an Auto Scaling group to add one instance when average CPU is between 60 and 70 percent, three instances when it is between 70 and 85 percent, and five instances when it exceeds 85 percent. Which type of scaling policy should be used?",
+    "options": [
+      "A predictive scaling policy with a buffer of five instances.",
+      "A simple scaling policy with three separate cooldown periods.",
+      "A target tracking scaling policy with a target value of 60 percent CPU.",
+      "A step scaling policy with step adjustments tied to a CloudWatch alarm on CPU utilization."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Step scaling policies let you define different capacity adjustments based on the size of the alarm breach, exactly matching this tiered requirement. Target tracking picks adjustments automatically and does not allow explicit tiers. Simple scaling applies a single adjustment per alarm and then waits for cooldown, and predictive scaling forecasts load rather than reacting to defined thresholds.",
+    "subtopic": "Step Scaling"
+  },
+  {
+    "id": "ha-scaling-018",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Auto Scaling group has two target tracking policies: one keeps average CPU utilization at 60 percent and the other keeps ALBRequestCountPerTarget at 1,000. How does Amazon EC2 Auto Scaling behave when the two policies disagree?",
+    "options": [
+      "It scales in if either policy indicates that capacity can be removed, to minimize cost.",
+      "It always follows the policy that was created first and ignores the second policy.",
+      "It scales out if either policy calls for more capacity and scales in only when both policies indicate that capacity can be removed.",
+      "It averages the capacity recommended by both policies and sets the desired capacity to that value."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With multiple target tracking policies, Auto Scaling chooses the policy that provides the largest capacity for both scale out and scale in. This means scale out happens when any policy requires it, while scale in only happens when all policies are ready to scale in. This design prioritizes availability; it does not average recommendations or depend on creation order.",
+    "subtopic": "Multiple Target Tracking Policies"
+  },
+  {
+    "id": "ha-scaling-019",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Auto Scaling group uses a target tracking policy on CPU utilization. Newly launched instances run CPU-intensive bootstrap tasks for several minutes before serving traffic. The group often launches far more instances than needed because these new instances report high CPU. Which change will prevent this over-scaling?",
+    "options": [
+      "Switch the group to use EC2 health checks instead of ELB health checks.",
+      "Increase the deregistration delay on the target group to cover the bootstrap time.",
+      "Enable default instance warmup on the Auto Scaling group with a value that covers the bootstrap time.",
+      "Increase the health check grace period so the instances are not checked during bootstrap."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "During the instance warmup period, a newly launched instance's metrics are not added to the group's aggregated metrics, so bootstrap CPU spikes do not trigger further scale-out. The health check grace period only delays health-based replacement and does not affect scaling metrics. Deregistration delay applies to instances leaving a target group, and the health check type has no effect on scaling decisions.",
+    "subtopic": "Default Instance Warmup"
+  },
+  {
+    "id": "ha-scaling-020",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "New instances in an Auto Scaling group must download configuration and register with a license server before they receive production traffic. If the setup fails, the instance must not be put into service. Which combination of steps will meet these requirements? (Select TWO.)",
+    "options": [
+      "Increase the scaling cooldown period to cover the setup time.",
+      "Set the desired capacity to zero until the setup scripts have finished on all instances.",
+      "Have the setup script call complete-lifecycle-action with CONTINUE on success and ABANDON on failure.",
+      "Add a lifecycle hook for instance termination so instances wait in the Terminating:Wait state.",
+      "Add a lifecycle hook for instance launch so new instances wait in the Pending:Wait state."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "A launch lifecycle hook pauses new instances in Pending:Wait so custom actions can run before the instance enters InService and is registered with the load balancer. The script then completes the lifecycle action with CONTINUE to proceed or ABANDON so Auto Scaling terminates and replaces the instance. A termination hook acts on instances being removed, cooldowns do not stop instances from going into service, and setting desired capacity to zero would remove all capacity.",
+    "subtopic": "Lifecycle Hooks"
+  },
+  {
+    "id": "ha-scaling-021",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "Instances in an Auto Scaling group write application logs to local disk. When the group scales in, the logs are lost. The company needs the logs to be uploaded to Amazon S3 before each instance is terminated. Which combination of steps will meet this requirement? (Select TWO.)",
+    "options": [
+      "Enable instance scale-in protection on all instances in the group.",
+      "Create an Amazon EventBridge rule for the lifecycle action that runs an AWS Systems Manager Run Command document to copy the logs to S3 and then complete the lifecycle action.",
+      "Add a lifecycle hook for instance termination so instances pause in the Terminating:Wait state.",
+      "Increase the target group deregistration delay to 3,600 seconds so the logs have time to upload.",
+      "Add a command to the instance user data that copies the logs to S3 whenever the instance shuts down."
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "A termination lifecycle hook holds the instance in Terminating:Wait, and the lifecycle event can trigger EventBridge to run a Systems Manager command or Lambda function that uploads the logs and then completes the lifecycle action. User data runs at launch by default, not at shutdown. Deregistration delay only drains in-flight requests, and scale-in protection would stop scale-in altogether rather than allowing a clean termination.",
+    "subtopic": "Lifecycle Hooks"
+  },
+  {
+    "id": "ha-scaling-022",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application takes 12 minutes to start because it loads a large dataset into memory at boot. Traffic spikes are unpredictable, and the Auto Scaling group cannot add capacity fast enough. The company wants faster scale-out without paying for extra running instances most of the time. Which solution meets these requirements MOST cost-effectively?",
+    "options": [
+      "Add scheduled scaling actions that add capacity every hour.",
+      "Configure a warm pool for the Auto Scaling group with instances kept in the Stopped state after initialization.",
+      "Increase the minimum capacity of the Auto Scaling group to the expected peak.",
+      "Switch to a larger instance type so that each instance boots faster."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A warm pool keeps pre-initialized instances ready; instances in the Stopped state incur only EBS storage charges, and they can be moved into service much faster than launching and initializing new ones. Raising the minimum to peak capacity means paying for idle running instances. Scheduled actions do not fit unpredictable spikes, and a larger instance type does not remove the long data loading step.",
+    "subtopic": "Warm Pools"
+  },
+  {
+    "id": "ha-scaling-023",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has built a new AMI with security patches for an application running in an Auto Scaling group behind an Application Load Balancer. The company must replace all running instances with the new AMI while keeping at least 90 percent of capacity in service. Which solution requires the LEAST operational effort?",
+    "options": [
+      "Create a new launch template version with the new AMI and start an instance refresh with a minimum healthy percentage of 90.",
+      "Update the launch template with the new AMI and wait for the Auto Scaling group to replace instances automatically.",
+      "Create a new Auto Scaling group with the new AMI and delete the old group immediately after it is created.",
+      "Terminate all instances at once so the Auto Scaling group launches replacements from the new AMI."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Instance refresh performs a rolling replacement of instances based on the updated launch template and honors a minimum healthy percentage, so capacity stays above 90 percent. Updating the launch template only affects instances launched later; existing instances are not replaced automatically. Terminating everything or deleting the old group before the new one is healthy causes an outage.",
+    "subtopic": "Instance Refresh"
+  },
+  {
+    "id": "ha-scaling-024",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A legacy application stores user session data in the memory of each web server. After the company placed the servers behind an Application Load Balancer, users report being logged out randomly. The company needs a quick fix without code changes. What should a solutions architect do?",
+    "options": [
+      "Increase the deregistration delay of the target group.",
+      "Change the target group algorithm to least outstanding requests.",
+      "Enable cross-zone load balancing on the Application Load Balancer.",
+      "Enable load balancer generated cookie stickiness on the target group."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Duration-based stickiness uses a load balancer cookie to route a user's requests to the same target, so in-memory sessions are found. Cross-zone balancing and the least outstanding requests algorithm still spread a user's requests over different servers. Deregistration delay only affects instances being removed. Stickiness is a short-term fix; moving session state out of the servers is the long-term solution.",
+    "subtopic": "Session Stickiness"
+  },
+  {
+    "id": "ha-scaling-025",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A photo-sharing application runs on EC2 instances in an Auto Scaling group. Each instance stores user sessions in memory and saves uploaded photos to its local disk. Users lose sessions and see missing photos when instances are replaced. Which combination of changes will make the web tier stateless? (Select TWO.)",
+    "options": [
+      "Store uploaded photos on instance store volumes to improve write performance.",
+      "Store session data on an EBS volume shared between instances with Multi-Attach.",
+      "Store uploaded photos in an Amazon S3 bucket.",
+      "Enable sticky sessions with a 7-day duration on the target group.",
+      "Store session data in Amazon ElastiCache or Amazon DynamoDB."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Moving sessions to a shared, external store such as ElastiCache or DynamoDB and moving uploads to Amazon S3 removes all state from the instances, so any instance can serve any request and instances can be replaced freely. Sticky sessions still lose data when an instance is terminated. EBS Multi-Attach is limited to one AZ and specific volume types, and instance store data is lost when an instance stops or terminates.",
+    "subtopic": "Stateless Architecture"
+  },
+  {
+    "id": "ha-scaling-026",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A content management system runs on EC2 instances in an Auto Scaling group across three Availability Zones. Editors upload files that must be immediately visible to all instances through a standard POSIX file system path. Which storage solution meets these requirements?",
+    "options": [
+      "Store the files on each instance's root EBS volume and synchronize them every five minutes with rsync.",
+      "Attach an io2 EBS volume with Multi-Attach to all instances in the Auto Scaling group.",
+      "Store the files on instance store volumes and replicate them with a cron job.",
+      "Mount an Amazon EFS file system on all instances using mount targets in each Availability Zone."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Amazon EFS is a regional, shared NFS file system that many Linux instances in multiple AZs can mount at the same time, with mount targets in each AZ. EBS Multi-Attach only works within a single AZ with a limited number of instances. Periodic synchronization of local or instance store volumes is not immediate and is fragile, and instance store data is lost on stop or termination.",
+    "subtopic": "Shared File Storage for Web Tier"
+  },
+  {
+    "id": "ha-scaling-027",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A stateless web application runs in an Auto Scaling group. The company always needs at least 4 On-Demand Instances for baseline traffic and wants the cheapest possible capacity above that baseline while minimizing Spot interruptions. Which combination of settings will meet these requirements? (Select TWO.)",
+    "options": [
+      "Purchase Dedicated Hosts for the baseline and run all additional capacity on Spot Instances.",
+      "Use the lowest-price Spot allocation strategy with only one Spot capacity pool.",
+      "Specify several suitable instance types and use the price-capacity-optimized Spot allocation strategy.",
+      "Use a single instance type for Spot capacity so that all instances perform identically.",
+      "Use a mixed instances policy with an On-Demand base capacity of 4 and 0 percent On-Demand above the base."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "A mixed instances policy lets you keep a fixed On-Demand base and fill the rest with Spot Instances. Diversifying across instance types with the price-capacity-optimized strategy picks pools that are both low cost and deep in capacity, which lowers interruption risk. Dedicated Hosts are expensive and unnecessary, and relying on one instance type or one pool increases the chance of interruptions and capacity shortages.",
+    "subtopic": "Mixed Instances Policy"
+  },
+  {
+    "id": "ha-scaling-028",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Auto Scaling group runs most of its capacity on Spot Instances. When Spot Instances are interrupted, the group temporarily drops below its desired capacity until replacements launch, causing elevated latency. Which feature should be enabled to reduce this impact?",
+    "options": [
+      "A longer default cooldown, so the group waits before replacing interrupted instances.",
+      "Capacity Rebalancing, so the group launches replacement instances when it receives an EC2 rebalance recommendation.",
+      "Termination lifecycle hooks with a heartbeat timeout of 48 hours to delay interruptions.",
+      "Instance scale-in protection, so Spot Instances cannot be interrupted."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "With Capacity Rebalancing, Auto Scaling proactively launches a new Spot Instance when an instance receives a rebalance recommendation signalling elevated interruption risk, then terminates the at-risk instance after the replacement is ready. Scale-in protection does not stop EC2 from reclaiming Spot capacity. Cooldowns only delay scaling, and lifecycle hooks cannot postpone a Spot interruption beyond the two-minute notice.",
+    "subtopic": "Capacity Rebalancing"
+  },
+  {
+    "id": "ha-scaling-029",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company runs a web application in eu-west-1 using an Application Load Balancer, an Auto Scaling group, and an Amazon Aurora MySQL cluster. The company needs a warm standby in eu-central-1 that can take over automatically if the primary Region becomes unavailable, with minimal data loss. Which combination of steps will meet these requirements? (Select TWO.)",
+    "options": [
+      "Enable cross-zone load balancing so the primary Application Load Balancer can send traffic to eu-central-1.",
+      "Convert the database to an Aurora global database with a secondary cluster in eu-central-1.",
+      "Extend the existing Auto Scaling group to include subnets in eu-central-1.",
+      "Configure Amazon Route 53 failover routing with a health check on the primary Region's load balancer endpoint.",
+      "Add a listener rule on the primary Application Load Balancer that forwards to a target group in eu-central-1."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Route 53 failover routing with health checks redirects users to the standby Region when the primary endpoint is unhealthy, and an Aurora global database replicates data to another Region with typical lag under a second and supports fast promotion. Auto Scaling groups and load balancers are regional resources, so they cannot span Regions. Cross-zone load balancing works only across Availability Zones within one Region.",
+    "subtopic": "Multi-Region Failover"
+  },
+  {
+    "id": "ha-scaling-030",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A gaming company runs UDP-based game servers behind Network Load Balancers in three AWS Regions. Players worldwide experience inconsistent latency over the public internet, and the company needs failover between Regions within seconds rather than waiting for DNS caches to expire. Which solution will meet these requirements?",
+    "options": [
+      "Use AWS Global Accelerator with endpoint groups for each Region's Network Load Balancer.",
+      "Use Amazon CloudFront with the Network Load Balancers as custom origins.",
+      "Use Amazon Route 53 latency-based routing with a TTL of 60 seconds.",
+      "Use an Application Load Balancer in one Region with targets registered in all three Regions."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Global Accelerator provides static anycast IP addresses, carries traffic over the AWS global network from the nearest edge location, supports TCP and UDP, and fails over between endpoint groups based on health checks without relying on DNS changes. CloudFront is designed for HTTP and HTTPS content, not raw UDP game traffic. Route 53 failover depends on client DNS caching, and an ALB does not support UDP or cross-Region targets in this way.",
+    "subtopic": "Global Accelerator"
+  },
+  {
+    "id": "ha-scaling-031",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A SaaS company deploys identical stacks, each with an Application Load Balancer, in us-west-2 and ap-southeast-1. The company wants each user to be directed by DNS to the Region that gives that user the lowest network latency. Which Route 53 configuration meets this requirement?",
+    "options": [
+      "Create a single alias record to one Application Load Balancer with cross-zone load balancing enabled.",
+      "Create geolocation records that map North America to us-west-2 and Asia to ap-southeast-1.",
+      "Create latency-based alias records for the domain that point to each Region's Application Load Balancer.",
+      "Create weighted alias records with a weight of 50 for each Application Load Balancer."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Latency-based routing uses measured latency between users' networks and AWS Regions to return the record for the Region with the lowest latency. Geolocation routes by the user's location, which does not always correspond to lowest latency, and requires a default record for unmapped locations. Weighted records split traffic by ratio regardless of latency, and cross-zone load balancing does not operate across Regions.",
+    "subtopic": "Route 53 Latency Routing"
+  },
+  {
+    "id": "ha-scaling-032",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company is moving a web application to a single AWS Region and must ensure that the failure of one Availability Zone does not cause an outage. Which combination of design choices will meet this requirement? (Select THREE.)",
+    "options": [
+      "Deploy an Application Load Balancer with subnets in at least two Availability Zones.",
+      "Run all instances in one Availability Zone and use larger instance types for headroom.",
+      "Configure the Auto Scaling group to launch instances in subnets in multiple Availability Zones.",
+      "Launch all instances in a cluster placement group to reduce network latency.",
+      "Store the database on instance store volumes for higher performance.",
+      "Use an Amazon RDS Multi-AZ deployment for the database."
+    ],
+    "answer": [
+      0,
+      2,
+      5
+    ],
+    "explanation": "An ALB spanning multiple AZs, an Auto Scaling group spread across AZs, and an RDS Multi-AZ database with automatic failover together remove single-AZ dependencies. A cluster placement group places instances in a single AZ, as does running everything in one AZ, so an AZ outage would take down the application. Instance store volumes are ephemeral and provide no AZ-level durability.",
+    "subtopic": "Multi-AZ Architecture"
+  },
+  {
+    "id": "ha-scaling-033",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs three web applications for shop.example.com, blog.example.com, and api.example.com. Each application currently has its own Application Load Balancer. The company wants to reduce load balancer costs without changing the applications. What should a solutions architect do?",
+    "options": [
+      "Remove the load balancers and use Route 53 multivalue answer records that point to the instances.",
+      "Replace the load balancers with one Network Load Balancer that routes requests based on the host name.",
+      "Use one Application Load Balancer with weighted target groups that split traffic evenly across the three applications.",
+      "Consolidate onto one Application Load Balancer with host-header listener rules that forward each domain to its own target group."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An Application Load Balancer can evaluate the Host header and send each domain to a different target group, so one ALB replaces three and reduces hourly charges. A Network Load Balancer cannot route by host name because it operates at layer 4. Weighted target groups split traffic by percentage, not by domain, and multivalue DNS answers do not provide load balancing features such as health-aware layer 7 routing.",
+    "subtopic": "ALB Host-Based Routing"
+  },
+  {
+    "id": "ha-scaling-034",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company already has an Application Load Balancer for its main website. It needs to add a small internal HTTP endpoint, /status-report, that receives only a few hundred requests per day. The company wants to avoid paying for idle compute. Which solution meets these requirements MOST cost-effectively?",
+    "options": [
+      "Implement the endpoint as an AWS Lambda function and register it in a target group used by a path-based rule on the existing Application Load Balancer.",
+      "Create a new Network Load Balancer with the Lambda function as its target.",
+      "Launch a t3.micro instance in its own Auto Scaling group and add a path-based rule for it on the existing Application Load Balancer.",
+      "Run the endpoint on an Amazon ECS service on Fargate with a minimum of two tasks behind a new load balancer."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Application Load Balancers support Lambda functions as targets, so the endpoint costs nothing when not invoked and reuses the existing load balancer. An always-on instance or always-running Fargate tasks incur charges even when idle, and a new load balancer adds cost. Network Load Balancers do not support Lambda functions as targets.",
+    "subtopic": "ALB Lambda Targets"
+  },
+  {
+    "id": "ha-scaling-035",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs a proprietary TCP protocol for an IoT platform that must handle millions of requests per second with ultra-low latency. Which load balancer type is the BEST fit?",
+    "options": [
+      "Application Load Balancer",
+      "Classic Load Balancer",
+      "Network Load Balancer",
+      "Gateway Load Balancer"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A Network Load Balancer operates at layer 4, supports TCP and UDP, and is designed to handle millions of requests per second with very low latency. Application Load Balancers are for HTTP, HTTPS, and gRPC traffic, Classic Load Balancers are a previous-generation option, and Gateway Load Balancers are used to insert virtual network appliances, not to serve application traffic.",
+    "subtopic": "Network Load Balancer"
+  },
+  {
+    "id": "ha-scaling-036",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Auto Scaling group uses ELB health checks. New instances run a bootstrap script that takes about 8 minutes, and the group is terminating them before they finish because the load balancer health checks fail. What is the MOST appropriate fix?",
+    "options": [
+      "Switch the Auto Scaling group to EC2 health checks only.",
+      "Increase the health check grace period of the Auto Scaling group so it exceeds the bootstrap time.",
+      "Increase the deregistration delay of the target group to 10 minutes.",
+      "Increase the unhealthy threshold of the target group to 100 consecutive failures."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The health check grace period tells Auto Scaling to wait before acting on health check results for a new instance, giving the bootstrap time to complete. Switching to EC2 health checks would stop detecting application failures entirely. Setting an extreme unhealthy threshold slows failure detection for every instance, and deregistration delay applies to instances leaving the target group, not to new ones.",
+    "subtopic": "Health Check Grace Period"
+  },
+  {
+    "id": "ha-scaling-037",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Users of an online banking application occasionally receive errors when the Auto Scaling group scales in. Investigation shows that requests in progress on terminating instances are cut off. Most requests complete within 30 seconds. What should a solutions architect configure?",
+    "options": [
+      "Enable cross-zone load balancing on the Application Load Balancer.",
+      "Reduce the health check interval of the target group to 5 seconds.",
+      "Set the target group deregistration delay to a value that covers in-flight requests, such as 60 seconds.",
+      "Enable sticky sessions so users stay on instances that are not being terminated."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Deregistration delay, also known as connection draining, keeps existing connections open on a deregistering target for the configured time while sending no new requests to it, so in-flight requests can finish. Stickiness does not prevent the target from being terminated. Faster health checks and cross-zone balancing do not protect requests that are already in progress.",
+    "subtopic": "Deregistration Delay"
+  },
+  {
+    "id": "ha-scaling-038",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A video transcoding service runs on an Auto Scaling group that scales based on the backlog in an Amazon SQS queue. Each job can take up to 2 hours. When the backlog drops, scale-in sometimes terminates instances that are in the middle of a job. Which solution prevents this while still allowing idle instances to be removed?",
+    "options": [
+      "Change the termination policy to OldestInstance.",
+      "Increase the target group deregistration delay to 2 hours.",
+      "Add a scheduled action that prevents scale-in during business hours.",
+      "Have the worker enable instance scale-in protection when it starts a job and remove the protection when the job completes."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Instance scale-in protection prevents Auto Scaling from selecting a protected instance during scale in, and toggling it per job means only busy instances are protected while idle ones can still be terminated. Deregistration delay has a maximum of one hour and only applies to load balancer targets. A termination policy changes which instance is chosen but cannot tell whether it is busy, and a schedule does not reflect job state.",
+    "subtopic": "Instance Scale-In Protection"
+  },
+  {
+    "id": "ha-scaling-039",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Worker instances in an Auto Scaling group process messages from an Amazon SQS queue. Each instance can process about 50 messages per minute, and the company wants messages to wait no longer than about 2 minutes. CPU utilization is not a reliable indicator of load. Which scaling approach is MOST appropriate?",
+    "options": [
+      "Publish a custom metric for backlog per instance, calculated from ApproximateNumberOfMessagesVisible divided by the number of InService instances, and use target tracking with a target of 100.",
+      "Use target tracking on average CPU utilization with a target of 40 percent.",
+      "Use a simple scaling policy that adds one instance whenever the queue contains any messages.",
+      "Use scheduled scaling based on the average number of messages received per hour last week."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Backlog per instance reflects how long messages will wait: with 50 messages per minute per instance and a 2-minute target, each instance should hold about 100 messages, so target tracking on that custom metric keeps latency in check. CPU is stated to be unreliable here. Adding one instance whenever any message exists reacts poorly to large backlogs, and schedules based on last week's averages do not follow actual demand.",
+    "subtopic": "Scaling on SQS Backlog"
+  },
+  {
+    "id": "ha-scaling-040",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A web application spends most of its time waiting on downstream API calls, so CPU utilization stays below 20 percent even when response times degrade under heavy traffic. Load testing shows each instance handles about 800 requests per minute before latency increases. Which scaling policy is MOST suitable?",
+    "options": [
+      "A simple scaling policy based on the HealthyHostCount metric of the target group.",
+      "A target tracking policy using the ALBRequestCountPerTarget metric with a target value of about 800.",
+      "A step scaling policy based on the NetworkIn metric of the instances.",
+      "A target tracking policy using ASGAverageCPUUtilization with a target value of 20 percent."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "ALBRequestCountPerTarget measures how many requests each target receives, matching the tested capacity limit of the application, so target tracking keeps each instance near 800 requests per minute. CPU does not correlate with load for this I/O-bound application. Network bytes and healthy host count do not reflect request concurrency and would lead to poor scaling decisions.",
+    "subtopic": "ALBRequestCountPerTarget"
+  },
+  {
+    "id": "ha-scaling-041",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs a fixed fleet of 20 EC2 instances for a web application. Monitoring shows that 20 instances are needed only for two hours each day, and 4 instances are enough the rest of the time. Traffic patterns vary from day to day. Which solution will reduce costs while maintaining performance?",
+    "options": [
+      "Stop 16 instances manually every evening and start them every morning.",
+      "Place the instances in an Auto Scaling group with a minimum of 4 and a maximum of 20 and a target tracking scaling policy.",
+      "Purchase a Compute Savings Plan that covers all 20 instances.",
+      "Change all 20 instances to a smaller instance type."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An Auto Scaling group with a target tracking policy runs only the capacity needed at any time and scales out for peaks, so the company pays for 20 instances only when required. A Savings Plan lowers the rate but still pays for mostly idle capacity. Smaller instances may not handle the peak, and manual start and stop is error-prone and does not follow variable daily patterns.",
+    "subtopic": "Auto Scaling for Cost"
+  },
+  {
+    "id": "ha-scaling-042",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A solutions architect is reviewing data transfer costs and traffic distribution for several load balancers. Which statements about cross-zone load balancing are correct? (Select TWO.)",
+    "options": [
+      "Network Load Balancers do not support cross-zone load balancing.",
+      "For Application Load Balancers, cross-zone load balancing is on by default and there is no inter-AZ data transfer charge for it.",
+      "Enabling cross-zone load balancing on an Application Load Balancer lets it send traffic to targets in other AWS Regions.",
+      "For Network Load Balancers, cross-zone load balancing is off by default and inter-AZ data transfer charges apply when it is turned on.",
+      "For Gateway Load Balancers, cross-zone load balancing is on by default and cannot be turned off."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "ALBs have cross-zone load balancing enabled by default at the load balancer level and do not charge for inter-AZ traffic it generates. NLBs and GWLBs have it disabled by default, and turning it on for an NLB results in regional data transfer charges for traffic sent across AZs. NLBs do support cross-zone load balancing, and cross-zone balancing works only between AZs within one Region.",
+    "subtopic": "Cross-Zone Load Balancing"
+  },
+  {
+    "id": "ha-scaling-043",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A public web application runs behind an Application Load Balancer. The security team needs to block SQL injection and cross-site scripting attempts before they reach the application, with minimal operational overhead. What should a solutions architect do?",
+    "options": [
+      "Associate an AWS WAF web ACL with AWS managed rule groups to the Application Load Balancer.",
+      "Add security group rules to the load balancer that deny SQL injection patterns.",
+      "Configure network ACL rules on the public subnets to block requests containing script tags.",
+      "Enable access logs on the load balancer and review them daily for attacks."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS WAF integrates directly with Application Load Balancers and inspects HTTP requests at layer 7; managed rule groups cover common attacks such as SQL injection and cross-site scripting. Security groups and network ACLs only filter on IP addresses, protocols, and ports and cannot inspect request content, and security groups have no deny rules. Reviewing logs is detective, not preventive.",
+    "subtopic": "AWS WAF with ALB"
+  },
+  {
+    "id": "ha-scaling-044",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants users to sign in with the corporate OpenID Connect identity provider before accessing an internal web application behind an Application Load Balancer. The development team does not want to add authentication code to the application. Which solution meets these requirements?",
+    "options": [
+      "Place a Network Load Balancer in front of the ALB and enable OIDC authentication on its TLS listener.",
+      "Configure the target group health check to validate OIDC tokens on each request.",
+      "Attach an IAM role to the target group that requires users to present OIDC tokens.",
+      "Configure an authenticate-oidc action in the HTTPS listener rule before the forward action to the target group."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Application Load Balancers can authenticate users through an OIDC-compliant identity provider or Amazon Cognito using an authenticate action on an HTTPS listener, then forward authenticated requests with user claims in headers. Target groups and health checks have no authentication function. Network Load Balancers do not support user authentication.",
+    "subtopic": "ALB Authentication"
+  },
+  {
+    "id": "ha-scaling-045",
+    "topic": "ha-scaling",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An internet-facing Application Load Balancer forwards HTTPS traffic to EC2 instances in private subnets on port 8080. The security team wants the instances to accept traffic only from the load balancer, even as load balancer node IP addresses change. How should the security groups be configured?",
+    "options": [
+      "Allow 443 from 0.0.0.0/0 on the load balancer security group, and allow 8080 on the instance security group from the load balancer's current private IP addresses.",
+      "Allow 8080 from 0.0.0.0/0 on the instance security group, because the instances are in private subnets.",
+      "Allow 443 from 0.0.0.0/0 on the load balancer security group, and allow 8080 on the instance security group only from the load balancer's security group ID.",
+      "Allow 443 on the load balancer security group only from the VPC CIDR, and allow 8080 on the instance security group from 0.0.0.0/0."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Referencing the load balancer's security group in the instance security group allows traffic from any current or future load balancer node without tracking IP addresses. Load balancer node IPs change as the load balancer scales, so hard-coded IPs break. Opening 8080 to everyone relies only on subnet placement, and restricting 443 to the VPC CIDR would block internet users.",
+    "subtopic": "Security Groups with ALB"
+  },
+  {
+    "id": "ha-scaling-046",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An engineer needs to troubleshoot an EC2 instance in an Auto Scaling group. The instance must stop receiving traffic from the load balancer, must not be terminated, and must return to service afterward without the group launching a replacement. What should the engineer do?",
+    "options": [
+      "Put the instance into the Standby state with the option to decrement the desired capacity, and exit Standby when finished.",
+      "Detach the instance from the target group and leave it in the Auto Scaling group.",
+      "Stop the instance from the EC2 console and start it again after troubleshooting.",
+      "Set the instance to unhealthy so the Auto Scaling group moves it out of service."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Standby removes the instance from load balancer traffic while it remains part of the Auto Scaling group, and decrementing desired capacity prevents a replacement launch; exiting Standby returns it to InService. Manually deregistering it from the target group is not tracked by Auto Scaling and leaves the group and load balancer out of sync, and stopping an instance can cause health checks to fail and trigger replacement. Marking it unhealthy causes it to be terminated.",
+    "subtopic": "Standby State"
+  },
+  {
+    "id": "ha-scaling-047",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "During a planned maintenance window, an operations team restarts the application on instances in an Auto Scaling group, which causes health checks to fail for a few minutes. The team does not want Auto Scaling to mark these instances unhealthy or replace them, but scaling based on demand should continue. Which scaling processes should be suspended? (Select TWO.)",
+    "options": [
+      "AlarmNotification",
+      "HealthCheck",
+      "ReplaceUnhealthy",
+      "ScheduledActions",
+      "AZRebalance"
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "Suspending HealthCheck stops Auto Scaling from checking and marking instances unhealthy, and suspending ReplaceUnhealthy stops it from terminating and replacing instances already marked unhealthy. AZRebalance only balances instances across AZs. Suspending AlarmNotification or ScheduledActions would stop demand-based or scheduled scaling, which the team wants to keep.",
+    "subtopic": "Suspending Scaling Processes"
+  },
+  {
+    "id": "ha-scaling-048",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Auto Scaling group with the default termination policy has 3 instances in AZ-a, 3 in AZ-b, and 4 in AZ-c. A scale-in event removes one instance. Which instance will Auto Scaling select first?",
+    "options": [
+      "The newest instance in AZ-a, because instances in the first Availability Zone are always removed first.",
+      "A random instance in any Availability Zone.",
+      "The oldest instance in the group, regardless of its Availability Zone.",
+      "An instance in AZ-c, because the default policy first selects the Availability Zone with the most instances."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "The default termination policy first balances capacity across Availability Zones by choosing the AZ with the most instances, then applies further criteria such as allocation strategy and the oldest launch template or configuration within that AZ. Selecting purely by age or randomly ignores AZ balance. No AZ is preferred because of its name or order.",
+    "subtopic": "ASG Termination Policy"
+  },
+  {
+    "id": "ha-scaling-049",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company wants to try predictive scaling for a production Auto Scaling group but is concerned that inaccurate forecasts could launch unnecessary instances and increase costs. The company wants to evaluate forecast accuracy first. What should a solutions architect recommend?",
+    "options": [
+      "Replace the target tracking policy with predictive scaling and set the maximum capacity equal to the minimum.",
+      "Create a predictive scaling policy in forecast only mode and compare the forecasts with actual load before switching to forecast and scale mode.",
+      "Enable predictive scaling on a copy of the Auto Scaling group in a test account with no traffic.",
+      "Create a predictive scaling policy in forecast and scale mode with a maximum capacity buffer of 0 percent."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Forecast only mode generates capacity forecasts that can be reviewed in the console and CloudWatch without launching instances, letting the company validate accuracy before enabling scaling actions. Forecast and scale mode acts on forecasts immediately. A test group with no traffic has no history to learn from, and pinning maximum to minimum disables scaling.",
+    "subtopic": "Predictive Scaling"
+  },
+  {
+    "id": "ha-scaling-050",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup runs its web application and a MySQL database on the same single EC2 instance. The company wants to place the web tier in an Auto Scaling group across multiple Availability Zones. What should be done with the database?",
+    "options": [
+      "Bake the database into the AMI so that every web instance has its own copy of the data.",
+      "Store the database files on instance store volumes and replicate them between instances with cron jobs.",
+      "Migrate the database to Amazon Aurora MySQL or Amazon RDS for MySQL with a Multi-AZ deployment that all web instances connect to.",
+      "Keep the database on the original instance and add that instance to the Auto Scaling group."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "To scale the web tier horizontally, state such as the database must move to a shared, managed, highly available service like Aurora or RDS Multi-AZ. A copy of the database in each AMI diverges immediately and loses writes. Adding the database instance to the group makes it disposable, and instance store replication with cron is fragile and not durable.",
+    "subtopic": "Stateless Architecture"
+  },
+  {
+    "id": "ha-scaling-051",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company is choosing between an Application Load Balancer and a Network Load Balancer for a new workload. Which requirements can be met ONLY by the Network Load Balancer? (Select TWO.)",
+    "options": [
+      "Routing requests to different target groups based on the URL path.",
+      "Assigning an Elastic IP address to the load balancer in each Availability Zone.",
+      "Authenticating users with an OpenID Connect identity provider before forwarding requests.",
+      "Load balancing UDP traffic for a DNS-based service.",
+      "Registering AWS Lambda functions as targets."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Network Load Balancers provide a static IP per AZ, can use Elastic IP addresses, and support UDP listeners. Application Load Balancers provide path-based routing, Lambda targets, and built-in OIDC or Cognito authentication, which NLBs do not offer.",
+    "subtopic": "ALB vs NLB"
+  },
+  {
+    "id": "ha-scaling-052",
+    "topic": "ha-scaling",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company is building microservices that communicate using gRPC over HTTP/2. The company needs a managed load balancer that can route each gRPC call to a different set of containers based on the service and method name and perform gRPC health checks. Which solution meets these requirements?",
+    "options": [
+      "A Gateway Load Balancer that forwards gRPC traffic to containers using GENEVE encapsulation.",
+      "A Network Load Balancer with a TLS listener and path-based listener rules for each gRPC service.",
+      "A Classic Load Balancer with HTTP/2 enabled and one listener per gRPC service.",
+      "An Application Load Balancer with target groups configured with the gRPC protocol version and path-based listener rules."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Application Load Balancers support gRPC target groups, gRPC health checks, and routing on the request path, which for gRPC contains the package, service, and method. Network Load Balancers cannot route on paths because they work at layer 4. Classic Load Balancers do not support gRPC routing, and Gateway Load Balancers are for network appliances, not application traffic.",
+    "subtopic": "ALB gRPC Support"
+  },
+  {
+    "id": "ha-scaling-053",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An application behind an Application Load Balancer issues its own session cookie named APPSESSION. The company wants requests to stay on the same target only while that application session is valid, and the stickiness should follow the lifetime the application sets on the cookie. Which configuration meets this requirement?",
+    "options": [
+      "Enable duration-based stickiness on the target group with a fixed duration of 7 days.",
+      "Enable cross-zone load balancing and set the routing algorithm to round robin.",
+      "Enable application-based cookie stickiness on the target group and specify APPSESSION as the application cookie name.",
+      "Enable source IP affinity on the Application Load Balancer listener."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Application-based cookie stickiness uses a custom cookie generated by the application, so stickiness aligns with the application's own session cookie. Duration-based stickiness uses a load balancer cookie with a fixed duration unrelated to the application's session. ALBs do not offer source IP affinity, and cross-zone balancing with round robin provides no stickiness.",
+    "subtopic": "Session Stickiness"
+  },
+  {
+    "id": "ha-scaling-054",
+    "topic": "ha-scaling",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants to release a new version of an application running behind an Application Load Balancer. The new version runs in a separate Auto Scaling group. The company wants to send 10 percent of traffic to the new version first and quickly roll back if errors increase. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Configure the listener rule to forward to two weighted target groups, 90 for the current version and 10 for the new version.",
+      "Add the new instances to the existing target group so that they receive a proportional share of traffic.",
+      "Use a Network Load Balancer in front of the ALB to split traffic between the two Auto Scaling groups.",
+      "Create a second Application Load Balancer and use Route 53 weighted records with a TTL of 1 day."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "ALB listener rules can forward to multiple target groups with weights, enabling canary or blue/green releases and instant rollback by changing weights. Route 53 weighted records with a long TTL make rollback slow because of DNS caching. Mixing instances in one target group does not give precise traffic control, and an extra NLB adds complexity without providing weighted routing between target groups.",
+    "subtopic": "Weighted Target Groups"
+  },
+  {
+    "id": "ha-scaling-055",
+    "topic": "ha-scaling",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company runs a fault-tolerant, stateless batch-processing web service in an Auto Scaling group. The service is busy during business hours and nearly idle at night. Which combination of actions will reduce cost the MOST without affecting availability during business hours? (Select TWO.)",
+    "options": [
+      "Disable cross-zone load balancing on the Application Load Balancer to avoid data transfer charges.",
+      "Increase the scaling cooldown period so that the group launches instances less often.",
+      "Add scheduled actions that lower the minimum and desired capacity at night and raise them before business hours.",
+      "Launch the instances on Dedicated Hosts to improve utilization.",
+      "Use a mixed instances policy that runs a portion of capacity on Spot Instances across multiple instance types."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Spot Instances offer large discounts for fault-tolerant, stateless workloads, and diversifying instance types improves availability of Spot capacity. Scheduled actions reduce idle capacity at night when demand is predictable. Longer cooldowns risk performance problems without reducing idle cost, ALBs do not charge for cross-zone traffic, and Dedicated Hosts are more expensive.",
+    "subtopic": "ASG Cost Optimization"
+  }
+]

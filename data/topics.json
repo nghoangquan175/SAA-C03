@@ -1,0 +1,20 @@
+[
+  { "key": "fundamentals", "group": "Course sections", "title": "AWS Fundamentals", "icon": "🌐", "summary": "Global infrastructure, default VPC, CloudFormation, CloudWatch, HA vs FT vs DR, Route 53 basics, ARNs, Service Quotas" },
+  { "key": "iam-org", "group": "Course sections", "title": "IAM, Accounts & AWS Organizations", "icon": "🔐", "summary": "Policies, users, groups, roles, PassRole, Organizations, SCPs, CloudTrail, Identity Center, Control Tower, cost tools" },
+  { "key": "s3", "group": "Course sections", "title": "Simple Storage Service (S3)", "icon": "🪣", "summary": "Security, static hosting, versioning, encryption & KMS, storage classes, lifecycle, replication, presigned URLs, Object Lock" },
+  { "key": "vpc", "group": "Course sections", "title": "VPC Basics", "icon": "🧱", "summary": "Sizing, subnets, routing, IGW, bastion hosts, NACLs vs Security Groups, NAT Gateway" },
+  { "key": "ec2", "group": "Course sections", "title": "EC2 Basics", "icon": "🖥️", "summary": "Instance types, EBS & instance store, snapshots, AMIs, purchase options, Savings Plans, metadata, hibernation" },
+  { "key": "containers", "group": "Course sections", "title": "Containers, ECS & ECR", "icon": "📦", "summary": "ECR, ECS concepts, EC2 vs Fargate, EKS, ECS/EKS Anywhere" },
+  { "key": "ec2-advanced", "group": "Course sections", "title": "Advanced EC2", "icon": "⚙️", "summary": "User data, cfn-init, Image Builder, instance roles, Parameter Store, CloudWatch Agent, placement groups, enhanced networking" },
+  { "key": "route53", "group": "Course sections", "title": "Route 53 - Global DNS", "icon": "🧭", "summary": "Hosted zones, Alias vs CNAME, health checks, all routing policies, DNSSEC, Resolver DNS Firewall" },
+  { "key": "rds", "group": "Course sections", "title": "RDS & Aurora", "icon": "🗄️", "summary": "Multi-AZ, backups, read replicas, encryption, RDS Custom, Aurora (Serverless, Global), RDS Proxy, DMS" },
+  { "key": "storage", "group": "Course sections", "title": "Network Storage & Data Lifecycle", "icon": "💾", "summary": "EFS, FSx family, AWS Backup, choosing the right storage" },
+  { "key": "ha-scaling", "group": "Course sections", "title": "HA & Scaling", "icon": "⚖️", "summary": "ELB architecture, ALB vs NLB vs GWLB, launch templates, Auto Scaling policies, lifecycle hooks, health checks" },
+  { "key": "serverless", "group": "Course sections", "title": "Serverless & Application Services", "icon": "λ", "summary": "Lambda, EventBridge, SNS, SQS, Step Functions, API Gateway, Kinesis, Firehose, Cognito, Glue, MQ, Batch" },
+  { "key": "cdn", "group": "Course sections", "title": "Global Content Delivery & Optimization", "icon": "🚀", "summary": "ACM, CloudFront (TTL, OAC, signed URLs, SNI), Lambda@Edge, Global Accelerator" },
+  { "key": "vpc-advanced", "group": "Course sections", "title": "Advanced VPC Networking", "icon": "🔀", "summary": "Flow Logs, egress-only IGW, PrivateLink, gateway & interface endpoints, peering, IPAM" },
+  { "key": "hybrid", "group": "Course sections", "title": "Hybrid Environments & Migration", "icon": "🏢", "summary": "BGP, Site-to-Site VPN, Direct Connect, Transit Gateway, Storage Gateway, Snow, DataSync, MGN" },
+  { "key": "nosql-caching", "group": "Extra exam topics", "title": "DynamoDB, Caching & Purpose-built DBs", "icon": "⚡", "summary": "DynamoDB, DAX, ElastiCache, MemoryDB, DocumentDB, Neptune, Keyspaces, Timestream" },
+  { "key": "security", "group": "Extra exam topics", "title": "Security Services", "icon": "🛡️", "summary": "WAF, Shield, GuardDuty, Inspector, Macie, Security Hub, Config, Secrets Manager, CloudHSM, shared responsibility" },
+  { "key": "analytics", "group": "Extra exam topics", "title": "Analytics & AI/ML Services", "icon": "📊", "summary": "Athena, Redshift, EMR, Glue, Lake Formation, OpenSearch, QuickSight, MSK, Rekognition, Comprehend, Bedrock..." }
+]

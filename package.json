@@ -1,0 +1,11 @@
+{
+  "name": "aws-saa-practice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AWS Solutions Architect Associate (SAA-C03) practice exams and topic quizzes",
+  "scripts": {
+    "start": "node server.js",
+    "validate": "node data/validate.js",
+    "build": "node data/validate.js && node scripts/build.js"
+  }
+}

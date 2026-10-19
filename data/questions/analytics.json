@@ -1,0 +1,875 @@
+[
+  {
+    "id": "analytics-001",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A travel company stores three years of booking logs in Amazon S3 and queries them with Amazon Athena. Almost every query filters on a single day or week, yet each query scans the entire dataset and costs are rising. Which change will reduce query cost the MOST?",
+    "options": [
+      "Move the data to S3 Standard-Infrequent Access",
+      "Increase the number of Athena workgroups",
+      "Store the data in date-based partitions such as year, month, and day, and filter on the partition columns",
+      "Enable S3 Transfer Acceleration on the bucket"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Athena charges by the amount of data scanned, and partitioning by date lets queries that filter on partition columns read only the relevant prefixes. Changing the storage class does not reduce scanned bytes and can add retrieval charges. Workgroups organize users and limits but do not prune data, and Transfer Acceleration speeds uploads only.",
+    "subtopic": "Athena partitioning"
+  },
+  {
+    "id": "analytics-002",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A marketing team queries 40 TB of CSV files in Amazon S3 with Amazon Athena. Most queries select only 5 of the 120 columns. The team wants faster queries and lower cost without changing tools. What should a solutions architect recommend?",
+    "options": [
+      "Convert the data to a compressed columnar format such as Apache Parquet",
+      "Combine all CSV files into a single very large file",
+      "Load the data into Amazon DynamoDB and query it with PartiQL",
+      "Turn on S3 Versioning so Athena reads only the latest data"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Columnar formats such as Parquet or ORC let Athena read only the referenced columns, and compression further reduces bytes scanned, lowering both cost and run time. One huge file limits parallelism. DynamoDB is not designed for wide analytical scans, and versioning does not change how much data a query reads.",
+    "subtopic": "Athena columnar formats"
+  },
+  {
+    "id": "analytics-003",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Analysts need to join clickstream data in Amazon S3 with customer profiles in Amazon DynamoDB and orders in Amazon RDS for MySQL by using SQL. The company does not want to build pipelines that copy the data first. Which solution meets these requirements?",
+    "options": [
+      "Export DynamoDB and RDS data to S3 every night with AWS Glue jobs, then query with Athena",
+      "Load all three sources into Amazon Redshift with the COPY command",
+      "Use Amazon EMR with Hive to read each source after copying it into HDFS",
+      "Use Amazon Athena Federated Query with data source connectors for DynamoDB and MySQL"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Athena Federated Query uses data source connectors that run on AWS Lambda to query sources such as DynamoDB and RDS in place, so analysts can join them with S3 data in one SQL statement. Nightly Glue exports and Redshift COPY loads both introduce the copy pipelines the company wants to avoid. Copying into HDFS on EMR also moves the data and adds cluster management.",
+    "subtopic": "Athena federated query"
+  },
+  {
+    "id": "analytics-004",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An IoT company partitions sensor data in Amazon S3 by device ID and hour, creating hundreds of thousands of partitions. Athena queries spend much of their time on query planning, and running MSCK REPAIR TABLE after each load is slow. Which solution improves performance with the LEAST operational overhead?",
+    "options": [
+      "Run an AWS Glue crawler every five minutes to add partitions",
+      "Configure Athena partition projection on the table so partition values are computed from configured rules",
+      "Remove all partitions and rely on Parquet statistics",
+      "Move the data into a single Amazon RDS table indexed by hour"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Partition projection lets Athena calculate partition locations from table properties instead of looking them up in the Data Catalog, which speeds planning for highly partitioned tables and removes the need to add partitions. Frequent crawlers add cost and still store huge numbers of partitions. Removing partitions forces larger scans, and RDS is not suited to this analytics scale.",
+    "subtopic": "Athena partition projection"
+  },
+  {
+    "id": "analytics-005",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company gives 200 analysts access to Amazon Athena. Some analysts run unfiltered queries over petabytes of data, causing unexpected bills. Which actions will help control and reduce Athena costs? (Select TWO.)",
+    "options": [
+      "Enable S3 Transfer Acceleration on the data lake buckets",
+      "Create Athena workgroups with per-query data usage limits for each team",
+      "Copy the data to Amazon EBS volumes attached to the analysts' instances",
+      "Store the data in partitioned, compressed Parquet files",
+      "Replace Athena with a single Amazon EC2 instance running Presto"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Athena workgroups can enforce per-query and per-workgroup data usage controls, and partitioned, compressed columnar data lowers the bytes scanned by each query. Transfer Acceleration affects uploads, not queries. EBS copies and a self-managed Presto instance add cost and management without addressing the query patterns.",
+    "subtopic": "Athena cost controls"
+  },
+  {
+    "id": "analytics-006",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company's Amazon Redshift data warehouse grows by 10 TB each month, but its compute needs are stable. The company keeps adding nodes only to get more storage. Which solution is MOST cost-effective?",
+    "options": [
+      "Add more nodes of the current type each quarter",
+      "Move the warehouse to Amazon RDS for PostgreSQL",
+      "Use Amazon Redshift RA3 nodes with Redshift Managed Storage so storage scales separately from compute",
+      "Unload all data to Amazon EFS and query it from EC2"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "RA3 nodes use Redshift Managed Storage, which lets storage grow independently and is billed separately from compute. Adding nodes for storage pays for unneeded compute. RDS for PostgreSQL is not designed for warehouse-scale analytics, and EFS with EC2 query engines adds cost and complexity.",
+    "subtopic": "Redshift RA3"
+  },
+  {
+    "id": "analytics-007",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A retailer keeps the latest 12 months of sales in Amazon Redshift and seven years of history in Parquet files in Amazon S3. Analysts occasionally need to join current data with history. The company does not want to load the history into Redshift. Which solution meets these requirements?",
+    "options": [
+      "Use Amazon Redshift Spectrum with external tables that point to the S3 data",
+      "Resize the cluster and load all seven years with the COPY command",
+      "Restore old Redshift snapshots into a second cluster when history is needed",
+      "Use S3 Select to filter the history files from the application"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Redshift Spectrum queries data in S3 through external tables and can join it with local Redshift tables, so the history does not need to be loaded. Loading seven years increases storage and compute cost. Restoring snapshots is slow and costly, and filtering files from the application is not a SQL join with warehouse data.",
+    "subtopic": "Redshift Spectrum"
+  },
+  {
+    "id": "analytics-008",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup runs analytics queries a few times a day at unpredictable times. It wants a Redshift data warehouse without choosing node types or managing clusters, and it wants to pay only when queries run. Which option meets these requirements?",
+    "options": [
+      "A provisioned Redshift cluster with Reserved Nodes",
+      "A provisioned Redshift cluster with concurrency scaling",
+      "Amazon EMR with Spark SQL on a long-running cluster",
+      "Amazon Redshift Serverless"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Amazon Redshift Serverless automatically provisions and scales capacity and charges for compute only while queries run, with no clusters to manage. Reserved Nodes and concurrency scaling apply to provisioned clusters that run continuously. A long-running EMR cluster also bills when idle and requires management.",
+    "subtopic": "Redshift Serverless"
+  },
+  {
+    "id": "analytics-009",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A finance company's provisioned Amazon Redshift cluster performs well most of the month, but at month-end hundreds of concurrent dashboard queries wait in queues for minutes. Which solution resolves the queuing with the LEAST operational overhead?",
+    "options": [
+      "Manually resize the cluster before month-end and shrink it afterward",
+      "Enable concurrency scaling for the affected WLM queues",
+      "Create a second cluster and split users between the two clusters",
+      "Move dashboards to query Amazon S3 directly with S3 Select"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Concurrency scaling automatically adds transient cluster capacity when queries queue and removes it when demand drops. Manual resizes require planning and effort each month. A second cluster duplicates data and management, and S3 Select is not a replacement for warehouse queries.",
+    "subtopic": "Redshift concurrency scaling"
+  },
+  {
+    "id": "analytics-010",
+    "topic": "analytics",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company's provisioned Amazon Redshift cluster in us-east-1 is encrypted with an AWS KMS key. The disaster recovery plan requires that recent snapshots be available in us-west-2 so the warehouse can be restored there. Which steps are required? (Select TWO.)",
+    "options": [
+      "Enable cross-Region snapshot copy on the cluster with us-west-2 as the destination",
+      "Turn on S3 Cross-Region Replication for the bucket where Redshift stores snapshots",
+      "Create a snapshot copy grant in us-west-2 for a KMS key in that Region",
+      "Enable Redshift Spectrum so snapshots are stored in S3 in both Regions",
+      "Use a Multi-AZ deployment to place a standby in us-west-2"
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "Redshift can automatically copy snapshots to another Region, and for KMS-encrypted clusters a snapshot copy grant in the destination Region lets Redshift encrypt the copies with a key there. Redshift snapshot storage is managed and not exposed as a bucket for replication. Spectrum queries external data, and Multi-AZ deployments span Availability Zones within one Region.",
+    "subtopic": "Redshift cross-Region snapshots"
+  },
+  {
+    "id": "analytics-011",
+    "topic": "analytics",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A logistics company runs business-critical reporting on an Amazon Redshift RA3 provisioned cluster. The company wants the warehouse to remain available if an Availability Zone fails, without restoring from snapshots. Which solution meets this requirement?",
+    "options": [
+      "Take manual snapshots every hour",
+      "Enable cross-Region snapshot copy",
+      "Deploy the cluster as a Redshift Multi-AZ deployment",
+      "Create a read replica of the cluster in another Availability Zone"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Redshift Multi-AZ deployments for RA3 run compute in two Availability Zones behind one endpoint, so the warehouse stays available during an AZ failure. Snapshots, whether manual or copied across Regions, require a restore and cause downtime. Redshift does not offer read replicas in the RDS sense.",
+    "subtopic": "Redshift Multi-AZ"
+  },
+  {
+    "id": "analytics-012",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A genomics company runs existing Apache Spark and Hadoop jobs on an on-premises cluster. It wants to move the jobs to AWS with minimal code changes and process petabytes of data stored in Amazon S3. Which service should it use?",
+    "options": [
+      "AWS Glue DataBrew",
+      "Amazon Athena",
+      "Amazon QuickSight",
+      "Amazon EMR"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Amazon EMR runs open source frameworks such as Spark and Hadoop, so existing jobs can move with few changes and read data directly from S3. DataBrew is a visual data preparation tool. Athena runs SQL queries, not arbitrary Spark and Hadoop jobs, and QuickSight is for dashboards.",
+    "subtopic": "Amazon EMR"
+  },
+  {
+    "id": "analytics-013",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a long-lived Amazon EMR cluster for nightly batch processing. It wants to cut costs, and jobs can tolerate some lost task capacity but not loss of HDFS data or the cluster itself. Which purchasing strategy is MOST cost-effective?",
+    "options": [
+      "Use Spot Instances for the primary, core, and task nodes",
+      "Use On-Demand or Reserved capacity for primary and core nodes and Spot Instances for task nodes",
+      "Use Dedicated Hosts for all nodes",
+      "Use Spot Instances for the primary node and On-Demand for task nodes"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Primary and core nodes run cluster management and HDFS, so they should use stable capacity, while task nodes only run compute and are a good fit for Spot Instances. Putting primary or core nodes on Spot risks losing the cluster or HDFS data. Dedicated Hosts are the most expensive option and add no value here.",
+    "subtopic": "EMR Spot instances"
+  },
+  {
+    "id": "analytics-014",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A data team runs Spark jobs a few times per week with highly variable input sizes. It wants to avoid sizing, starting, and shutting down clusters, and it wants to pay only for resources used while jobs run. Which solution meets these requirements?",
+    "options": [
+      "Amazon EMR Serverless",
+      "A persistent Amazon EMR on EC2 cluster with managed scaling",
+      "Amazon Redshift provisioned cluster with Reserved Nodes",
+      "Apache Spark on a fleet of Reserved EC2 instances"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "EMR Serverless runs Spark and Hive jobs without clusters to manage, scales automatically, and charges for the resources used while jobs run. A persistent cluster still costs money when idle. Redshift is a data warehouse rather than a Spark runtime, and Reserved EC2 instances require capacity planning and full-time payment.",
+    "subtopic": "EMR Serverless"
+  },
+  {
+    "id": "analytics-015",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company runs a daily four-hour Amazon EMR job on a cluster that stays up all day and stores input and output in HDFS. Which changes will reduce cost while keeping the data durable? (Select TWO.)",
+    "options": [
+      "Keep the cluster running and add more core nodes for HDFS",
+      "Store persistent data on instance store volumes of the core nodes",
+      "Store input and output data in Amazon S3 instead of HDFS",
+      "Run the cluster on EC2 Dedicated Hosts",
+      "Use a transient cluster that terminates automatically after its steps complete"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Keeping data in Amazon S3 decouples storage from the cluster, which allows transient clusters that start for the job and terminate afterward, so the company stops paying for 20 idle hours a day. Adding core nodes increases cost. Instance store data is lost when the cluster terminates, and Dedicated Hosts cost more.",
+    "subtopic": "EMR transient clusters"
+  },
+  {
+    "id": "analytics-016",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company lands new JSON datasets in Amazon S3 from several partners, and each dataset has a different schema. Analysts want to query new datasets in Amazon Athena without writing table definitions by hand. What should a solutions architect do?",
+    "options": [
+      "Create an Amazon RDS database to store the schemas",
+      "Use Amazon Macie to classify the datasets",
+      "Run an AWS Glue crawler that infers schemas and creates tables in the AWS Glue Data Catalog",
+      "Convert each file to CSV with an AWS Lambda function"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS Glue crawlers scan data in S3, infer schemas and partitions, and create or update tables in the Glue Data Catalog, which Athena uses as its metastore. An RDS schema store would not integrate with Athena. Macie classifies sensitive data, and converting to CSV still leaves the tables undefined.",
+    "subtopic": "Glue crawlers and Data Catalog"
+  },
+  {
+    "id": "analytics-017",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An AWS Glue ETL job runs every hour against an S3 prefix where new files arrive. The job currently reprocesses all historical files each run, which wastes time and money. Which feature should the team enable?",
+    "options": [
+      "AWS Glue crawler schedules",
+      "AWS Glue DataBrew recipes",
+      "Amazon S3 Inventory reports",
+      "AWS Glue job bookmarks"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Glue job bookmarks track data that a job has already processed, so later runs read only new data. Crawler schedules update catalog metadata but do not change what a job processes. DataBrew recipes define transformations, and S3 Inventory lists objects without integrating with job state.",
+    "subtopic": "Glue job bookmarks"
+  },
+  {
+    "id": "analytics-018",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Business analysts at a retailer need to clean and normalize sales spreadsheets stored in Amazon S3, such as fixing date formats and removing duplicates. They do not write code and want a visual, point-and-click tool. Which service should they use?",
+    "options": [
+      "AWS Glue DataBrew",
+      "Amazon EMR with Apache Hive",
+      "AWS Glue ETL jobs written in PySpark",
+      "Amazon Managed Service for Apache Flink"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS Glue DataBrew is a visual data preparation tool with hundreds of built-in transformations that analysts can apply without code. EMR and PySpark Glue jobs require programming skills. Managed Service for Apache Flink processes streaming data, not interactive spreadsheet cleanup.",
+    "subtopic": "AWS Glue DataBrew"
+  },
+  {
+    "id": "analytics-019",
+    "topic": "analytics",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company's Amazon Athena query results contain customer data and are written to an S3 bucket. Security requires that all query results be encrypted with an AWS KMS key, even if an analyst's client is misconfigured. What should a solutions architect do?",
+    "options": [
+      "Ask analysts to select SSE-KMS in their SQL client settings",
+      "Configure the Athena workgroup to encrypt query results with SSE-KMS and override client-side settings",
+      "Enable Amazon Macie on the results bucket",
+      "Enable S3 Versioning on the results bucket"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Athena workgroups can define the query result location and encryption, and enforcing workgroup settings overrides client-side settings so every result is encrypted with the required KMS key. Relying on analysts does not enforce anything. Macie detects sensitive data but does not encrypt it, and versioning does not provide encryption.",
+    "subtopic": "Athena workgroup encryption"
+  },
+  {
+    "id": "analytics-020",
+    "topic": "analytics",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A bank's S3 data lake is queried through Amazon Athena and Amazon Redshift Spectrum. Analysts in the marketing group must not see the SSN column, and regional analysts may see only rows for their own region. Which actions meet these requirements with the LEAST operational overhead? (Select TWO.)",
+    "options": [
+      "Register the S3 data lake locations with AWS Lake Formation",
+      "Create a separate filtered copy of the data in a new bucket for each group",
+      "Use S3 bucket policies to hide specific columns from each group",
+      "Grant Lake Formation permissions with column exclusions and data filters for row-level access",
+      "Run Amazon Macie jobs to remove SSNs before analysts query the data"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "After registering the S3 locations with Lake Formation, administrators can grant column-level permissions and data filters for row- and cell-level security that Athena and Redshift Spectrum enforce. Separate copies multiply storage and pipelines. Bucket policies work on objects, not columns or rows, and Macie identifies sensitive data rather than enforcing fine-grained access.",
+    "subtopic": "Lake Formation fine-grained access"
+  },
+  {
+    "id": "analytics-021",
+    "topic": "analytics",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A central data platform account manages a data lake with AWS Lake Formation. A business unit in another AWS account needs to query selected tables with Athena, and the company wants to avoid copying the data. Which solution meets these requirements?",
+    "options": [
+      "Replicate the S3 buckets to the business unit account with S3 Cross-Region Replication",
+      "Create IAM users in the central account for every analyst in the business unit",
+      "Grant cross-account Lake Formation permissions on the tables to the business unit account",
+      "Export the tables to CSV and share them through a presigned URL"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Lake Formation supports cross-account sharing of Data Catalog databases and tables, which the consumer account can query in place with Athena while governance stays central. Replicating data creates copies. IAM users in another account bypass the consumer account's identity management, and CSV exports are copies without fine-grained controls.",
+    "subtopic": "Lake Formation cross-account sharing"
+  },
+  {
+    "id": "analytics-022",
+    "topic": "analytics",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A healthcare data lake governed by AWS Lake Formation has 4,000 tables, and permissions are currently granted table by table. Data classifications such as confidentiality level and department change often. Which approach will make permission management scale?",
+    "options": [
+      "Write an IAM policy for each table and attach it to the analyst roles",
+      "Assign LF-Tags to databases, tables, and columns and grant permissions on tag expressions",
+      "Create one S3 bucket per classification and move tables between buckets",
+      "Use AWS Config rules to revoke permissions that do not match the classification"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Lake Formation tag-based access control lets administrators tag resources with LF-Tags and grant permissions on tag expressions, so new or reclassified tables inherit the right access automatically. Per-table IAM policies do not scale. Moving data between buckets is disruptive, and Config rules detect issues rather than grant access.",
+    "subtopic": "Lake Formation LF-Tags"
+  },
+  {
+    "id": "analytics-023",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An e-commerce site needs a product search feature with full-text search, relevance ranking, typo tolerance, and faceted filters by brand and price. Which AWS service is the best fit?",
+    "options": [
+      "Amazon Redshift",
+      "Amazon Athena",
+      "Amazon DynamoDB",
+      "Amazon OpenSearch Service"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Amazon OpenSearch Service provides full-text search with relevance scoring, fuzzy matching, and aggregations for facets. Redshift and Athena are analytical SQL engines that are not built for low-latency search relevance. DynamoDB supports key-based access patterns rather than full-text search.",
+    "subtopic": "OpenSearch Service search"
+  },
+  {
+    "id": "analytics-024",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An operations team wants to search and visualize application logs from hundreds of services in near real time, with interactive dashboards and alerting on error spikes. Logs are already streamed through Amazon Data Firehose. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Deliver logs with Firehose to Amazon OpenSearch Service and use OpenSearch Dashboards",
+      "Deliver logs to Amazon S3 and run a nightly Amazon EMR job",
+      "Load logs into Amazon RDS for MySQL and build reports with SQL",
+      "Store logs in Amazon DynamoDB and scan the table for errors"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Firehose can deliver directly to Amazon OpenSearch Service, which indexes logs for near-real-time search, and OpenSearch Dashboards provides visualization and alerting. A nightly EMR job is not near real time. RDS and DynamoDB are not designed for log search and would require custom tooling.",
+    "subtopic": "OpenSearch log analytics"
+  },
+  {
+    "id": "analytics-025",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security company keeps 18 months of logs in an Amazon OpenSearch Service domain on hot data nodes. Only the last 14 days are queried often, but older logs must stay searchable for investigations. Which change will reduce cost the MOST while keeping the data searchable in OpenSearch?",
+    "options": [
+      "Add more hot data nodes with larger EBS volumes",
+      "Delete logs older than 14 days and keep only S3 backups",
+      "Move older indexes to UltraWarm and cold storage tiers",
+      "Disable replicas on all indexes"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "UltraWarm and cold storage keep older indexes in OpenSearch Service backed by Amazon S3 at a much lower cost than hot nodes, while keeping them searchable. Adding hot nodes increases cost. Deleting the data removes searchability in OpenSearch, and disabling replicas reduces resilience without addressing the main storage cost.",
+    "subtopic": "OpenSearch UltraWarm and cold storage"
+  },
+  {
+    "id": "analytics-026",
+    "topic": "analytics",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company's customer-facing search runs on an Amazon OpenSearch Service domain in a single Availability Zone, and an AZ issue caused an outage. Which configuration will improve availability for production workloads?",
+    "options": [
+      "Increase the instance size of the data nodes",
+      "Take hourly manual snapshots to Amazon S3",
+      "Enable OpenSearch Dashboards authentication",
+      "Deploy the domain across three Availability Zones with replica shards and dedicated master nodes"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Spreading data nodes across multiple Availability Zones with replica shards, plus dedicated master nodes for cluster stability, keeps the domain available if one AZ fails. Larger instances do not remove the single-AZ risk. Snapshots require restoring, and Dashboards authentication is a security control, not an availability control.",
+    "subtopic": "OpenSearch high availability"
+  },
+  {
+    "id": "analytics-027",
+    "topic": "analytics",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company stores sensitive support tickets in an Amazon OpenSearch Service domain. The domain must not be reachable from the internet, and support agents should see only the indexes and fields their role permits when using OpenSearch Dashboards. Which actions meet these requirements? (Select TWO.)",
+    "options": [
+      "Use a public endpoint with a resource policy that allows all principals",
+      "Create the domain with VPC access so it has no public endpoint",
+      "Enable AWS Shield Advanced on the domain",
+      "Enable Amazon Macie on the domain indexes",
+      "Enable fine-grained access control with role mappings for index-, document-, and field-level permissions"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "VPC access places the domain endpoint inside the VPC with no public endpoint, and fine-grained access control provides role-based permissions down to the index, document, and field level, including in Dashboards. An open public endpoint violates the requirement. Shield Advanced addresses DDoS, and Macie scans S3 rather than OpenSearch indexes.",
+    "subtopic": "OpenSearch security"
+  },
+  {
+    "id": "analytics-028",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A sales organization wants interactive dashboards on data in Amazon Redshift and Athena for 1,500 business users, with fast in-memory performance and no BI servers to manage. Which service should it use?",
+    "options": [
+      "Amazon QuickSight with SPICE",
+      "Amazon OpenSearch Dashboards",
+      "AWS Glue Studio",
+      "Amazon Managed Grafana for sales reporting"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Amazon QuickSight is a serverless BI service that connects to Redshift and Athena, and its SPICE in-memory engine speeds up dashboards for many users. OpenSearch Dashboards targets search and log data. Glue Studio is for building ETL jobs, and Managed Grafana focuses on operational metrics rather than business reporting.",
+    "subtopic": "Amazon QuickSight"
+  },
+  {
+    "id": "analytics-029",
+    "topic": "analytics",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A franchise company publishes one Amazon QuickSight sales dashboard to all regional managers. Each manager must see only data for their own region in the same dashboard. Which solution meets this requirement with the LEAST effort?",
+    "options": [
+      "Create a separate dataset and dashboard for each region",
+      "Use S3 bucket policies to restrict which rows each manager can read",
+      "Apply QuickSight row-level security to the dataset by using a permissions dataset that maps users to regions",
+      "Ask managers to apply a region filter when they open the dashboard"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "QuickSight row-level security uses a permissions dataset to filter rows per user or group, so one dashboard shows each manager only their data. Separate dashboards multiply maintenance. Bucket policies cannot filter rows, and manual filters are not a security control.",
+    "subtopic": "QuickSight row-level security"
+  },
+  {
+    "id": "analytics-030",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A payments company streams card transactions into Amazon Kinesis Data Streams. It must detect suspicious patterns, such as many transactions from one card within 60 seconds, and emit alerts within seconds by using stateful windowed processing. Which service should process the stream?",
+    "options": [
+      "Amazon Athena queries scheduled every minute",
+      "Amazon Managed Service for Apache Flink",
+      "AWS Glue crawlers",
+      "Amazon QuickSight alerts on SPICE datasets"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Amazon Managed Service for Apache Flink runs stateful stream processing with time windows on Kinesis data and can emit results within seconds. Scheduled Athena queries on S3 add delay and are batch-oriented. Crawlers only catalog schemas, and QuickSight alerts on SPICE data are not real-time stream processing.",
+    "subtopic": "Managed Service for Apache Flink"
+  },
+  {
+    "id": "analytics-031",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A media website wants clickstream events delivered to Amazon S3 in Apache Parquet format for Athena analysis. A delay of a few minutes is acceptable, and the team does not want to write or run consumer applications. Which solution is MOST cost-effective and simplest?",
+    "options": [
+      "Kinesis Data Streams with a fleet of EC2 consumers that write Parquet files",
+      "Amazon MSK with a custom Kafka consumer running on Amazon ECS",
+      "Amazon SQS with a Lambda function that writes each event as a separate object",
+      "Amazon Data Firehose with record format conversion to Parquet and delivery to S3"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Amazon Data Firehose is fully managed, buffers data for near-real-time delivery, and can convert records to Parquet by using a Glue Data Catalog schema before writing to S3. EC2 or ECS consumers require custom code and operations. Writing one object per event creates many small files that make Athena slower and more expensive.",
+    "subtopic": "Data Firehose format conversion"
+  },
+  {
+    "id": "analytics-032",
+    "topic": "analytics",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs self-managed Apache Kafka on EC2 and struggles with broker failures and patching. It wants a highly available managed service that works with its existing Kafka producers and consumers without code changes. Which service should it use?",
+    "options": [
+      "Amazon Managed Streaming for Apache Kafka (Amazon MSK)",
+      "Amazon Kinesis Data Streams",
+      "Amazon SQS FIFO queues",
+      "Amazon MQ for RabbitMQ"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Amazon MSK runs Apache Kafka as a managed service across multiple Availability Zones and is compatible with existing Kafka APIs and clients. Kinesis Data Streams, SQS, and Amazon MQ use different APIs and would require application changes.",
+    "subtopic": "Amazon MSK"
+  },
+  {
+    "id": "analytics-033",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A gaming startup uses Kafka APIs for event streaming, but traffic is spiky and hard to predict. It wants to avoid sizing brokers and storage and pay based on usage. Which solution meets these requirements?",
+    "options": [
+      "An Amazon MSK provisioned cluster sized for peak traffic",
+      "Self-managed Kafka on EC2 Spot Instances",
+      "Amazon MSK Serverless",
+      "Amazon Kinesis Data Streams in provisioned mode"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "MSK Serverless runs Kafka without broker or storage sizing and scales capacity automatically, with pricing based on usage. A provisioned cluster sized for peak wastes capacity. Self-managed Kafka on Spot risks interruptions and adds operations, and Kinesis does not use Kafka APIs and needs shard planning in provisioned mode.",
+    "subtopic": "MSK Serverless"
+  },
+  {
+    "id": "analytics-034",
+    "topic": "analytics",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company loads data into an Amazon Redshift cluster with COPY from Amazon S3. A security requirement states that this traffic must stay within the VPC so it can be controlled with VPC endpoints, security groups, and VPC Flow Logs. What should a solutions architect enable?",
+    "options": [
+      "Redshift concurrency scaling",
+      "Redshift enhanced VPC routing",
+      "Redshift Spectrum",
+      "S3 Transfer Acceleration"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Enhanced VPC routing forces COPY and UNLOAD traffic between Redshift and data repositories through the VPC, where VPC endpoints, security controls, and flow logs apply. Concurrency scaling adds query capacity. Spectrum queries external data, and Transfer Acceleration uses public edge locations.",
+    "subtopic": "Redshift enhanced VPC routing"
+  },
+  {
+    "id": "analytics-035",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A sports app streams scores through Amazon Kinesis Data Streams. Traffic is unpredictable and spikes during big games, causing throttling. Five independent consumer applications each need low-latency reads without competing for read throughput. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Switch the stream to on-demand capacity mode",
+      "Increase the data retention period to one year",
+      "Reduce the stream to a single shard to simplify ordering",
+      "Replace the consumers with Amazon Data Firehose to reduce latency",
+      "Register the consumers with enhanced fan-out"
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "On-demand capacity mode scales the stream automatically for unpredictable traffic, and enhanced fan-out gives each registered consumer its own dedicated read throughput per shard with low latency. Longer retention does not increase throughput. A single shard lowers capacity, and Firehose buffers data and is a delivery service, not a low-latency consumer replacement.",
+    "subtopic": "Kinesis on-demand and enhanced fan-out"
+  },
+  {
+    "id": "analytics-036",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A social media startup must automatically flag user-uploaded images that contain explicit or violent content before they are published. The team has no machine learning experience. Which service should it use?",
+    "options": [
+      "Amazon Textract",
+      "Amazon Comprehend",
+      "Amazon Polly",
+      "Amazon Rekognition content moderation"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Amazon Rekognition provides pre-trained content moderation APIs that detect unsafe content in images and videos without ML expertise. Textract extracts text and data from documents. Comprehend analyzes text, and Polly converts text to speech.",
+    "subtopic": "Amazon Rekognition"
+  },
+  {
+    "id": "analytics-037",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An accounts payable team receives thousands of scanned invoices and forms each day. It needs to extract vendor names, totals, line items, and table data automatically, not just raw text. Which solution meets these requirements with the LEAST development effort?",
+    "options": [
+      "Amazon Rekognition text detection",
+      "Amazon Comprehend custom entity recognition on the images",
+      "Amazon Textract with its form, table, and expense analysis features",
+      "A custom OCR model trained in Amazon SageMaker AI"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Amazon Textract extracts printed and handwritten text along with structured data such as key-value pairs, tables, and invoice fields through its analysis APIs. Rekognition text detection reads text in images but does not understand forms or tables. Comprehend works on text rather than scanned images, and a custom OCR model requires much more development.",
+    "subtopic": "Amazon Textract"
+  },
+  {
+    "id": "analytics-038",
+    "topic": "analytics",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A hospital wants to extract medical conditions, medications, and dosages from unstructured clinical notes and identify protected health information in the text. It wants a managed NLP service built for medical language. Which service should it use?",
+    "options": [
+      "Amazon Comprehend Medical",
+      "Amazon Transcribe",
+      "Amazon Kendra",
+      "Amazon Translate"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Amazon Comprehend Medical uses NLP tuned for medical text to extract entities such as conditions, medications, and dosages, and it can detect protected health information. Transcribe converts speech to text. Kendra is an intelligent search service, and Translate converts text between languages.",
+    "subtopic": "Amazon Comprehend Medical"
+  },
+  {
+    "id": "analytics-039",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A global call center records customer calls in Spanish, Portuguese, and French. Managers want English text versions of every call so they can analyze them. Which AWS services should be combined? (Select TWO.)",
+    "options": [
+      "Amazon Polly to convert the recordings into text",
+      "Amazon Transcribe to convert the audio recordings into text",
+      "Amazon Translate to convert the transcripts into English",
+      "Amazon Lex to build a bot that reads the recordings",
+      "Amazon Rekognition to analyze the audio files"
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "Amazon Transcribe converts speech to text in many languages, and Amazon Translate converts that text into English. Polly does the opposite of what is needed, turning text into speech. Lex builds conversational interfaces, and Rekognition analyzes images and video, not audio transcripts.",
+    "subtopic": "Transcribe and Translate"
+  },
+  {
+    "id": "analytics-040",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A bank wants a conversational chatbot on its website and phone line that understands what customers ask, such as checking a balance or reporting a lost card, and calls backend Lambda functions to complete requests. Which service should it use?",
+    "options": [
+      "Amazon Polly",
+      "Amazon Lex",
+      "Amazon Comprehend",
+      "Amazon Personalize"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Amazon Lex builds voice and text conversational interfaces with intent recognition and slot filling, and it can invoke Lambda functions to fulfill requests. Polly only synthesizes speech. Comprehend analyzes text for sentiment and entities, and Personalize produces recommendations.",
+    "subtopic": "Amazon Lex"
+  },
+  {
+    "id": "analytics-041",
+    "topic": "analytics",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Employees at an engineering firm waste time hunting through documents in Amazon S3, SharePoint, and Confluence. The firm wants employees to ask natural language questions and get precise answers from those documents, respecting existing document permissions, without building a custom search engine. Which service should it use?",
+    "options": [
+      "Amazon Athena",
+      "Amazon Textract",
+      "Amazon Comprehend",
+      "Amazon Kendra"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Amazon Kendra is an intelligent enterprise search service with connectors for sources such as S3, SharePoint, and Confluence, natural language question answering, and support for document access control. Athena runs SQL on structured data. Textract extracts text from documents, and Comprehend analyzes text without providing a search experience.",
+    "subtopic": "Amazon Kendra"
+  },
+  {
+    "id": "analytics-042",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An online bookstore wants personalized 'recommended for you' lists based on browsing and purchase history. It has no data scientists and wants a managed service rather than building and hosting its own models. Which solution meets these requirements MOST cost-effectively?",
+    "options": [
+      "Amazon Personalize",
+      "A custom recommendation model built and hosted on Amazon SageMaker AI",
+      "Amazon Kendra",
+      "Amazon Rekognition Custom Labels"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Amazon Personalize is a managed service that builds recommendation models from interaction data and serves them through an API, without ML expertise. Building and hosting a custom SageMaker AI model requires data scientists and more operational work. Kendra is for search, and Rekognition Custom Labels classifies images.",
+    "subtopic": "Amazon Personalize"
+  },
+  {
+    "id": "analytics-043",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A regional grocery chain new to AWS wants to forecast weekly demand for each product from historical sales data. Its analysts do not write code and want a managed, low-code tool. Which option should a solutions architect recommend?",
+    "options": [
+      "Amazon Forecast, because it is the default AWS forecasting service for new customers",
+      "Amazon Personalize with a time-series recipe",
+      "Amazon SageMaker Canvas with its time-series forecasting capability",
+      "Amazon Comprehend custom classification on sales records"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Amazon SageMaker Canvas offers no-code time-series forecasting for analysts, and it is the AWS-recommended path for forecasting now that Amazon Forecast is no longer available to new customers. Personalize builds recommendations, not demand forecasts. Comprehend analyzes text and does not produce numeric forecasts.",
+    "subtopic": "Forecasting alternatives"
+  },
+  {
+    "id": "analytics-044",
+    "topic": "analytics",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A law firm wants a generative AI assistant that answers staff questions from its internal policy documents stored in Amazon S3, using foundation models through an API without managing model infrastructure. The assistant must block harmful content and mask personal data in responses. Which actions meet these requirements? (Select TWO.)",
+    "options": [
+      "Use Amazon Bedrock Knowledge Bases to retrieve relevant passages from the S3 documents for the model",
+      "Train a new foundation model from scratch on SageMaker AI with the policy documents",
+      "Use Amazon Rekognition to filter harmful text in model responses",
+      "Use Amazon Polly to redact personal data from the responses",
+      "Apply Amazon Bedrock Guardrails with content filters and sensitive information filters"
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "Amazon Bedrock provides foundation models through an API, Knowledge Bases implements retrieval-augmented generation over documents in S3, and Guardrails filter harmful content and can mask or block sensitive information. Training a model from scratch is costly and unnecessary. Rekognition analyzes images and video, and Polly converts text to speech.",
+    "subtopic": "Amazon Bedrock"
+  },
+  {
+    "id": "analytics-045",
+    "topic": "analytics",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A fintech company's data scientists build a custom fraud detection model with their own code on Amazon SageMaker AI. Training jobs can be restarted from checkpoints, and the deployed model receives only occasional, unpredictable bursts of requests. Which actions will reduce cost? (Select TWO.)",
+    "options": [
+      "Replace the model with Amazon Rekognition Custom Labels",
+      "Use managed Spot training with checkpointing for the training jobs",
+      "Keep notebook instances running all the time so training starts faster",
+      "Deploy the model with SageMaker AI Serverless Inference",
+      "Use Amazon Comprehend to score the transactions instead of the model"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Managed Spot training uses spare EC2 capacity at a discount, and checkpointing lets interrupted jobs resume. Serverless Inference scales to zero between bursts, so the company does not pay for idle endpoint instances. Rekognition and Comprehend are not suited to custom tabular fraud models, and always-on notebook instances add cost.",
+    "subtopic": "SageMaker AI cost optimization"
+  }
+]

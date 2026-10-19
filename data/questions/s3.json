@@ -1,0 +1,1362 @@
+[
+  {
+    "id": "s3-001",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company uses AWS Organizations with 40 member accounts. The security team must guarantee that no S3 bucket or object in any member account can ever be made public, even by account administrators who try to change bucket-level settings. Which combination of steps will meet these requirements? (Select TWO.)",
+    "options": [
+      "Enable S3 Block Public Access at the account level in every member account.",
+      "Configure every bucket ACL as private and schedule a Lambda function to reset ACLs nightly.",
+      "Enable S3 Versioning with MFA Delete on every bucket so that policy changes require MFA.",
+      "Attach a service control policy that denies s3:PutAccountPublicAccessBlock to all principals in the member accounts.",
+      "Create an S3 Access Point for each bucket and remove the bucket endpoints."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Account-level Block Public Access overrides any bucket policy or ACL that would grant public access, and an SCP that denies s3:PutAccountPublicAccessBlock prevents administrators in member accounts from turning those settings off. Resetting ACLs on a schedule is reactive and leaves windows of exposure. MFA Delete protects object versions and the versioning state, not bucket policies or ACLs. Access points do not remove the bucket endpoint.",
+    "subtopic": "S3 Block Public Access"
+  },
+  {
+    "id": "s3-002",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A logistics company receives shipment manifests from a partner that writes objects into the company's S3 bucket from the partner's own AWS account. The company's analytics jobs receive Access Denied errors on some of those objects because the partner account owns them. The company wants every object in the bucket to be owned by the bucket owner and wants to manage access only through policies. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Require the partner to add the bucket-owner-full-control canned ACL to every upload request.",
+      "Set S3 Object Ownership on the bucket to Bucket owner enforced.",
+      "Enable S3 Block Public Access on the bucket and ask the partner to upload the objects again.",
+      "Create an S3 Access Point for the partner with a policy that grants s3:PutObjectAcl."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The Bucket owner enforced setting disables ACLs and makes the bucket owner the owner of every object automatically, so access is controlled only with policies. Requiring a canned ACL depends on the partner's code being correct and keeps ACLs in use. Block Public Access does not change object ownership. Granting s3:PutObjectAcl keeps the ACL model the company wants to avoid.",
+    "subtopic": "S3 Object Ownership"
+  },
+  {
+    "id": "s3-003",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company's policy states that it must generate and manage its own encryption keys outside AWS and supply the key with each request. AWS must use the key only to encrypt or decrypt the object and must not store the key. Which S3 encryption option meets this requirement?",
+    "options": [
+      "SSE-S3",
+      "SSE-KMS with a customer managed key",
+      "SSE-C",
+      "DSSE-KMS"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "With SSE-C the client sends its own key in each request, S3 uses it to perform server-side encryption or decryption, and then discards the key, storing only a salted HMAC to validate future requests. SSE-S3 uses keys that S3 manages. SSE-KMS and DSSE-KMS use keys stored in AWS KMS, so AWS holds the key.",
+    "subtopic": "SSE-C"
+  },
+  {
+    "id": "s3-004",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A healthcare company stores patient records in an S3 bucket. Compliance rules state that the cloud operations team, which administers the bucket, must not be able to read the record contents. A separate security team must control who can use the encryption key, and every use of the key must be auditable. Which solution will meet these requirements?",
+    "options": [
+      "Use SSE-S3 and add a bucket policy that denies s3:GetObject to the operations team.",
+      "Use SSE-C with keys stored in AWS Secrets Manager that the operations team can retrieve.",
+      "Use SSE-KMS with the AWS managed key aws/s3 and IAM policies that restrict the operations team.",
+      "Use SSE-KMS with a customer managed key whose key policy is administered by the security team and allows kms:Decrypt only for the application role."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A customer managed KMS key lets the security team own the key policy, so even users with full S3 permissions cannot decrypt objects without kms:Decrypt, and AWS CloudTrail records every key use. SSE-S3 offers no separate key permission, so a bucket administrator could change the bucket policy and read data. Giving the operations team access to SSE-C keys defeats the separation. The AWS managed key policy cannot be edited, so the security team cannot control who uses it.",
+    "subtopic": "Role separation with SSE-KMS"
+  },
+  {
+    "id": "s3-005",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A mobile photo-sharing application lets users upload images directly to a private S3 bucket. The application users do not have AWS credentials, and each upload link must stop working 10 minutes after it is issued. Which combination of steps will meet these requirements? (Select TWO.)",
+    "options": [
+      "Have the backend generate a presigned URL for a PutObject request with a 10-minute expiration and return it to the app.",
+      "Grant public write access to the bucket and use a lifecycle rule to delete objects after 10 minutes.",
+      "Ensure that the IAM role used by the backend to sign the URL has s3:PutObject permission on the upload prefix.",
+      "Embed long-term IAM user access keys in the mobile app so it can call S3 directly.",
+      "Enable S3 Transfer Acceleration so that the upload links expire automatically."
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "A presigned URL carries the signer's permissions for a limited time, so the backend can issue a 10-minute PutObject URL and the bucket stays private. The signing principal must itself be allowed to perform s3:PutObject, otherwise the presigned request fails. Public write access and embedded long-term keys are insecure. Transfer Acceleration improves upload speed and has nothing to do with link expiration.",
+    "subtopic": "Presigned URLs"
+  },
+  {
+    "id": "s3-006",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A video production company has editors in Australia, Brazil, and Germany who upload multi-gigabyte raw footage files over the public internet to a single S3 bucket in us-east-1. Uploads from the distant offices are slow and inconsistent. The company wants to improve upload speed without changing where the data is stored. Which solution will meet these requirements?",
+    "options": [
+      "Enable S3 Transfer Acceleration on the bucket and have clients upload through the accelerate endpoint.",
+      "Configure Cross-Region Replication to buckets on each continent and have editors upload to the us-east-1 bucket.",
+      "Create an S3 gateway endpoint for each office network.",
+      "Change the default storage class of uploads to S3 Express One Zone."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Transfer Acceleration routes uploads to the nearest CloudFront edge location and then over the optimized AWS backbone to the bucket Region, which speeds long-distance transfers. Replication copies data after it lands and does not speed the original upload. Gateway endpoints work only for traffic from within a VPC, not from office networks. S3 Express One Zone is a directory bucket class for low-latency in-AZ access and does not help remote internet uploads.",
+    "subtopic": "S3 Transfer Acceleration"
+  },
+  {
+    "id": "s3-007",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A media company's application uploads 20 GB video files to Amazon S3 using a single PUT request, and the uploads fail. The company needs the uploads to succeed and to be resilient to transient network errors. What should a solutions architect recommend?",
+    "options": [
+      "Enable S3 Transfer Acceleration on the bucket.",
+      "Use the multipart upload API to upload the file as parts in parallel.",
+      "Compress each file before upload so that it fits within a single request.",
+      "Request a service quota increase for the maximum single PUT object size."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A single PUT is limited to 5 GB, so large objects must use multipart upload, which also lets parts upload in parallel and retry individually after a failure. Transfer Acceleration does not change the single PUT size limit. Compression is not guaranteed to bring video below the limit and is not a reliable design. The single PUT size limit is not an adjustable quota.",
+    "subtopic": "Multipart upload"
+  },
+  {
+    "id": "s3-008",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A data engineering team notices that the storage bill for an ingestion bucket keeps rising even though the number of visible objects is stable. Investigation shows that many large uploads from unreliable networks fail partway through and are never completed. Which solution will reduce cost with the LEAST operational overhead?",
+    "options": [
+      "Change the default storage class of the bucket to S3 Intelligent-Tiering.",
+      "Enable versioning and add a lifecycle rule that expires noncurrent versions.",
+      "Add a lifecycle rule that aborts incomplete multipart uploads 7 days after initiation.",
+      "Enable S3 Requester Pays so that the uploading clients pay for the storage."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Parts of incomplete multipart uploads are stored and billed but do not appear as objects, and a lifecycle AbortIncompleteMultipartUpload action removes them automatically. Intelligent-Tiering does not delete unfinished upload parts. Noncurrent version expiration affects completed object versions, not upload parts. Requester Pays shifts request and transfer charges, not storage charges.",
+    "subtopic": "S3 Lifecycle"
+  },
+  {
+    "id": "s3-009",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Developers at a marketing agency sometimes overwrite or delete campaign assets in an S3 bucket by mistake. The agency wants to be able to restore any earlier copy of an object quickly. Which solution will meet this requirement with the LEAST operational overhead?",
+    "options": [
+      "Configure Same-Region Replication to a second bucket.",
+      "Enable S3 server access logging to record every overwrite.",
+      "Apply S3 Object Lock in compliance mode with a 1-year retention period to every object.",
+      "Enable S3 Versioning on the bucket."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Versioning keeps every version of an object, so an overwritten object can be restored and a delete only adds a delete marker that can be removed. Replication also replicates overwrites and adds a second bucket to manage. Access logs record requests but cannot restore data. Compliance mode Object Lock is far stricter than needed and prevents anyone from removing versions during the retention period.",
+    "subtopic": "S3 Versioning"
+  },
+  {
+    "id": "s3-010",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Auditors require that an S3 bucket's own versioning configuration enforce multi-factor authentication before anyone can permanently delete an object version or suspend versioning. Which action will meet this requirement?",
+    "options": [
+      "Use the root user credentials and MFA device to enable MFA Delete on the bucket by using the AWS CLI or API.",
+      "Sign in to the S3 console as an IAM administrator with MFA and enable MFA Delete in the bucket properties.",
+      "Attach an IAM policy with an aws:MultiFactorAuthPresent condition to all users and enable Object Lock in governance mode.",
+      "Add a lifecycle configuration rule that requires MFA for expiration actions."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "MFA Delete is part of the versioning configuration and can be enabled only by the bucket owner's root user, using the root MFA device through the CLI or API. The S3 console cannot enable MFA Delete, and IAM users cannot enable it. IAM conditions and Object Lock can add protection but are not the versioning-level MFA requirement the auditors asked for. Lifecycle rules have no MFA setting.",
+    "subtopic": "MFA Delete"
+  },
+  {
+    "id": "s3-011",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A bank stores scanned loan documents in S3 Standard. Documents are accessed often for 30 days after upload, then about once per quarter, and every access must return data within milliseconds. The documents must survive the loss of an Availability Zone and must be deleted after 5 years. Which combination of lifecycle actions is MOST cost-effective? (Select TWO.)",
+    "options": [
+      "Transition objects to S3 One Zone-IA 30 days after creation.",
+      "Transition objects to S3 Glacier Instant Retrieval 30 days after creation.",
+      "Transition objects to S3 Glacier Deep Archive 30 days after creation.",
+      "Add an expiration action that deletes objects 1,825 days after creation.",
+      "Transition objects to S3 Glacier Flexible Retrieval 30 days after creation."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "S3 Glacier Instant Retrieval offers millisecond access and multi-AZ resilience at a lower storage price than Standard-IA for data accessed about once a quarter, and an expiration action removes objects after 5 years. One Zone-IA stores data in a single AZ and would not survive an AZ loss. Glacier Deep Archive and Glacier Flexible Retrieval require a restore that takes minutes to hours, so they do not meet the millisecond requirement.",
+    "subtopic": "S3 Lifecycle"
+  },
+  {
+    "id": "s3-012",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup stores user-generated content whose access patterns are unpredictable: some objects are popular for months and others are never read again. The startup wants to minimize storage cost automatically without paying retrieval fees when data is accessed. Which storage class should it use?",
+    "options": [
+      "S3 Standard-IA",
+      "S3 One Zone-IA",
+      "S3 Intelligent-Tiering",
+      "S3 Glacier Instant Retrieval"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "S3 Intelligent-Tiering moves objects between access tiers based on observed access and charges a small monitoring fee but no retrieval fees. Standard-IA, One Zone-IA, and Glacier Instant Retrieval all charge per-GB retrieval fees, which can be expensive for objects that turn out to be popular. One Zone-IA also reduces resilience.",
+    "subtopic": "S3 Intelligent-Tiering"
+  },
+  {
+    "id": "s3-013",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An insurance company must retain closed claim files for 10 years to satisfy regulators. The files are almost never read, and when an auditor requests one, a retrieval time of up to 48 hours is acceptable. Which storage class is the MOST cost-effective?",
+    "options": [
+      "S3 Glacier Flexible Retrieval",
+      "S3 Standard-IA",
+      "S3 Glacier Instant Retrieval",
+      "S3 Glacier Deep Archive"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "S3 Glacier Deep Archive has the lowest storage price in S3 and supports standard retrievals within 12 hours and bulk retrievals within 48 hours, which fits the requirement. Glacier Flexible Retrieval and Glacier Instant Retrieval cost more to store and offer faster access that is not needed. Standard-IA is designed for data that needs millisecond access and is considerably more expensive for long-term archives.",
+    "subtopic": "S3 Glacier Deep Archive"
+  },
+  {
+    "id": "s3-014",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An e-commerce company generates product image thumbnails from originals that are stored safely in another bucket. The thumbnails are accessed infrequently, must load in milliseconds when requested, and can be regenerated if lost. Which storage class is the MOST cost-effective for the thumbnails?",
+    "options": [
+      "S3 One Zone-IA",
+      "S3 Standard-IA",
+      "S3 Glacier Flexible Retrieval",
+      "S3 Intelligent-Tiering"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "One Zone-IA is cheaper than Standard-IA and still provides millisecond access, and the single-AZ risk is acceptable because the thumbnails can be recreated. Standard-IA pays for multi-AZ resilience that is not needed. Glacier Flexible Retrieval requires a restore before access. Intelligent-Tiering adds a monitoring charge and keeps data in multi-AZ tiers, which is unnecessary for re-creatable infrequent data.",
+    "subtopic": "S3 One Zone-IA"
+  },
+  {
+    "id": "s3-015",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A machine learning team runs training jobs on a large fleet of EC2 instances in a single Availability Zone. The jobs read millions of small files and need consistent single-digit millisecond latency at hundreds of thousands of requests per second. Which storage option will provide the HIGHEST performance?",
+    "options": [
+      "An S3 Standard bucket with Transfer Acceleration enabled",
+      "An S3 Express One Zone directory bucket in the same Availability Zone as the instances",
+      "An S3 One Zone-IA bucket in the same Region",
+      "An S3 Glacier Instant Retrieval bucket"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "S3 Express One Zone uses directory buckets in a chosen Availability Zone and is designed for consistent single-digit millisecond latency and very high request rates, which suits co-located training jobs. Transfer Acceleration improves long-distance internet transfers, not in-Region latency. One Zone-IA and Glacier Instant Retrieval are lower-cost classes for infrequent access and do not provide this level of performance.",
+    "subtopic": "S3 Express One Zone"
+  },
+  {
+    "id": "s3-016",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must encrypt objects in a data lake bucket with a customer managed AWS KMS key. Applications write and read millions of small objects per day, and the AWS KMS portion of the bill has become larger than the S3 storage cost. Which solution will reduce cost while keeping the customer managed key?",
+    "options": [
+      "Switch the bucket to SSE-C and manage the keys in the application.",
+      "Replace the key with a multi-Region KMS key.",
+      "Enable S3 Bucket Keys in the bucket's SSE-KMS default encryption configuration.",
+      "Create a separate KMS grant for each application role."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "An S3 Bucket Key is a bucket-level key generated from the KMS key that S3 uses to create data keys, which cuts the number of KMS requests and their cost significantly while still using the customer managed key. SSE-C would drop the KMS requirement and add key management burden. Multi-Region keys and grants do not reduce the number of KMS calls.",
+    "subtopic": "S3 Bucket Keys"
+  },
+  {
+    "id": "s3-017",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A financial services company must keep a copy of trade confirmation files in a second AWS Region for disaster recovery. Regulators require that the company demonstrate that 99.99% of new objects are copied within 15 minutes and that replication delays generate alerts. Which solution will meet these requirements?",
+    "options": [
+      "Configure Same-Region Replication with versioning enabled.",
+      "Run S3 Batch Operations copy jobs every 15 minutes.",
+      "Configure Cross-Region Replication and enable Transfer Acceleration on both buckets.",
+      "Configure Cross-Region Replication with S3 Replication Time Control enabled."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "S3 Replication Time Control is backed by an SLA to replicate 99.99% of objects within 15 minutes and provides replication metrics and event notifications for objects that miss the threshold. Same-Region Replication does not put a copy in another Region. Scheduled Batch Operations jobs add overhead and provide no SLA. Transfer Acceleration does not affect replication timing.",
+    "subtopic": "S3 Replication Time Control"
+  },
+  {
+    "id": "s3-018",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company enabled Cross-Region Replication on a bucket that already contained 300 million objects. New objects are replicating, but the existing objects are not present in the destination bucket. Which solution will copy the existing objects with the LEAST operational overhead?",
+    "options": [
+      "Use S3 Batch Replication to replicate the existing objects.",
+      "Suspend and then re-enable versioning on the source bucket.",
+      "Enable S3 Replication Time Control on the replication rule.",
+      "Add a lifecycle rule that transitions existing objects to a new storage class to trigger replication."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Live replication applies only to objects written after the rule is created, and S3 Batch Replication is the managed way to replicate existing objects, as well as objects that previously failed to replicate. Toggling versioning does not replicate anything. RTC affects only new objects. Lifecycle transitions are not replicated and do not trigger replication of the object.",
+    "subtopic": "S3 Batch Replication"
+  },
+  {
+    "id": "s3-019",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company configured Cross-Region Replication from a bucket in eu-west-1 to a bucket in eu-central-1. Objects encrypted with SSE-S3 replicate successfully, but objects encrypted with SSE-KMS using a customer managed key are not replicated. Which combination of actions will resolve the issue? (Select TWO.)",
+    "options": [
+      "Enable S3 Transfer Acceleration on both buckets.",
+      "In the replication rule, enable replication of objects encrypted with AWS KMS and specify a KMS key in eu-central-1 for the replicas.",
+      "Enable S3 Object Lock on the destination bucket.",
+      "Grant the replication IAM role kms:Decrypt on the source key and kms:Encrypt on the destination key.",
+      "Disable S3 Bucket Keys on the destination bucket."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "S3 replicates SSE-KMS objects only when the rule explicitly opts in to KMS-encrypted objects and names a destination KMS key, and the replication role must be able to decrypt with the source key and encrypt with the destination key. Transfer Acceleration does not affect replication. Object Lock adds retention, not KMS permissions. Bucket Keys are compatible with replication and disabling them does not fix missing permissions.",
+    "subtopic": "Replication of SSE-KMS objects"
+  },
+  {
+    "id": "s3-020",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A payments company encrypts records on the client side in us-east-1 before storing them in S3, and the records are replicated to eu-west-1. Applications in eu-west-1 must be able to decrypt the records using a key in their own Region, without calling AWS KMS in us-east-1 and without re-encrypting the data. Which solution will meet these requirements?",
+    "options": [
+      "Create a single-Region KMS key in each Region and copy the key material from one key to the other.",
+      "Create a multi-Region primary key in us-east-1 and a replica key in eu-west-1, and use them for encryption and decryption.",
+      "Use the AWS managed key aws/s3 in both Regions.",
+      "Have the eu-west-1 applications call the us-east-1 KMS key through cross-Region API requests."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Multi-Region keys share the same key ID and key material across Regions, so data encrypted with the primary key can be decrypted locally with the replica key. AWS-generated key material cannot be exported to another key, and separate single-Region keys are not interchangeable. AWS managed keys are different in each Region and cannot be used for client-side encryption. Cross-Region calls violate the requirement to avoid a dependency on us-east-1.",
+    "subtopic": "KMS multi-Region keys"
+  },
+  {
+    "id": "s3-021",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Which statement correctly describes envelope encryption as used by AWS KMS and Amazon S3 server-side encryption?",
+    "options": [
+      "AWS KMS encrypts the entire object payload directly with the KMS key regardless of object size.",
+      "The object is encrypted twice, once by a KMS key in each of two different Regions.",
+      "The object is encrypted with a data key, and the data key is encrypted with a KMS key and stored alongside the encrypted object.",
+      "The KMS key material is exported to the client, which uses it to encrypt the object locally."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "In envelope encryption, a data key encrypts the data, and the KMS key encrypts only the data key, which is stored with the ciphertext so it can later be decrypted by KMS. The KMS Encrypt API can directly encrypt only small payloads of up to 4 KB, so it is not used for whole objects. Double encryption across Regions is not envelope encryption. KMS key material never leaves AWS KMS unencrypted.",
+    "subtopic": "Envelope encryption"
+  },
+  {
+    "id": "s3-022",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A nightly batch job runs under a temporary IAM role and must decrypt SSE-KMS objects for the duration of the job only. The security team does not want to edit the KMS key policy before and after every run. Which solution will meet these requirements?",
+    "options": [
+      "Edit the key policy before each job to add the role and remove it afterward.",
+      "Schedule the KMS key for deletion after each job and create a new key for the next run.",
+      "Disable automatic key rotation while the job is running.",
+      "Create a KMS grant that allows the role to use kms:Decrypt and retire the grant when the job finishes."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Grants provide programmatic, temporary delegation of specific KMS operations to a principal and can be retired or revoked when no longer needed, without changing the key policy. Editing the key policy every run is exactly what the team wants to avoid and is error prone. Deleting keys would make existing data unreadable. Rotation settings do not control who can use the key.",
+    "subtopic": "KMS grants"
+  },
+  {
+    "id": "s3-023",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "Account A owns an S3 bucket whose objects are encrypted with SSE-KMS using a customer managed key in Account A. An application role in Account B must read the objects. Which combination of steps is required? (Select THREE.)",
+    "options": [
+      "Add a bucket policy in Account A that grants the Account B role s3:GetObject on the bucket objects.",
+      "Re-encrypt the objects with the AWS managed key aws/s3 so that Account B can use it.",
+      "Add a statement to the KMS key policy in Account A that allows the Account B role to use kms:Decrypt.",
+      "Enable S3 Requester Pays on the bucket.",
+      "Attach an IAM policy to the role in Account B that allows s3:GetObject on the bucket and kms:Decrypt on the key ARN.",
+      "Create a KMS grant from Account B without changing any policy in Account A."
+    ],
+    "answer": [
+      0,
+      2,
+      4
+    ],
+    "explanation": "Cross-account access needs permission on both sides for both services: the bucket policy and key policy in Account A must trust the Account B role, and the role's IAM policy in Account B must allow the S3 and KMS actions. AWS managed keys cannot be shared across accounts because their key policies cannot be modified. Requester Pays only changes who is billed. Account B cannot create a grant on the key unless Account A's key policy first allows it.",
+    "subtopic": "Cross-account access with SSE-KMS"
+  },
+  {
+    "id": "s3-024",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A defense contractor's compliance framework requires that data at rest in Amazon S3 be protected by two independent layers of server-side encryption. The company wants AWS to manage the encryption process. Which option meets this requirement?",
+    "options": [
+      "Dual-layer server-side encryption with AWS KMS keys (DSSE-KMS)",
+      "SSE-KMS with S3 Bucket Keys enabled",
+      "SSE-S3 with S3 Versioning enabled",
+      "SSE-C with automatic key rotation"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "DSSE-KMS applies two independent layers of AES-256 encryption on the server side using AWS KMS keys, designed for frameworks that require multilayer encryption. SSE-KMS with Bucket Keys is a single layer that reduces KMS calls. Versioning is unrelated to encryption layers. SSE-C is a single layer, and key rotation is the customer's responsibility.",
+    "subtopic": "DSSE-KMS"
+  },
+  {
+    "id": "s3-025",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A law firm will archive case files in Amazon S3. Its policy states that data must already be encrypted before it leaves the firm's on-premises network and that AWS must never have access to the plaintext. Which approach meets these requirements?",
+    "options": [
+      "Use SSE-KMS with a customer managed key and a restrictive key policy.",
+      "Encrypt the files on premises with the Amazon S3 Encryption Client before uploading them.",
+      "Enforce SSE-S3 with a bucket policy that rejects unencrypted uploads.",
+      "Add a bucket policy that denies requests when aws:SecureTransport is false."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Client-side encryption encrypts the data before upload, so S3 only ever receives ciphertext. SSE-KMS and SSE-S3 are server-side, meaning S3 receives the plaintext over TLS and encrypts it in AWS. Requiring TLS protects data in transit but does not keep plaintext away from AWS.",
+    "subtopic": "Client-side encryption"
+  },
+  {
+    "id": "s3-026",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A security audit found that some legacy clients access an S3 bucket over plain HTTP. The company must reject any request to the bucket that is not sent over TLS. Which solution will meet this requirement?",
+    "options": [
+      "Enable default encryption with SSE-KMS on the bucket.",
+      "Enable S3 Block Public Access on the bucket.",
+      "Add a bucket policy statement that denies all S3 actions when the aws:SecureTransport condition key is false.",
+      "Enable S3 Transfer Acceleration, which accepts only TLS connections."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A bucket policy that denies requests where aws:SecureTransport is false blocks any non-TLS request regardless of other permissions. Default encryption protects data at rest, not in transit. Block Public Access controls public grants, not the protocol. Transfer Acceleration is an optional endpoint and does not stop clients from using the standard HTTP endpoint.",
+    "subtopic": "Bucket policies"
+  },
+  {
+    "id": "s3-027",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company requires that every object uploaded to a bucket be encrypted with one approved customer managed KMS key. Several teams upload by using their own scripts, and some scripts specify a different KMS key in the request headers. Which solution enforces the requirement?",
+    "options": [
+      "Configure default bucket encryption with the approved key and rely on it for all uploads.",
+      "Enable S3 Bucket Keys on the bucket.",
+      "Enable automatic rotation on the approved customer managed key.",
+      "Add a bucket policy that denies s3:PutObject when the s3:x-amz-server-side-encryption-aws-kms-key-id value is not the approved key ARN, and require uploaders to specify that key."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A deny statement on the s3:x-amz-server-side-encryption-aws-kms-key-id condition key rejects any upload that names a different key, so only the approved key can be used. Default encryption applies only when a request does not specify encryption headers, so requests that name another key would still succeed. Bucket Keys reduce KMS calls and rotation changes key material, and neither restricts which key is used.",
+    "subtopic": "Enforcing a specific KMS key"
+  },
+  {
+    "id": "s3-028",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company serves a single-page web application from an S3 bucket through Amazon CloudFront. The bucket must remain private with S3 Block Public Access turned on, and users must not be able to bypass CloudFront to read objects directly from S3. Which combination of steps will meet these requirements? (Select TWO.)",
+    "options": [
+      "Configure an origin access control (OAC) on the CloudFront distribution for the S3 REST API origin.",
+      "Enable static website hosting and use the website endpoint as the CloudFront origin.",
+      "Grant public read access through object ACLs and restrict access with a CloudFront geographic restriction.",
+      "Add a bucket policy that allows the cloudfront.amazonaws.com service principal to call s3:GetObject when AWS:SourceArn matches the distribution ARN.",
+      "Enable S3 Transfer Acceleration and give the accelerate endpoint to CloudFront."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "OAC lets CloudFront sign requests to the private S3 origin, and the bucket policy that allows only the CloudFront service principal for that specific distribution ensures that direct S3 requests are denied. The S3 website endpoint does not support OAC and requires public read access. Public ACLs violate the private bucket requirement and allow direct access. Transfer Acceleration is for faster uploads and does not control access.",
+    "subtopic": "CloudFront origin access control"
+  },
+  {
+    "id": "s3-029",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A nonprofit hosts its public website on an S3 static website endpoint. The organization must now serve the site over HTTPS on its custom domain www.example.org, which is managed in Amazon Route 53. Which solution will meet this requirement?",
+    "options": [
+      "Upload an ACM certificate to the S3 bucket and enable HTTPS on the website endpoint.",
+      "Create a CloudFront distribution in front of the bucket with an ACM certificate requested in us-east-1, and create a Route 53 alias record for the distribution.",
+      "Enable S3 Transfer Acceleration to obtain an HTTPS endpoint for the website.",
+      "Create a Route 53 alias record that points directly to the S3 website endpoint and enable HTTPS on the record."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "S3 website endpoints support only HTTP, so HTTPS with a custom domain is provided by CloudFront using an ACM certificate, which for CloudFront must be in us-east-1. Certificates cannot be attached to S3 buckets. Transfer Acceleration is not a website hosting endpoint. Route 53 records have no HTTPS setting; they only resolve names.",
+    "subtopic": "S3 static website hosting"
+  },
+  {
+    "id": "s3-030",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A ticketing company runs its web application behind an Application Load Balancer. If the application becomes unhealthy, the company wants users to automatically see a static maintenance page instead of an error, with minimal infrastructure to maintain. Which solution will meet these requirements?",
+    "options": [
+      "Create a CloudWatch alarm that launches a standby EC2 instance in another Region to serve the page.",
+      "Use Route 53 weighted routing to split traffic evenly between the ALB and an S3 static website.",
+      "Configure Route 53 failover routing with a health check on the ALB primary record and a secondary alias record that points to an S3 static website hosting the maintenance page.",
+      "Enable Cross-Region Replication on the website bucket and use latency-based routing."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Failover routing sends traffic to the secondary S3 website only when the health check marks the primary ALB unhealthy, and S3 static hosting needs no servers. Launching EC2 instances adds infrastructure and delay. Weighted routing sends half of the users to the maintenance page even when the application is healthy. Replication and latency routing do not detect application failures.",
+    "subtopic": "S3 static website failover"
+  },
+  {
+    "id": "s3-031",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A web application served from https://app.example.com uses browser JavaScript to fetch JSON configuration files from an S3 bucket at its S3 endpoint. Requests from the browser fail with errors stating that the origin is not allowed, although the same requests succeed from a command-line tool. What should a solutions architect do?",
+    "options": [
+      "Make the bucket public with a bucket policy that grants s3:GetObject to everyone.",
+      "Enable static website hosting on the bucket.",
+      "Generate presigned URLs for each configuration file.",
+      "Add a CORS configuration to the bucket that allows GET requests from the https://app.example.com origin."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Browsers enforce the same-origin policy for cross-origin script requests, and S3 returns the required Access-Control-Allow-Origin headers only when the bucket has a matching CORS rule. Making the bucket public does not add CORS headers and weakens security. Static website hosting and presigned URLs do not by themselves satisfy a browser's cross-origin check.",
+    "subtopic": "S3 CORS"
+  },
+  {
+    "id": "s3-032",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A research institute shares one large S3 bucket with 25 teams, each of which needs different permissions on different prefixes. The bucket policy has become difficult to manage and is approaching its size limit. Which solution will simplify access management with the LEAST operational overhead?",
+    "options": [
+      "Create an S3 Access Point for each team with its own access point policy, and delegate access control from the bucket policy to the access points.",
+      "Create a separate bucket for each team and keep them in sync with Same-Region Replication.",
+      "Use object ACLs to grant each team access to its prefix.",
+      "Create an IAM group for each team and attach a copy of the bucket policy to each group."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Access points give each team a dedicated endpoint and policy, so permissions are managed per team instead of in one large bucket policy. Separate replicated buckets duplicate data and add cost and complexity. ACLs are disabled by default and are not granular per prefix. Bucket policies are resource policies and cannot be attached to IAM groups.",
+    "subtopic": "S3 Access Points"
+  },
+  {
+    "id": "s3-033",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An analytics team must access a shared dataset bucket only from inside its VPC. Other teams access the same bucket from other networks, and their access must not be affected. Which solution will meet these requirements?",
+    "options": [
+      "Add a bucket policy that denies all requests that do not originate from the analytics VPC.",
+      "Create an S3 Access Point with a VPC network origin for the analytics VPC and grant the analytics team access only through that access point.",
+      "Create an interface VPC endpoint and turn on S3 Block Public Access for the bucket.",
+      "Enable S3 Object Lambda on the bucket for the analytics team."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An access point with a VPC network origin accepts requests only from the specified VPC, and its policy can scope the analytics team's permissions without changing other teams' access. A bucket-wide deny would block every other team. An interface endpoint plus Block Public Access does not restrict the analytics team to the VPC. Object Lambda transforms data and does not control network origin.",
+    "subtopic": "S3 Access Points"
+  },
+  {
+    "id": "s3-034",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A retailer stores customer order records in S3. An internal analytics application needs to read the records with credit card numbers and email addresses masked, while the billing application must continue reading the original records. The retailer does not want to store and keep in sync a second copy of the data. Which solution will meet these requirements?",
+    "options": [
+      "Use S3 Event Notifications to invoke a Lambda function that writes a masked copy of each record to a second bucket.",
+      "Run Amazon Macie on the bucket to remove sensitive data from the records.",
+      "Create an S3 Object Lambda Access Point that invokes a Lambda function to mask the fields when the analytics application retrieves objects.",
+      "Enable SSE-KMS and deny the analytics application kms:Decrypt on sensitive fields."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "S3 Object Lambda runs a Lambda function on GET requests made through its access point, so the analytics application receives masked data while the billing application reads the originals and no second copy is stored. Writing masked copies creates the duplicate data the retailer wants to avoid. Macie discovers sensitive data but does not transform it. KMS permissions apply to whole objects, not individual fields.",
+    "subtopic": "S3 Object Lambda"
+  },
+  {
+    "id": "s3-035",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A global SaaS company stores customer uploads in S3 buckets in three Regions. Applications in every Region must use a single global endpoint for reads and writes that routes to the nearest bucket, and the company must be able to shift all traffic away from a Region during an outage. Which solution will meet these requirements?",
+    "options": [
+      "Create Route 53 latency-based records that point a custom domain to each Regional bucket endpoint.",
+      "Create a CloudFront distribution with an origin group containing the three buckets.",
+      "Enable S3 Transfer Acceleration on each bucket and use the accelerate endpoints.",
+      "Create an S3 Multi-Region Access Point over the three buckets with two-way replication, and use its failover controls during an outage."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A Multi-Region Access Point gives one global endpoint that routes requests to the closest bucket over the AWS network, and failover controls let the company mark Regions active or passive in minutes; replication keeps the buckets synchronized. S3 requires requests to match bucket names, so a custom domain with latency records does not work for multiple bucket endpoints. CloudFront origin groups fail over only for reads. Transfer Acceleration endpoints are per bucket and do not provide routing or failover.",
+    "subtopic": "S3 Multi-Region Access Points"
+  },
+  {
+    "id": "s3-036",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A compliance officer needs a daily report listing every object in a bucket of 400 million objects along with its encryption status, storage class, and replication status. The solution must not add load to the bucket through API listing calls. Which solution will meet these requirements?",
+    "options": [
+      "Configure S3 Inventory to deliver a daily report in CSV or Apache Parquet format that includes the encryption status, storage class, and replication status fields.",
+      "Schedule a Lambda function that calls ListObjectsV2 and HeadObject for every object each day.",
+      "Enable server access logging and query the logs with Amazon Athena.",
+      "Use the S3 Storage Lens default dashboard to list the encryption status of each object."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "S3 Inventory produces scheduled flat-file lists of objects with optional metadata such as encryption status, storage class, and replication status without the caller making list requests. Listing and heading 400 million objects daily is slow and costly. Access logs show requests, not the state of every object. Storage Lens provides aggregated metrics rather than per-object listings.",
+    "subtopic": "S3 Inventory"
+  },
+  {
+    "id": "s3-037",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A real estate website stores listing photos uploaded by agents in the uploads/ prefix of an S3 bucket. A thumbnail must be generated within seconds of each upload. Which solution will meet this requirement with the LEAST operational overhead?",
+    "options": [
+      "Create an EventBridge scheduled rule that runs every minute and scans the bucket for new photos.",
+      "Configure an S3 Event Notification for s3:ObjectCreated:* events on the uploads/ prefix that invokes a Lambda function to create the thumbnail.",
+      "Enable server access logging and have a Lambda function parse the logs for new uploads.",
+      "Replicate the bucket to a processing bucket that an EC2 instance polls for new objects."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "S3 Event Notifications can invoke Lambda directly when objects are created under a prefix, giving near-real-time, serverless processing. A scheduled scan adds delay and repeated listing cost. Server access logs are delivered on a best-effort basis, often hours later. Replication plus EC2 polling adds infrastructure and latency.",
+    "subtopic": "S3 Event Notifications"
+  },
+  {
+    "id": "s3-038",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Three independent microservices must each process every new object written to the invoices/ prefix of a bucket. A developer tried to create three S3 event notification configurations with the same event type and prefix, each targeting a different SQS queue, but S3 rejected the configuration. Which solution will meet the requirement in a decoupled way?",
+    "options": [
+      "Create the three notification configurations with slightly different suffix filters so they do not overlap.",
+      "Replicate the bucket to three buckets and configure a separate notification on each copy.",
+      "Configure one S3 event notification to publish to an SNS topic, and subscribe the three SQS queues to the topic.",
+      "Have the first microservice forward each event to the other two microservices over HTTP."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "S3 does not allow overlapping prefix and event type filters across notification configurations, so fan-out is done by publishing to an SNS topic with an SQS subscription for each consumer (or by using EventBridge rules). Changing suffix filters would cause some objects to be missed. Replicating to three buckets triples storage cost. Forwarding over HTTP couples the services and creates a single point of failure.",
+    "subtopic": "S3 Event Notifications fan-out"
+  },
+  {
+    "id": "s3-039",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company is deciding whether to enable Amazon EventBridge integration for an S3 bucket instead of using direct S3 event notifications. Which capabilities does EventBridge add? (Select TWO.)",
+    "options": [
+      "Guaranteed exactly-once, strictly ordered delivery of every event.",
+      "Routing the same event to many targets through multiple rules.",
+      "Automatic encryption of objects at rest when events are delivered.",
+      "Removal of the need for any resource or IAM permissions on targets.",
+      "Advanced filtering on event fields such as object size or key patterns, plus event archive and replay."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "With EventBridge, S3 events can be matched by many rules that each send to multiple targets, and rules support richer content filtering as well as archiving and replaying events. EventBridge does not guarantee exactly-once ordered delivery, so consumers should be idempotent. Event delivery has nothing to do with object encryption. Targets still require appropriate permissions.",
+    "subtopic": "S3 and Amazon EventBridge"
+  },
+  {
+    "id": "s3-040",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A security team wants a low-cost record of every request made to a sensitive S3 bucket, including the requester, request time, operation, and response status, for periodic review. Which feature should the team enable?",
+    "options": [
+      "S3 Storage Lens advanced metrics",
+      "S3 Inventory",
+      "S3 Versioning",
+      "S3 server access logging to a separate logging bucket"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Server access logs record detailed information about each request, such as requester, operation, key, and status, and are delivered to a target bucket at no additional charge other than storage. Storage Lens gives aggregated usage and activity metrics, not per-request records. Inventory lists objects, not requests. Versioning preserves object versions but does not log access.",
+    "subtopic": "S3 server access logging"
+  },
+  {
+    "id": "s3-041",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company changed the Object Ownership setting of its log target bucket to Bucket owner enforced so that ACLs are disabled. Afterward, S3 server access logs stopped arriving. The company requires that ACLs remain disabled. What should a solutions architect do to restore log delivery?",
+    "options": [
+      "Add a bucket policy on the target bucket that allows the logging.s3.amazonaws.com service principal to call s3:PutObject, scoped to the source bucket and account.",
+      "Re-enable ACLs on the target bucket and grant write access to the S3 Log Delivery group.",
+      "Configure the source bucket to deliver its access logs to itself.",
+      "Enable SSE-C on the target bucket so that the logging service can write encrypted logs."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "When ACLs are disabled, log delivery permissions must be granted through a bucket policy for the logging.s3.amazonaws.com service principal, ideally with aws:SourceArn and aws:SourceAccount conditions. Re-enabling ACLs would work but violates the requirement. Logging a bucket to itself creates additional log records for every log write. SSE-C is supplied per request by a client and does not grant the logging service permission to write.",
+    "subtopic": "S3 server access logging"
+  },
+  {
+    "id": "s3-042",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A brokerage firm must store trade records in a write-once-read-many (WORM) format for 7 years. No user, including the root user of the account, may delete or overwrite a record during that period. Which combination of steps will meet these requirements? (Select TWO.)",
+    "options": [
+      "Enable S3 Object Lock on the bucket, which also requires S3 Versioning.",
+      "Configure a default retention period of 7 years in governance mode.",
+      "Configure a default retention period of 7 years in compliance mode.",
+      "Enable MFA Delete and store the root MFA device in a safe.",
+      "Add a lifecycle rule that expires objects after 7 years."
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "S3 Object Lock provides WORM protection on versioned buckets, and compliance mode prevents any user, including the root user, from deleting or shortening retention on a locked object version until the period ends. Governance mode can be bypassed by principals with s3:BypassGovernanceRetention. MFA Delete still allows deletion by someone who has the MFA device. A lifecycle expiration rule removes data but does not prevent earlier deletion.",
+    "subtopic": "S3 Object Lock"
+  },
+  {
+    "id": "s3-043",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants to protect backup files in S3 from deletion for 90 days. However, a small security administration team must be able to remove a backup early in exceptional cases, such as when sensitive data is uploaded by mistake. Which solution will meet these requirements?",
+    "options": [
+      "Use Object Lock compliance mode and grant the security team s3:BypassGovernanceRetention.",
+      "Place a legal hold on every backup and grant the security team s3:DeleteObject.",
+      "Use Object Lock governance mode with a 90-day retention period and grant only the security team role s3:BypassGovernanceRetention.",
+      "Enable MFA Delete and share the root user's MFA device with the security team."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Governance mode protects object versions from most users while allowing principals with the s3:BypassGovernanceRetention permission to override retention when they explicitly request it. Compliance mode cannot be bypassed by anyone. Legal holds have no expiry and still need s3:PutObjectLegalHold to remove, so they do not match a 90-day requirement. Sharing root MFA is poor security practice.",
+    "subtopic": "S3 Object Lock"
+  },
+  {
+    "id": "s3-044",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A pharmaceutical company is involved in a lawsuit. Its legal team must ensure that specific research documents in a versioned S3 bucket with Object Lock enabled cannot be deleted until the case is closed, but no one knows how long the case will last. Which solution will meet this requirement?",
+    "options": [
+      "Apply a compliance mode retention period of 10 years to the documents.",
+      "Move the documents to S3 Glacier Deep Archive and apply a vault lock policy.",
+      "Apply a governance mode retention period and extend it every month.",
+      "Place an Object Lock legal hold on the document versions and remove it when the case is closed."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A legal hold protects an object version from deletion with no expiration date and stays in place until a user with s3:PutObjectLegalHold removes it, which suits indefinite litigation holds. A fixed 10-year compliance retention could not be shortened after the case ends. Vault Lock applies to S3 Glacier vaults, and changing an object's storage class does not prevent its deletion. Manually extending governance retention adds overhead and risks lapses.",
+    "subtopic": "S3 Object Lock legal hold"
+  },
+  {
+    "id": "s3-045",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A genomics research institute publishes a 2 PB reference dataset in S3 for other organizations that have their own AWS accounts. The institute wants the organizations that download the data to pay for the requests and data transfer. Which solution will meet this requirement?",
+    "options": [
+      "Enable Requester Pays on the bucket.",
+      "Generate presigned URLs for each organization.",
+      "Replicate the dataset to a bucket in each organization's account.",
+      "Serve the dataset through CloudFront with signed cookies."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "With Requester Pays, the requester's AWS account is charged for requests and data transfer, while the bucket owner still pays for storage. Presigned URLs bill the bucket owner for downloads. Replicating 2 PB to each account is expensive and complex. CloudFront transfer is billed to the distribution owner.",
+    "subtopic": "S3 Requester Pays"
+  },
+  {
+    "id": "s3-046",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A data provider enabled Requester Pays on a bucket and granted a partner account read access in the bucket policy. The partner's download requests now fail with 403 Access Denied errors. What must the partner do?",
+    "options": [
+      "Enable S3 Transfer Acceleration in the partner account.",
+      "Include the request payer parameter (x-amz-request-payer: requester) in authenticated requests to acknowledge the charges.",
+      "Send anonymous requests so that the charges go to the bucket owner.",
+      "Ask the data provider to add the partner account to the bucket ACL as the payer."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "For Requester Pays buckets, requesters must send authenticated requests that include the x-amz-request-payer header or the equivalent SDK or CLI parameter to confirm they will pay, otherwise S3 returns 403. Anonymous requests are not allowed on Requester Pays buckets. Transfer Acceleration is unrelated. There is no ACL setting that designates a payer.",
+    "subtopic": "S3 Requester Pays"
+  },
+  {
+    "id": "s3-047",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A marketing team stores clickstream data as compressed CSV files in S3. Analysts occasionally need to run ad hoc SQL queries that return a few columns from billions of rows. The team wants the MOST cost-effective solution with no infrastructure to manage. Which solution meets these requirements?",
+    "options": [
+      "Load the data into an Amazon RDS for PostgreSQL instance and run queries there.",
+      "Copy the files to an EC2 instance each time and process them with custom scripts.",
+      "Define a table over the S3 prefix in the AWS Glue Data Catalog and query it with Amazon Athena.",
+      "Use S3 Inventory reports to query the contents of the objects."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Athena is serverless and queries data in place in S3 using standard SQL, charging per amount of data scanned, which suits occasional ad hoc analysis. An RDS instance and EC2 scripts require provisioning and running infrastructure. S3 Inventory lists object metadata and cannot query the contents of objects.",
+    "subtopic": "Querying S3 with Athena"
+  },
+  {
+    "id": "s3-048",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "Analysts query 30 TB of JSON log files in S3 with Amazon Athena, and most queries filter on a single day and read only five of 80 fields. Queries are slow and expensive. Which combination of changes will MOST improve query performance and reduce cost? (Select TWO.)",
+    "options": [
+      "Move the log files to S3 Glacier Instant Retrieval.",
+      "Convert the data to a compressed columnar format such as Apache Parquet.",
+      "Enable S3 Transfer Acceleration on the bucket.",
+      "Split the data into many files of about 1 KB each.",
+      "Partition the data in S3 by date and register the partitions in the table definition."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "Columnar formats let Athena read only the needed columns and compress well, and date partitions let Athena skip data outside the queried day, so both reduce the amount of data scanned and query time. Glacier Instant Retrieval adds retrieval charges and does not reduce scanned data. Transfer Acceleration affects transfers over the internet, not Athena reads. Very small files increase overhead and slow queries.",
+    "subtopic": "Athena performance on S3"
+  },
+  {
+    "id": "s3-049",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company with 120 AWS accounts wants a single view of S3 storage usage and activity across the organization, including which buckets hold large amounts of noncurrent versions or incomplete multipart uploads, so it can find cost savings. Which solution will meet these requirements with the LEAST effort?",
+    "options": [
+      "Create an S3 Storage Lens dashboard at the organization level.",
+      "Configure S3 Inventory on every bucket and analyze the reports separately.",
+      "Review AWS Trusted Advisor checks in each account.",
+      "Enable server access logs on every bucket and query them with Athena."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "S3 Storage Lens aggregates storage and activity metrics across all accounts in an organization and highlights cost optimization opportunities such as noncurrent version bytes and incomplete multipart upload bytes. Per-bucket Inventory reports require significant setup and custom analysis. Trusted Advisor has only limited S3 checks. Access logs describe requests, not storage composition.",
+    "subtopic": "S3 Storage Lens"
+  },
+  {
+    "id": "s3-050",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An IoT platform writes sensor readings to a bucket using keys that all begin with the same prefix, for example data/reading-0001.json. At peak, writes exceed 3,500 requests per second and the application receives HTTP 503 Slow Down responses. Which change will MOST improve write throughput?",
+    "options": [
+      "Enable S3 Versioning on the bucket.",
+      "Spread objects across multiple prefixes, for example by adding a device ID or hash segment to the key path.",
+      "Change the storage class of new objects to S3 Standard-IA.",
+      "Enable Requester Pays so that devices are billed per request."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "S3 supports at least 3,500 write and 5,500 read requests per second per partitioned prefix, so distributing keys across many prefixes lets throughput scale horizontally. Versioning does not increase request rates. Storage class does not change request throughput. Requester Pays only changes billing.",
+    "subtopic": "S3 request performance"
+  },
+  {
+    "id": "s3-051",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A geospatial application stores 50 GB raster files in S3. A processing step needs only a small header at the start of each file to decide whether to process it, and when a file is processed it must be downloaded as quickly as possible. Which approach will meet these requirements?",
+    "options": [
+      "Use S3 Select to read the header from each raster file.",
+      "Enable S3 Transfer Acceleration for the bucket.",
+      "Use GET requests with the Range header to fetch only the header, and use parallel byte-range GETs to download files that must be processed.",
+      "Use the multipart upload API to download the file in parts."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Byte-range fetches retrieve only the requested bytes, so the header can be read cheaply, and many concurrent range requests improve aggregate download throughput. S3 Select works only on CSV, JSON, and Parquet content and is not intended for binary raster files. Transfer Acceleration speeds long-distance internet transfers but does not avoid downloading the full file. Multipart upload is an upload API.",
+    "subtopic": "Byte-range fetches"
+  },
+  {
+    "id": "s3-052",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A streaming education company stores 2 GB lecture videos in an S3 bucket in us-west-2. Students around the world report slow downloads. Which combination of actions will improve download performance? (Select TWO.)",
+    "options": [
+      "Change the storage class of the videos to S3 One Zone-IA.",
+      "Configure S3 Inventory reports for the bucket.",
+      "Serve the videos through an Amazon CloudFront distribution with the bucket as the origin.",
+      "Have the client application download each video by using parallel byte-range GET requests.",
+      "Enable MFA Delete on the bucket."
+    ],
+    "answer": [
+      2,
+      3
+    ],
+    "explanation": "CloudFront caches the videos at edge locations close to students, and parallel byte-range requests increase throughput for large objects. One Zone-IA is a cheaper, less resilient class and does not improve download speed. Inventory reports and MFA Delete are management and protection features with no effect on performance.",
+    "subtopic": "S3 download performance"
+  },
+  {
+    "id": "s3-053",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Which S3 storage class stores data in a single Availability Zone, so the data would be lost if that Availability Zone were destroyed?",
+    "options": [
+      "S3 Standard",
+      "S3 Standard-IA",
+      "S3 Glacier Instant Retrieval",
+      "S3 One Zone-IA"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "S3 One Zone-IA stores data redundantly within one Availability Zone only, so it is not resilient to the physical loss of that AZ. S3 Standard, Standard-IA, and Glacier Instant Retrieval store data across a minimum of three Availability Zones in a Region.",
+    "subtopic": "S3 storage class resilience"
+  },
+  {
+    "id": "s3-054",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An order-processing service writes an order file to S3 and immediately lists the prefix so that a downstream step can pick up the new file. A developer added a 30-second sleep and a DynamoDB index of keys because of concerns about stale reads. What should a solutions architect recommend?",
+    "options": [
+      "Remove the sleep and the extra index, because S3 provides strong read-after-write consistency for PUT, DELETE, and LIST operations.",
+      "Keep the sleep, because S3 is only eventually consistent for new objects.",
+      "Enable versioning on the bucket to obtain strong consistency.",
+      "Keep the DynamoDB index, because S3 LIST operations are eventually consistent."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Amazon S3 delivers strong read-after-write consistency for all GET, PUT, LIST, and DELETE operations, so a successful write is immediately visible in reads and listings. The sleep and the extra index add latency and cost without benefit. Versioning is unrelated to consistency, and LIST is no longer eventually consistent.",
+    "subtopic": "S3 consistency model"
+  },
+  {
+    "id": "s3-055",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A design agency enabled versioning on a bucket of large project files. Storage costs have doubled because of old object versions. The agency must keep previous versions for 90 days for recovery, and those versions are rarely accessed but must be available within milliseconds. Which combination of lifecycle actions will reduce cost while meeting these requirements? (Select TWO.)",
+    "options": [
+      "Transition noncurrent versions to S3 Standard-IA 30 days after they become noncurrent.",
+      "Suspend versioning so that S3 deletes the existing noncurrent versions.",
+      "Enable MFA Delete so that old versions are removed automatically.",
+      "Permanently delete noncurrent versions 90 days after they become noncurrent.",
+      "Enable S3 Transfer Acceleration to reduce the size of stored versions."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Lifecycle rules can act on noncurrent versions specifically: moving them to Standard-IA after 30 days lowers storage cost while keeping millisecond access, and a NoncurrentVersionExpiration action removes them after the 90-day recovery window. Suspending versioning does not delete existing versions. MFA Delete adds protection and does not remove anything. Transfer Acceleration has no effect on storage size.",
+    "subtopic": "Lifecycle for noncurrent versions"
+  },
+  {
+    "id": "s3-056",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A bucket holds 2 billion objects. About 90% are JSON metadata files smaller than 10 KB, and the rest are images larger than 1 MB. After 30 days, objects are rarely read but must remain available within milliseconds and stored across multiple Availability Zones. Which lifecycle design is MOST cost-effective?",
+    "options": [
+      "Transition all objects to S3 Standard-IA after 30 days.",
+      "Use a lifecycle rule with an object size filter so that only objects larger than 128 KB transition to S3 Standard-IA after 30 days.",
+      "Transition all objects to S3 One Zone-IA after 30 days.",
+      "Transition all objects to S3 Glacier Deep Archive after 30 days."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Standard-IA bills a minimum object size of 128 KB and each lifecycle transition is a charged request, so moving billions of tiny objects can cost more than leaving them in Standard; filtering by object size transitions only the large images. Transitioning everything incurs those penalties on the small files. One Zone-IA stores data in a single AZ, which violates the resilience requirement. Deep Archive cannot provide millisecond access.",
+    "subtopic": "S3 Lifecycle object size filters"
+  },
+  {
+    "id": "s3-057",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A media analytics company has a 5 PB data lake with unpredictable access patterns. Many objects are not touched for more than 6 months, and the applications can wait several hours when they occasionally need one of those objects. The company wants to minimize storage cost automatically without building lifecycle rules for each dataset. Which solution will meet these requirements?",
+    "options": [
+      "Transition all objects to S3 Standard-IA after 30 days.",
+      "Store all objects in S3 One Zone-IA.",
+      "Use S3 Intelligent-Tiering and activate the optional Archive Access and Deep Archive Access tiers.",
+      "Store all objects in S3 Glacier Instant Retrieval."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Intelligent-Tiering moves objects among tiers automatically based on access, and the optional Archive Access and Deep Archive Access tiers place long-untouched objects in archive pricing when applications can tolerate asynchronous restore times. A fixed Standard-IA rule does not adapt and incurs retrieval fees for popular data. One Zone-IA reduces resilience and is not an archive price. Glacier Instant Retrieval charges higher retrieval fees for frequently accessed data and is not the cheapest for objects untouched for months.",
+    "subtopic": "S3 Intelligent-Tiering archive tiers"
+  },
+  {
+    "id": "s3-058",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Once a year, an auditing firm must restore 40 TB of records stored in the S3 Glacier Flexible Retrieval storage class. The restore can take up to 12 hours. Which retrieval option is the MOST cost-effective?",
+    "options": [
+      "Expedited retrieval",
+      "Standard retrieval",
+      "Copy the objects to S3 Standard with S3 Batch Operations without restoring them",
+      "Bulk retrieval"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Bulk retrievals are the lowest-cost option for S3 Glacier Flexible Retrieval and typically finish within 5 to 12 hours, which fits the window. Expedited and Standard retrievals are faster but cost more. Objects in Glacier Flexible Retrieval must be restored before they can be copied, so a copy without a restore fails.",
+    "subtopic": "S3 Glacier retrieval options"
+  },
+  {
+    "id": "s3-059",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A bank must keep a continuously updated copy of production data from one account in a test account. Data residency rules require that the data never leave the eu-central-1 Region. Which solution will meet these requirements with the LEAST operational overhead?",
+    "options": [
+      "Configure S3 Same-Region Replication from the production bucket to a bucket in the test account in eu-central-1.",
+      "Configure Cross-Region Replication to a bucket in the test account in eu-west-1.",
+      "Enable S3 Transfer Acceleration and have the test account download new objects.",
+      "Schedule a Lambda function to copy new objects to the test account every night."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Same-Region Replication automatically and asynchronously copies new objects to a bucket in another account within the same Region, keeping the data in eu-central-1. Cross-Region Replication moves data to another Region and breaks residency rules. Transfer Acceleration is not a replication mechanism. A nightly copy job adds code to maintain and is not continuous.",
+    "subtopic": "S3 Same-Region Replication"
+  },
+  {
+    "id": "s3-060",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company replicates a critical bucket to a backup bucket in another Region. It is concerned that a compromised user could delete data in the source bucket and that the deletions would propagate to the backup. Which replication behavior protects the backup copy?",
+    "options": [
+      "Enable delete marker replication on the replication rule.",
+      "Keep delete marker replication disabled; S3 never replicates deletions of specific object versions, so earlier versions remain in the destination.",
+      "Enable S3 Replication Time Control on the replication rule.",
+      "Change the rule from Cross-Region Replication to Same-Region Replication."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "When a delete request specifies a version ID, S3 does not replicate the permanent deletion, and simple deletes that create delete markers are replicated only if delete marker replication is turned on. Enabling delete marker replication would make objects appear deleted in the backup. RTC only speeds up replication, including of delete markers when enabled. Switching to SRR does not change delete behavior.",
+    "subtopic": "Replication and deletes"
+  },
+  {
+    "id": "s3-061",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A team wants to stop creating new object versions in a bucket that has had versioning enabled for a year. What happens when the team changes the bucket's versioning configuration?",
+    "options": [
+      "Versioning can be suspended, and existing object versions remain in the bucket until they are deleted.",
+      "Versioning can be disabled, and all noncurrent versions are deleted immediately.",
+      "Versioning can be disabled, and all existing versions are merged into a single null version.",
+      "The versioning configuration cannot be changed once enabled, so the bucket must be deleted."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Once versioning is enabled, a bucket can only be returned to a suspended state, never to unversioned. Suspending stops new versions from being created, but all existing versions stay and continue to be billed until they are deleted manually or by lifecycle rules. Versions are not deleted or merged automatically, and the bucket does not need to be recreated.",
+    "subtopic": "S3 Versioning states"
+  },
+  {
+    "id": "s3-062",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A solutions architect configures an S3 event notification that targets a standard SQS queue, but saving the configuration fails with an error that S3 cannot validate the destination. What should the architect do?",
+    "options": [
+      "Enable versioning on the source bucket.",
+      "Attach an IAM role to the bucket that allows sqs:SendMessage.",
+      "Add an SQS queue access policy that allows the s3.amazonaws.com service principal to call sqs:SendMessage, with a condition on the source bucket ARN.",
+      "Convert the queue to an SQS FIFO queue."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "S3 publishes notifications using the S3 service principal, so the queue's resource policy must allow s3.amazonaws.com to send messages, ideally limited with aws:SourceArn and aws:SourceAccount. Versioning is not required for notifications. Buckets do not assume IAM roles for event delivery. S3 event notifications do not support FIFO queues as direct destinations.",
+    "subtopic": "S3 Event Notifications to SQS"
+  },
+  {
+    "id": "s3-063",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An S3 event notification invokes a Lambda function that indexes each new document. During traffic spikes, the function is throttled and some documents are never indexed. The company needs every upload to be processed eventually and wants failed messages kept for investigation. Which solution will meet these requirements?",
+    "options": [
+      "Increase the Lambda function timeout to 15 minutes.",
+      "Enable S3 Transfer Acceleration to slow down incoming uploads.",
+      "Send the S3 event notifications to an SQS queue, configure the Lambda function to poll the queue, and attach a dead-letter queue.",
+      "Replace the event notification with an hourly EventBridge scheduled rule that lists the bucket."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "An SQS queue durably buffers events during spikes, the Lambda event source mapping processes them as capacity allows, and a dead-letter queue keeps messages that repeatedly fail. A longer timeout does not address throttling. Transfer Acceleration speeds uploads rather than throttling them. Hourly listing adds delay and cost and still needs custom tracking of processed objects.",
+    "subtopic": "S3 Event Notifications reliability"
+  },
+  {
+    "id": "s3-064",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company is worried that an attacker with administrator access to its production account could delete or encrypt all S3 backups. The company needs an immutable copy of new backup objects that administrators of the production account cannot delete for 30 days. Which solution will meet these requirements?",
+    "options": [
+      "Enable versioning and MFA Delete on the production backup bucket.",
+      "Replicate the backups to a bucket in a separate AWS account that has S3 Object Lock enabled with a default 30-day retention in compliance mode.",
+      "Replicate the backups to a second bucket in the production account with delete marker replication enabled.",
+      "Create daily S3 Inventory reports of the backup bucket and store them in another Region."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Replicating to an Object Lock bucket in a separate account isolates the copy from production administrators, and compliance mode retention prevents anyone from deleting the replicated versions for 30 days. MFA Delete in the same account can still be used by a privileged attacker with the root MFA device and offers no account isolation. A second bucket in the same account with delete marker replication propagates deletes. Inventory reports list objects but do not back them up.",
+    "subtopic": "Ransomware protection with replication and Object Lock"
+  },
+  {
+    "id": "s3-065",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A public sector agency serves a static website from an S3 bucket in us-east-1 through CloudFront. The site must remain available even if S3 in us-east-1 becomes unavailable, with no manual intervention. Which combination of steps will meet this requirement? (Select TWO.)",
+    "options": [
+      "Configure Same-Region Replication to a second bucket in us-east-1.",
+      "Configure Cross-Region Replication from the primary bucket to a bucket in us-west-2.",
+      "Store the site in S3 One Zone-IA to reduce the number of dependencies.",
+      "Enable S3 Transfer Acceleration on the primary bucket.",
+      "Create a CloudFront origin group with the primary bucket and the us-west-2 bucket, failing over on 5xx responses."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "Cross-Region Replication keeps a copy of the site in another Region, and a CloudFront origin group automatically retries GET requests against the secondary origin when the primary returns errors. A second bucket in the same Region does not protect against a Regional S3 problem. One Zone-IA reduces resilience. Transfer Acceleration speeds uploads and does not provide failover.",
+    "subtopic": "Multi-Region static website"
+  },
+  {
+    "id": "s3-066",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "EC2 instances in private subnets must read and write objects in an S3 bucket in the same Region. Traffic must not traverse the internet, and the bucket must reject any request that does not come through the company's VPC endpoint. Which combination of steps will meet these requirements? (Select TWO.)",
+    "options": [
+      "Route S3 traffic through a NAT gateway and allow only the NAT gateway's Elastic IP address in the bucket policy.",
+      "Create an S3 gateway VPC endpoint and associate it with the private subnets' route tables.",
+      "Enable S3 Transfer Acceleration and require the aws:SecureTransport condition.",
+      "Move the instances to public subnets and assign public IP addresses.",
+      "Add a bucket policy that denies all requests unless aws:SourceVpce equals the VPC endpoint ID."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "A gateway endpoint adds route table entries so S3 traffic stays on the AWS network without a NAT gateway, and a bucket policy that denies requests not made through that endpoint enforces the restriction. A NAT gateway sends traffic to the public S3 endpoint and adds data processing charges. Transfer Acceleration uses edge locations over the internet. Public subnets expose the instances unnecessarily.",
+    "subtopic": "S3 gateway endpoints"
+  },
+  {
+    "id": "s3-067",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A high-traffic analytics platform reads and writes thousands of SSE-KMS encrypted objects per second in one bucket by using a customer managed key. The applications intermittently receive KMS ThrottlingException errors, causing failed S3 requests. The company must keep using the customer managed key. Which solution will resolve the issue with the LEAST operational overhead?",
+    "options": [
+      "Replace the key with a multi-Region key and spread requests across Regions.",
+      "Enable S3 Bucket Keys for the bucket so that S3 makes far fewer requests to AWS KMS.",
+      "Distribute the objects across more prefixes in the bucket.",
+      "Switch the bucket's encryption to SSE-C."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "With SSE-KMS, each object operation normally calls KMS and counts against the account's KMS request quota; S3 Bucket Keys let S3 generate data keys from a bucket-level key, which sharply reduces KMS calls and throttling. Multi-Region keys do not reduce per-Region request volume for this workload. More prefixes raise S3 request limits, not KMS limits. SSE-C would drop the required customer managed KMS key.",
+    "subtopic": "SSE-KMS request quotas"
+  },
+  {
+    "id": "s3-068",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A mobile game downloads a single configuration object from S3 when it starts. After a viral launch, the game receives more than 20,000 GET requests per second for that one object, and many requests fail with HTTP 503 Slow Down responses. Which solution will MOST effectively resolve the issue?",
+    "options": [
+      "Serve the object through an Amazon CloudFront distribution so that edge locations cache it and absorb the requests.",
+      "Spread the object across multiple prefixes by renaming it.",
+      "Enable S3 Transfer Acceleration on the bucket.",
+      "Move the object to S3 Standard-IA."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "CloudFront caches the object at edge locations, so most requests never reach S3, removing the per-prefix request pressure and lowering latency for players. A single object lives under a single key, so adding prefixes does not split requests for that object. Transfer Acceleration still sends every request to the bucket. Standard-IA adds retrieval charges and does not raise request limits.",
+    "subtopic": "S3 request performance"
+  },
+  {
+    "id": "s3-069",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "Engineering offices in Singapore and Tokyo upload 5 GB CAD archives to an S3 bucket in eu-west-1 over the internet. Uploads are slow and a single network error forces the whole file to be sent again. Which combination of actions will MOST improve upload performance and reliability? (Select TWO.)",
+    "options": [
+      "Upload directly to the S3 Glacier Deep Archive storage class.",
+      "Enable S3 Object Lock on the bucket.",
+      "Use multipart upload and send the parts in parallel so that failed parts can be retried individually.",
+      "Enable S3 server access logging to diagnose slow requests.",
+      "Enable S3 Transfer Acceleration and upload through the accelerate endpoint."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Multipart upload sends parts in parallel for higher throughput and only failed parts need to be resent, and Transfer Acceleration routes the traffic through nearby edge locations and the AWS backbone to the distant Region. Choosing Deep Archive changes the storage price, not upload speed. Object Lock and access logging do not improve upload performance.",
+    "subtopic": "Upload performance"
+  },
+  {
+    "id": "s3-070",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A document management application runs on EC2 instances behind an Application Load Balancer. Users upload files of up to 2 GB through the application servers, which then write them to S3. During business hours the instances are saturated by upload traffic. Which solution will MOST improve the scalability of the application?",
+    "options": [
+      "Increase the ALB idle timeout so that long uploads do not fail.",
+      "Add an EBS volume to each instance to buffer uploads before copying them to S3.",
+      "Enable S3 Transfer Acceleration while keeping uploads flowing through the instances.",
+      "Have the application return presigned URLs so that browsers upload files directly to S3."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Presigned URLs let clients upload directly to S3, which scales automatically, while the application only authorizes the upload, removing the data path from the instances. A longer timeout and EBS buffering keep the instances in the data path. Transfer Acceleration would only speed the instance-to-S3 leg while the instances remain the bottleneck.",
+    "subtopic": "Presigned URLs for direct upload"
+  }
+]

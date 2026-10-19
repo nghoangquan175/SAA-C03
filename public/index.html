@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SAA-C03 Practice</title>
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23161c26'/><path d='M14 40c10 7 26 7 36 0' stroke='%23ff9900' stroke-width='5' fill='none' stroke-linecap='round'/><path d='M44 36l7 3-3 7' stroke='%23ff9900' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/><text x='32' y='31' font-family='Arial' font-weight='700' font-size='17' fill='%23e6edf3' text-anchor='middle'>SAA</text></svg>">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menu">☰</button>
+    <a class="brand" href="#/">
+      <span class="brand-mark">SAA</span>
+      <span class="brand-text">Solutions Architect <b>Associate</b></span>
+    </a>
+    <div class="topbar-right" id="topbarRight"></div>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" id="sidebar">
+      <a href="#/" data-nav="home"><span>◎</span>Dashboard</a>
+      <a href="#/exams" data-nav="exams"><span>⏱</span>Practice Exams</a>
+      <a href="#/topics" data-nav="topics"><span>▦</span>Topic Quizzes</a>
+      <a href="#/review" data-nav="review"><span>↺</span>Review Mistakes <em id="mistakeCount"></em></a>
+      <a href="#/bookmarks" data-nav="bookmarks"><span>★</span>Bookmarks <em id="bookmarkCount"></em></a>
+      <a href="#/history" data-nav="history"><span>☰</span>History</a>
+      <a href="#/guide" data-nav="guide"><span>ℹ</span>Exam Guide</a>
+      <div class="sidebar-foot" id="bankInfo"></div>
+    </nav>
+    <main id="app" class="main"><div class="loading">Loading question bank…</div></main>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="modal-backdrop" id="modal" hidden></div>
+  <script src="/app.js"></script>
+</body>
+</html>
