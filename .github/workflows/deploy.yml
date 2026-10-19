@@ -1,0 +1,44 @@
+name: Deploy
+
+# Every push to main publishes the site to https://saa.quannh.xyz.
+# Infra lives in infras/ and is applied by hand with Terraform, so changes there alone don't deploy.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'infras/**'
+      - '**.md'
+  workflow_dispatch:
+
+permissions:
+  id-token: write # GitHub OIDC token, exchanged for the saa-github-deploy role
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate questions and build
+        run: npm run build
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # no-cache: browsers revalidate with the ETag, so a new deploy shows up on the next load
+      - name: Upload to S3
+        run: aws s3 sync dist "s3://${{ secrets.S3_BUCKET }}" --delete --cache-control "no-cache" --no-progress
+
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/*"

@@ -11,14 +11,19 @@ output "distribution_id" {
   value = aws_cloudfront_distribution.site.id
 }
 
+output "distribution_arn" {
+  description = "Scope cloudfront:CreateInvalidation of the GitHub deploy role (created by hand) to this ARN."
+  value       = aws_cloudfront_distribution.site.arn
+}
+
 output "bucket" {
   value = aws_s3_bucket.site.bucket
 }
 
-output "deploy_role_arn" {
-  value = aws_iam_role.github_deploy.arn
-}
-
 output "kvs_arn" {
   value = aws_cloudfront_key_value_store.auth.arn
+}
+
+output "deploy_role_arn" {
+  value = aws_iam_role.github_deploy.arn
 }
