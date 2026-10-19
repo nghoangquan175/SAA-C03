@@ -1,12 +1,20 @@
 import cf from 'cloudfront';
 
-// Login gate (viewer-request). Terraform fills in the KeyValueStore id.
+// Login gate (viewer-request). Terraform fills in the KeyValueStore id and the site domain.
 // The cookie holds SHA-256(username:password:salt) computed by public/login.js.
 const kvs = cf.kvs('__KVS_ID__');
+const SITE_HOST = '__SITE_HOST__';
 const PUBLIC_PATHS = ['/login.html', '/login.js', '/styles.css', '/favicon.ico'];
 
 async function handler(event) {
   const request = event.request;
+
+  // Only the real domain serves the site; the default *.cloudfront.net name is blocked.
+  const host = request.headers.host ? request.headers.host.value : '';
+  if (host !== SITE_HOST) {
+    return { statusCode: 403, statusDescription: 'Forbidden' };
+  }
+
   if (PUBLIC_PATHS.indexOf(request.uri) !== -1) return request;
 
   const cookie = request.cookies.saa_auth;

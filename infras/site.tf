@@ -58,9 +58,12 @@ resource "aws_cloudfront_key_value_store" "auth" {
 resource "aws_cloudfront_function" "auth" {
   name    = "saa-auth-gate"
   runtime = "cloudfront-js-2.0"
-  comment = "Redirects to /login.html unless the saa_auth cookie matches the stored hash"
+  comment = "Blocks other hostnames, redirects to /login.html unless the saa_auth cookie matches the stored hash"
   publish = true
-  code    = replace(file("${path.module}/auth-function.js"), "__KVS_ID__", aws_cloudfront_key_value_store.auth.id)
+  code = replace(
+    replace(file("${path.module}/auth-function.js"), "__KVS_ID__", aws_cloudfront_key_value_store.auth.id),
+    "__SITE_HOST__", var.domain
+  )
 
   key_value_store_associations = [aws_cloudfront_key_value_store.auth.arn]
 }
