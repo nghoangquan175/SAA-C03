@@ -2387,5 +2387,47 @@
     "explanation": "A regional NAT gateway has its own route table, which AWS creates with a route to the internet gateway, and the transit gateway is a supported target in it, so return routes to other networks belong there. After translating responses back to the spoke instances' private addresses, the NAT gateway needs a 10.0.0.0/8 route to the transit gateway to deliver them. Transit gateway route tables target attachments, not NAT gateways, appliance mode does not add missing routes, and a regional NAT gateway does not use public subnets.",
     "subtopic": "Regional NAT Gateway",
     "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateways-regional.html"
+  },
+  {
+    "id": "vpc-120",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Instances in private subnets reach the internet through a zonal public NAT gateway that has an Elastic IP address. The company also routes traffic for an on-premises payment server from the NAT gateway to a transit gateway with a Site-to-Site VPN attachment. The on-premises firewall allow-lists the NAT gateway's Elastic IP address, but it drops this traffic. What is the cause?",
+    "options": [
+      "Traffic that leaves through the transit gateway reaches on premises from the NAT gateway's private IPv4 address, because the Elastic IP address is applied only when traffic goes through the internet gateway.",
+      "The Site-to-Site VPN tunnels translate the Elastic IP address to the customer gateway's address, so the firewall sees the tunnel endpoint instead of the NAT gateway as the source.",
+      "A public NAT gateway cannot forward traffic to a transit gateway, so the packets are dropped in the VPC before they reach the VPN, and the firewall logs show only retries.",
+      "The transit gateway replaces the source address with the IP address of its VPC attachment network interface, so the firewall must allow-list the transit gateway attachment subnet."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Both public and private NAT gateways first translate the instances' source address to the NAT gateway's own private IPv4 address. For a public NAT gateway, the internet gateway then maps that private address to the associated Elastic IP address, so the Elastic IP is used as the source only for traffic that leaves through the internet gateway. Traffic sent from the NAT gateway to a transit gateway or virtual private gateway arrives from the NAT gateway's private IP address, so the firewall must allow that address. A public NAT gateway can route to a transit gateway, and neither the VPN tunnels nor the transit gateway rewrite the source address.",
+    "subtopic": "NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html"
+  },
+  {
+    "id": "vpc-121",
+    "topic": "vpc",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "An instance with the private IPv4 address 10.16.32.5 sends a request to a website on the internet through a zonal public NAT gateway that has the Elastic IP address 3.3.3.1. Which statements correctly describe how the source address is translated? (Select TWO.)",
+    "options": [
+      "The NAT gateway replaces the source address 10.16.32.5 with the NAT gateway's own private IPv4 address from its subnet.",
+      "The NAT gateway replaces the source address 10.16.32.5 directly with 3.3.3.1, and the internet gateway forwards the packet unchanged.",
+      "The internet gateway maps the NAT gateway's private IPv4 address to 3.3.3.1, so the website sees 3.3.3.1 as the source address.",
+      "The instance's operating system adds 3.3.3.1 as a secondary address so that the website can send responses directly to the instance.",
+      "The internet gateway maps 10.16.32.5 to 3.3.3.1 in a one-to-one record, because the Elastic IP address is associated with the instance's subnet."
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "A public NAT gateway maps the instance's private source address to the NAT gateway's own private IPv4 address, and the internet gateway then maps that private address to the Elastic IP address associated with the NAT gateway. The website therefore sees 3.3.3.1, and responses return through the same two translations in reverse. The NAT gateway does not write the Elastic IP itself, the instance never knows about 3.3.3.1, and Elastic IP addresses are associated with network interfaces such as the NAT gateway's, not with subnets or with the instance in this design.",
+    "subtopic": "NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html"
   }
 ]
