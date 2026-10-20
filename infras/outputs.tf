@@ -24,6 +24,10 @@ output "kvs_arn" {
   value = aws_cloudfront_key_value_store.auth.arn
 }
 
+output "book_table" {
+  value = aws_dynamodb_table.book.name
+}
+
 output "deploy_role_arn" {
   value = aws_iam_role.github_deploy.arn
 }

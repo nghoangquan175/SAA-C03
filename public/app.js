@@ -19,7 +19,9 @@
 
   // ---------- State ----------
   const bank = { topics: [], topicMap: {}, questions: [], byId: {}, exams: [] };
-  let store = { attempts: [], qstats: {}, bookmarks: [], session: null, prefs: {} };
+  // book: per-question page state { done, ok, choice, note, at }, synced to /api/book.
+  // bookPos: last page opened per topic. bookPending: qids saved locally but not yet in the cloud.
+  let store = { attempts: [], qstats: {}, bookmarks: [], session: null, prefs: {}, book: {}, bookPos: {}, bookPending: [] };
   let timerHandle = null;
   let reviewFilter = 'all';
   const PAGE_SIZE = 20;
@@ -119,6 +121,96 @@
     s.at = Date.now();
   }
   const mistakeIds = () => Object.keys(store.qstats).filter(id => store.qstats[id].last === false && bank.byId[id]);
+
+  // ---------- Book pages & cloud sync ----------
+  // Every change is saved in localStorage first, then sent to /api/book (DynamoDB behind CloudFront).
+  // If the API can't be reached the page stays queued in bookPending and is retried later.
+  const cloud = { state: 'idle', timers: {} }; // idle | syncing | synced | local
+  const bookEntry = id => store.book[id] || {};
+
+  async function sha256Hex(text) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  // The Lambda origin sits behind CloudFront OAC, which requires the payload hash on PUT requests.
+  async function api(method, path, body) {
+    const opts = { method, headers: { Accept: 'application/json' }, credentials: 'same-origin' };
+    if (body !== undefined) {
+      opts.body = JSON.stringify(body);
+      opts.headers['Content-Type'] = 'application/json';
+      opts.headers['x-amz-content-sha256'] = await sha256Hex(opts.body);
+    }
+    const res = await fetch('/api' + path, opts);
+    if (!res.ok || !(res.headers.get('content-type') || '').includes('application/json')) throw new Error(`api ${res.status}`);
+    return res.json();
+  }
+
+  function setCloud(state) {
+    cloud.state = state;
+    const el = $('#syncState');
+    if (el) el.outerHTML = syncBadge();
+  }
+  function syncBadge() {
+    const pending = store.bookPending.length;
+    const map = {
+      idle: ['muted', 'Saved'],
+      syncing: ['muted', 'Saving…'],
+      synced: ['good', '✓ Synced to cloud'],
+      local: ['warn', `Saved on this device${pending ? ` · ${pending} waiting to sync` : ''}`],
+    };
+    const [cls, label] = map[cloud.state] || map.idle;
+    return `<span class="sync ${cls}" id="syncState" title="${cloud.state === 'local' ? 'The cloud copy is unavailable right now; changes sync automatically when it is back.' : ''}">${label}</span>`;
+  }
+
+  function saveBook(id, patch, delay = 0) {
+    store.book[id] = Object.assign({}, bookEntry(id), patch, { at: Date.now() });
+    if (!store.bookPending.includes(id)) store.bookPending.push(id);
+    saveStore();
+    clearTimeout(cloud.timers[id]);
+    cloud.timers[id] = setTimeout(() => pushBook([id]), delay);
+  }
+
+  async function pushBook(ids = store.bookPending.slice()) {
+    if (!ids.length) return;
+    setCloud('syncing');
+    let failed = false;
+    for (const id of ids) {
+      const e = store.book[id];
+      if (!e) continue;
+      try {
+        await api('PUT', '/book/' + encodeURIComponent(id), e);
+        // Only clear it if nothing changed while the request was in flight
+        if (store.book[id] === e) store.bookPending = store.bookPending.filter(x => x !== id);
+      } catch (_) { failed = true; break; }
+    }
+    saveStore();
+    setCloud(failed ? 'local' : store.bookPending.length ? 'syncing' : 'synced');
+  }
+
+  // Newest timestamp wins per page, so edits from another device are merged instead of overwritten.
+  async function pullBook() {
+    try {
+      const { items } = await api('GET', '/book');
+      items.forEach(it => {
+        const mine = store.book[it.qid];
+        if (!mine || (it.at || 0) > (mine.at || 0)) {
+          const { qid, ...rest } = it;
+          store.book[qid] = rest;
+          store.bookPending = store.bookPending.filter(x => x !== qid);
+        } else if ((mine.at || 0) > (it.at || 0) && !store.bookPending.includes(it.qid)) store.bookPending.push(it.qid);
+      });
+      const remote = new Set(items.map(it => it.qid));
+      Object.keys(store.book).forEach(id => { if (!remote.has(id) && !store.bookPending.includes(id)) store.bookPending.push(id); });
+      saveStore();
+      setCloud('synced');
+      await pushBook();
+      return true;
+    } catch (_) {
+      setCloud('local');
+      return false;
+    }
+  }
+  window.addEventListener('online', () => pushBook());
 
   function updateCounts() {
     if (!bank.questions.length) return;
@@ -446,7 +538,7 @@
         <div class="card pad-lg">
           <div class="section-head"><h2>Focus areas</h2>${mistakes ? `<a href="#/review" class="small">${mistakes} to review →</a>` : ''}</div>
           ${weak.length ? `<table class="sub-table"><tbody>${weak.map(({ t, s }) => `
-            <tr class="pick" data-href="#/topic/${t.key}"><td>${esc(t.icon)} ${esc(t.title)}</td><td class="num">${s.acc}%</td><td class="num muted">${s.seen}/${s.total}</td></tr>`).join('')}
+            <tr class="pick" data-href="#/book/${t.key}"><td>${esc(t.icon)} ${esc(t.title)}</td><td class="num">${s.acc}%</td><td class="num muted">${s.seen}/${s.total}</td></tr>`).join('')}
             </tbody></table>` : `<p class="muted">Answer at least 5 questions in a topic and your weakest topics will show up here.</p>`}
         </div>
       </div>
@@ -486,26 +578,228 @@
       ${!bank.exams.length ? '<div class="empty">Not enough questions to build a full exam yet.</div>' : ''}`;
   }
 
+  // ---------- Books (one per topic, one question per page) ----------
+  const bookPages = key => bank.questions.filter(q => q.topic === key); // file order = page order
+  function bookStats(key) {
+    const pages = bookPages(key);
+    const s = { total: pages.length, done: 0, ok: 0, later: 0, notes: 0, firstOpen: -1 };
+    pages.forEach((q, i) => {
+      const e = bookEntry(q.id);
+      if (e.done) { s.done++; if (e.ok) s.ok++; } else if (s.firstOpen < 0) s.firstOpen = i;
+      if (e.later) s.later++;
+      if (e.note && e.note.trim()) s.notes++;
+    });
+    return s;
+  }
+  // Resume where the reader left off, else the first page that isn't solved yet
+  function resumePage(key) {
+    const s = bookStats(key);
+    const last = store.bookPos[key];
+    if (last != null && last < s.total) return last;
+    return s.firstOpen >= 0 ? s.firstOpen : 0;
+  }
+
   function viewTopics() {
     setActiveNav('topics');
     const groups = [...new Set(bank.topics.map(t => t.group))];
     app().innerHTML = `
       ${resumeBanner()}
-      <div class="page-head"><div><h1>Topic Quizzes</h1>
-        <p>Drill one section at a time with instant feedback, or mix several topics into a custom quiz.</p></div>
-        <a class="btn" href="#/custom">Build custom quiz</a>
+      <div class="page-head"><div><h1>Topic Books</h1>
+        <p>Each topic is a book and each question is a page. Solve a page to complete it, write your own notes, and mark pages to come back to.</p></div>
+        <div class="row"><a class="btn" href="#/notes">My notes</a><a class="btn" href="#/custom">Build custom quiz</a></div>
       </div>
       ${groups.map(g => `
         <div class="section"><h2>${esc(g)}</h2>
         <div class="grid grid-auto">${bank.topics.filter(t => t.group === g).map(t => {
-          const s = topicStats(t.key);
-          return `<a class="card clickable topic-card" href="#/topic/${t.key}" style="text-decoration:none;color:inherit">
+          const s = bookStats(t.key);
+          const finished = s.total && s.done === s.total;
+          const started = s.done || store.bookPos[t.key] != null;
+          return `<a class="card clickable book-card" href="#/book/${t.key}">
             <div class="top"><div class="topic-icon">${esc(t.icon)}</div>
               <div><h3>${esc(t.title)}</h3><p>${esc(t.summary)}</p></div></div>
-            <div class="bar thin"><i style="width:${s.mastery}%"></i></div>
-            <div class="stats"><span>${s.total} questions</span><span>${s.seen ? `${s.acc}% accuracy · ${s.seen} seen` : 'Not started'}</span></div>
+            <div class="book-progress"><b>${s.done}</b><span>/ ${s.total} pages</span>${s.done ? `<span class="muted small">· ${pct(s.ok, s.done)}% correct</span>` : ''}</div>
+            <div class="bar thin"><i style="width:${pct(s.done, s.total)}%"></i></div>
+            <div class="stats">
+              <span>${s.later ? `<span class="tag-later">⚑ ${s.later} to revisit</span>` : ''}${s.notes ? `<span>✎ ${s.notes} note${s.notes > 1 ? 's' : ''}</span>` : ''}</span>
+              <span class="btn sm ${started && !finished ? 'primary' : ''}">${finished ? 'Read again' : started ? `Continue · p.${resumePage(t.key) + 1}` : 'Start reading'}</span>
+            </div>
           </a>`;
         }).join('')}</div></div>`).join('')}`;
+  }
+
+  let bookDraft = { id: null, choice: [] }; // selections on an unsolved page before "Check answer"
+  let bookFilter = 'all';
+  const BOOK_FILTERS = [['all', 'All'], ['open', 'Unsolved'], ['wrong', 'Wrong'], ['later', 'Solve later'], ['notes', 'Has notes']];
+  function pageMatches(q, f) {
+    const e = bookEntry(q.id);
+    if (f === 'open') return !e.done;
+    if (f === 'wrong') return e.done && !e.ok;
+    if (f === 'later') return !!e.later;
+    if (f === 'notes') return !!(e.note && e.note.trim());
+    return true;
+  }
+
+  function viewBook(key, pageArg) {
+    setActiveNav('topics');
+    const t = bank.topicMap[key];
+    if (!t) return viewNotFound();
+    const pages = bookPages(key);
+    if (!pages.length) return viewNotFound();
+    const n = Number(pageArg);
+    if (!Number.isInteger(n) || n < 1 || n > pages.length) {
+      location.replace(`#/book/${key}/${resumePage(key) + 1}`);
+      return;
+    }
+    const i = n - 1;
+    store.bookPos[key] = i;
+    saveStore();
+    const q = pages[i];
+    const e = bookEntry(q.id);
+    if (bookDraft.id !== q.id) bookDraft = { id: q.id, choice: [] };
+    const chosen = e.done ? e.choice || [] : bookDraft.choice;
+    const need = requiredCount(q);
+    const s = bookStats(key);
+    const bookmarked = store.bookmarks.includes(q.id);
+    const shown = pages.map((p, k) => [p, k]).filter(([p]) => pageMatches(p, bookFilter));
+
+    app().innerHTML = `
+      <div class="book-head">
+        <div><a href="#/topics" class="small">← All books</a>
+          <h1>${esc(t.icon)} ${esc(t.title)}</h1></div>
+        <span class="spacer"></span>
+        <div class="book-count"><b>${s.done}</b> / ${s.total} pages completed${s.done ? ` · ${pct(s.ok, s.done)}% correct` : ''}</div>
+      </div>
+      <div class="progress-line"><i style="width:${pct(s.done, s.total)}%"></i></div>
+      <div class="quiz">
+        <div>
+          <article class="qcard page">
+            <div class="qmeta">
+              <span class="qnum">Page ${n} of ${pages.length}</span>
+              ${e.done ? `<span class="chip ${e.ok ? 'good' : 'bad'}">${e.ok ? '✓ Completed · correct' : '✗ Completed · incorrect'}</span>` : ''}
+              ${e.done ? domainChip(q.domain) : ''}
+              ${e.done && q.subtopic ? `<span class="chip">${esc(q.subtopic)}</span>` : ''}
+              <span class="spacer"></span>
+              <button class="btn sm ${e.later ? 'later-on' : 'ghost'}" data-action="toggle-later" title="Mark to solve later (M)">${e.later ? '⚑ Solve later' : '⚐ Solve later'}</button>
+              <button class="icon-btn ${bookmarked ? 'on' : ''}" data-action="book-star" title="Bookmark (S)" aria-label="Bookmark">★</button>
+            </div>
+            <div class="qtext">${esc(q.question)}</div>
+            ${q.type === 'multi' ? `<div class="qhint">Multiple response — choose ${need}.${e.done ? '' : ` Selected ${chosen.length}/${need}.`}</div>` : ''}
+            ${renderOptions(q, chosen, !!e.done, !e.done)}
+            ${e.done ? explanationBlock(q, chosen) : ''}
+            <div class="qactions">
+              <button class="btn" data-action="page-prev" ${i === 0 ? 'disabled' : ''}>← Previous page</button>
+              <span class="spacer"></span>
+              ${e.done
+                ? `<button class="btn ghost" data-action="solve-again">Solve again</button>
+                   ${i < pages.length - 1 ? `<button class="btn primary" data-action="page-next">Next page →</button>` : `<a class="btn primary" href="#/topics">Back to books</a>`}`
+                : `${chosen.length < need ? `<span class="small text-2">${chosen.length ? `Select ${need - chosen.length} more to check` : need > 1 ? `Select ${need} answers` : 'Select an answer'}</span>` : ''}
+                   ${i < pages.length - 1 ? `<button class="btn" data-action="page-next">Skip →</button>` : ''}
+                   <button class="btn primary" data-action="page-check" ${chosen.length === need ? '' : 'disabled'}>Check answer</button>`}
+            </div>
+          </article>
+
+          <section class="card notes-card">
+            <div class="row" style="justify-content:space-between">
+              <label for="pageNote"><b>My notes</b> <span class="muted small">— how you understand this question, in your own words</span></label>
+              ${syncBadge()}
+            </div>
+            <textarea id="pageNote" data-qid="${q.id}" rows="4" placeholder="e.g. Regional NAT gateway has its own route table to the IGW, so the VPC needs no public subnet">${esc(e.note || '')}</textarea>
+          </section>
+          <div class="kbd-hint"><kbd>1</kbd>–<kbd>6</kbd> or <kbd>A</kbd>–<kbd>F</kbd> select · <kbd>Enter</kbd> check / next page · <kbd>←</kbd> <kbd>→</kbd> turn pages · <kbd>M</kbd> solve later · <kbd>S</kbd> star · <kbd>N</kbd> write a note</div>
+        </div>
+
+        <aside class="navigator"><div class="card">
+          <div class="row" style="justify-content:space-between"><b>Contents</b><span class="muted small">${s.done}/${s.total} done</span></div>
+          <div class="toc-filters">${BOOK_FILTERS.map(([k, l]) => {
+            const c = pages.filter(p => pageMatches(p, k)).length;
+            return `<button class="select-chip sm ${bookFilter === k ? 'on' : ''}" data-action="book-filter" data-key="${k}">${l} (${c})</button>`;
+          }).join('')}</div>
+          ${shown.length ? `<div class="nav-grid">${shown.map(([p, k]) => {
+            const pe = bookEntry(p.id);
+            let cls = 'nav-cell';
+            if (pe.done) cls += pe.ok ? ' correct' : ' wrong';
+            if (pe.later) cls += ' flagged';
+            if (pe.note && pe.note.trim()) cls += ' noted';
+            if (k === i) cls += ' current';
+            return `<a class="${cls}" href="#/book/${key}/${k + 1}" title="Page ${k + 1}">${k + 1}</a>`;
+          }).join('')}</div>` : `<p class="muted small" style="margin-top:12px">No pages match this filter.</p>`}
+          <div class="legend">
+            <span><i style="background:var(--good-soft);border-color:var(--good)"></i>Correct</span>
+            <span><i style="background:var(--bad-soft);border-color:var(--bad)"></i>Wrong</span>
+            <span><i style="background:var(--warn);border-color:var(--warn);border-radius:50%"></i>Solve later</span>
+            <span><i class="note-dot"></i>Has notes</span>
+          </div>
+          ${s.firstOpen >= 0 ? `<button class="btn sm" style="margin-top:12px;width:100%" data-action="next-open">Next unsolved page</button>` : ''}
+          ${s.later ? `<button class="btn sm" style="margin-top:8px;width:100%" data-action="next-later">Next "solve later" page</button>` : ''}
+        </div></aside>
+      </div>`;
+  }
+
+  function bookCtx() {
+    const m = location.hash.match(/^#\/book\/([^/]+)\/(\d+)$/);
+    if (!m) return null;
+    const pages = bookPages(m[1]);
+    const i = Number(m[2]) - 1;
+    return pages[i] ? { key: m[1], pages, i, q: pages[i] } : null;
+  }
+  const gotoPage = (key, i) => { location.hash = `#/book/${key}/${i + 1}`; };
+
+  function bookSelect(idx) {
+    const c = bookCtx();
+    if (!c || bookEntry(c.q.id).done || idx >= c.q.options.length) return;
+    let chosen = bookDraft.choice.slice();
+    if (c.q.type === 'single') chosen = [idx];
+    else if (chosen.includes(idx)) chosen = chosen.filter(x => x !== idx);
+    else {
+      if (chosen.length >= requiredCount(c.q)) { toast(`Select only ${requiredCount(c.q)} — deselect one first`); return; }
+      chosen.push(idx);
+    }
+    bookDraft = { id: c.q.id, choice: chosen.sort((a, b) => a - b) };
+    rerender();
+  }
+
+  function bookCheck() {
+    const c = bookCtx();
+    if (!c) return;
+    const chosen = bookDraft.choice;
+    if (chosen.length !== requiredCount(c.q)) return toast(`Select ${requiredCount(c.q)} option${requiredCount(c.q) > 1 ? 's' : ''} first`);
+    const ok = sameSet(chosen, c.q.answer);
+    recordAnswer(c.q, ok);
+    saveBook(c.q.id, { done: true, ok, choice: chosen });
+    rerender();
+  }
+
+  function bookJump(pred) {
+    const c = bookCtx();
+    if (!c) return;
+    for (let step = 1; step <= c.pages.length; step++) {
+      const k = (c.i + step) % c.pages.length;
+      if (pred(c.pages[k])) return gotoPage(c.key, k);
+    }
+    toast('None left');
+  }
+
+  function viewNotes() {
+    setActiveNav('notes');
+    const items = bank.questions.filter(q => (bookEntry(q.id).note || '').trim());
+    const byTopic = {};
+    items.forEach(q => (byTopic[q.topic] = byTopic[q.topic] || []).push(q));
+    const index = q => bookPages(q.topic).indexOf(q);
+    app().innerHTML = `
+      <div class="page-head"><div><h1>My Notes</h1>
+        <p>Everything you wrote on book pages, grouped by book. Open a note to see its page.</p></div>
+        <span class="muted small">${items.length} note${items.length === 1 ? '' : 's'}</span></div>
+      ${items.length ? bank.topics.filter(t => byTopic[t.key]).map(t => `
+        <div class="section"><h2>${esc(t.icon)} ${esc(t.title)} <span class="muted small">· ${byTopic[t.key].length}</span></h2>
+          ${byTopic[t.key].map(q => {
+            const e = bookEntry(q.id);
+            return `<a class="card clickable note-item" href="#/book/${t.key}/${index(q) + 1}">
+              <div class="muted small">Page ${index(q) + 1}${q.subtopic && e.done ? ` · ${esc(q.subtopic)}` : ''}${e.done ? (e.ok ? ' · ✓ correct' : ' · ✗ incorrect') : ' · not solved yet'}${e.later ? ' · ⚑ solve later' : ''}</div>
+              <div class="note-text">${esc(e.note)}</div>
+              <div class="stem muted small">${esc(q.question)}</div>
+            </a>`;
+          }).join('')}
+        </div>`).join('') : `<div class="empty">No notes yet. Open any book and write in "My notes" under a page.</div>`}`;
   }
 
   function filterChips(name, options, current) {
@@ -548,53 +842,6 @@
              <button class="btn sm" data-action="reset-filters">Reset filters</button>`}</div>`;
   }
 
-  let topicSub = null; // selected subtopic on the topic page
-  function viewTopic(key) {
-    setActiveNav('topics');
-    const t = bank.topicMap[key];
-    if (!t) return viewNotFound();
-    const all = bank.questions.filter(q => q.topic === key);
-    const pool = topicSub ? all.filter(q => q.subtopic === topicSub) : all;
-    const available = applyFilters(pool, quizPrefs()).length;
-    const subs = {};
-    all.forEach(q => {
-      const k = q.subtopic || 'General';
-      const s = subs[k] || (subs[k] = { n: 0, seen: 0, ok: 0 });
-      s.n++;
-      const st = store.qstats[q.id];
-      if (st) { s.seen++; if (st.last) s.ok++; }
-    });
-    const st = topicStats(key);
-    const dmap = {};
-    all.forEach(q => { dmap[q.domain] = dmap[q.domain] || [0, 0]; dmap[q.domain][1]++; const s = store.qstats[q.id]; if (s && s.last) dmap[q.domain][0]++; });
-
-    app().innerHTML = `
-      ${resumeBanner()}
-      <div class="page-head"><div>
-        <a href="#/topics" class="small">← All topics</a>
-        <h1 style="margin-top:8px">${esc(t.icon)} ${esc(t.title)}</h1>
-        <p>${esc(t.summary)}</p></div>
-        <div class="row"><span class="chip">${st.total} questions</span><span class="chip accent">${st.seen ? st.acc + '% accuracy' : 'Not started'}</span></div>
-      </div>
-      <div class="setup">
-        <div class="card pad-lg" id="setupCard" data-scope="topic" data-key="${key}">
-          ${topicSub ? `<div class="row" style="margin-bottom:16px"><span class="chip accent">Subtopic: ${esc(topicSub)}</span><button class="btn sm ghost" data-action="clear-sub">Clear</button></div>` : ''}
-          ${setupOptions(available)}
-        </div>
-        <div class="card">
-          <h3 style="margin-bottom:8px">Subtopics</h3>
-          <p class="muted small" style="margin-bottom:8px">Click a row to quiz only that subtopic.</p>
-          <table class="sub-table"><thead><tr><th>Subtopic</th><th class="num">Qs</th><th class="num">Correct</th></tr></thead><tbody>
-          ${Object.entries(subs).sort((a, b) => b[1].n - a[1].n).map(([name, s]) => `
-            <tr class="pick ${topicSub === name ? 'on' : ''}" data-action="pick-sub" data-sub="${esc(name)}">
-              <td>${esc(name)}</td><td class="num">${s.n}</td><td class="num ${s.seen ? '' : 'muted'}">${s.seen ? `${s.ok}/${s.seen}` : '—'}</td></tr>`).join('')}
-          </tbody></table>
-          <h3 style="margin:18px 0 6px">By domain</h3>
-          ${DKEYS.filter(d => dmap[d]).map(d => `<div class="row small" style="justify-content:space-between;padding:4px 0">${domainChip(d)}<span class="muted">${dmap[d][1]} Q · ${dmap[d][0]} mastered</span></div>`).join('')}
-        </div>
-      </div>`;
-  }
-
   let customTopics = new Set();
   let customDomain = 'all';
   function viewCustom() {
@@ -618,18 +865,11 @@
   }
 
   function startFromSetup() {
-    const card = $('#setupCard');
     const p = quizPrefs();
-    let pool, title, topicKey = null;
-    if (card.dataset.scope === 'topic') {
-      topicKey = card.dataset.key;
-      pool = bank.questions.filter(q => q.topic === topicKey && (!topicSub || q.subtopic === topicSub));
-      title = topicName(topicKey) + (topicSub ? ` · ${topicSub}` : '');
-    } else {
-      pool = bank.questions.filter(q => (!customTopics.size || customTopics.has(q.topic)) && (customDomain === 'all' || q.domain === customDomain));
-      title = customTopics.size === 1 ? topicName([...customTopics][0]) : customTopics.size ? `Custom quiz (${customTopics.size} topics)` : 'Custom quiz (all topics)';
-      if (customDomain !== 'all') title += ` · ${DOMAINS[customDomain].short}`;
-    }
+    const topicKey = customTopics.size === 1 ? [...customTopics][0] : null;
+    let pool = bank.questions.filter(q => (!customTopics.size || customTopics.has(q.topic)) && (customDomain === 'all' || q.domain === customDomain));
+    let title = topicKey ? topicName(topicKey) : customTopics.size ? `Custom quiz (${customTopics.size} topics)` : 'Custom quiz (all topics)';
+    if (customDomain !== 'all') title += ` · ${DOMAINS[customDomain].short}`;
     pool = applyFilters(pool, p);
     // least-seen first, then random
     const seen = id => (store.qstats[id] ? store.qstats[id].seen : 0);
@@ -823,7 +1063,7 @@
         <div class="card pad-lg"><h2 style="margin-bottom:12px">By domain</h2>${domainBars(a.byDomain, '—')}</div>
         <div class="card pad-lg"><h2 style="margin-bottom:12px">By topic</h2>
           <table class="sub-table"><tbody>${topicRows.map(([k, [c, t]]) => `
-            <tr class="pick" data-href="#/topic/${k}"><td>${esc(topicName(k))}</td>
+            <tr class="pick" data-href="#/book/${k}"><td>${esc(topicName(k))}</td>
             <td style="width:35%"><div class="bar thin"><i style="width:${pct(c, t)}%;background:${pct(c, t) >= 72 ? 'var(--good)' : pct(c, t) >= 50 ? 'var(--warn)' : 'var(--bad)'}"></i></div></td>
             <td class="num">${c}/${t}</td></tr>`).join('')}</tbody></table>
         </div>
@@ -897,7 +1137,7 @@
         <div class="row"><button class="btn sm" data-action="export">Export progress</button><button class="btn sm" data-action="import">Import progress</button></div></div>
       ${total ? historyTable(store.attempts.slice(historyPage * PAGE_SIZE, (historyPage + 1) * PAGE_SIZE)) + pager(historyPage, total, PAGE_SIZE, 'history-page') : '<div class="empty">No attempts yet.</div>'}
       <div class="section danger-zone">
-        <div><h3>Danger zone</h3><p class="small text-2">Delete every attempt, statistic and bookmark stored in this browser. Export first if you want a backup.</p></div>
+        <div><h3>Danger zone</h3><p class="small text-2">Delete every attempt, statistic and bookmark stored in this browser. Book pages and your notes are kept. Export first if you want a backup.</p></div>
         <button class="btn danger" data-action="reset">Reset all progress</button>
       </div>`;
   }
@@ -939,8 +1179,8 @@
           <ul class="list">
             <li>Practice exams: 65 questions, 130 min timer, domain mix 20/17/15/13, results only after submit.</li>
             <li>All 65 questions are scored here; the scaled score is an estimate (72% ≈ 720).</li>
-            <li>Topic quizzes follow the course sections, with instant feedback and explanations.</li>
-            <li>Progress is stored in this browser (localStorage). Use History → Export to back it up.</li>
+            <li>Topic books follow the course sections: one question per page, instant feedback, your own notes and "solve later" marks.</li>
+            <li>Book pages and notes sync to the cloud; exam history and statistics stay in this browser (History → Export to back them up).</li>
           </ul>
         </div>
         <div class="card pad-lg">
@@ -966,14 +1206,15 @@
     window.scrollTo({ top: 0 });
     const parts = location.hash.replace(/^#\/?/, '').split('/');
     const [page, arg] = parts;
-    if (page !== 'topic') topicSub = null;
     if (page !== route.lastPage) { listLimit = PAGE_SIZE; historyPage = 0; }
     route.lastPage = page;
     switch (page) {
       case '': return viewHome();
       case 'exams': return viewExams();
       case 'topics': return viewTopics();
-      case 'topic': return viewTopic(arg);
+      case 'topic': return location.replace(`#/book/${arg}`);
+      case 'book': return viewBook(arg, parts[2]);
+      case 'notes': return viewNotes();
       case 'custom': return viewCustom();
       case 'quiz': return viewQuiz();
       case 'result': return viewResult(arg);
@@ -1014,6 +1255,7 @@
 
     const opt = e.target.closest('[data-opt]');
     if (opt && !opt.disabled && store.session && location.hash === '#/quiz') return selectOption(Number(opt.dataset.opt));
+    if (opt && !opt.disabled && bookCtx()) return bookSelect(Number(opt.dataset.opt));
 
     const gotoEl = e.target.closest('[data-goto]');
     if (gotoEl) { store.session.current = Number(gotoEl.dataset.goto); saveStore(); return viewQuiz(); }
@@ -1046,8 +1288,6 @@
         if (ok) { store.session = null; saveStore(); rerender(); }
         return;
       }
-      case 'pick-sub': topicSub = topicSub === el.dataset.sub ? null : el.dataset.sub; return rerender();
-      case 'clear-sub': topicSub = null; return rerender();
       case 'toggle-topic': {
         const k = el.dataset.key;
         if (customTopics.has(k)) customTopics.delete(k); else customTopics.add(k);
@@ -1056,6 +1296,31 @@
       case 'pick-domain': customDomain = el.dataset.key; return rerender();
       case 'reset-filters': store.prefs.filter = 'all'; store.prefs.difficulty = 'any'; saveStore(); return rerender();
       case 'load-more': listLimit += PAGE_SIZE; return rerender();
+      case 'page-check': return bookCheck();
+      case 'page-prev': case 'page-next': {
+        const c = bookCtx();
+        if (c) gotoPage(c.key, c.i + (el.dataset.action === 'page-next' ? 1 : -1));
+        return;
+      }
+      case 'solve-again': {
+        const c = bookCtx();
+        if (!c) return;
+        saveBook(c.q.id, { done: false, ok: null, choice: [] });
+        bookDraft = { id: c.q.id, choice: [] };
+        return rerender();
+      }
+      case 'toggle-later': {
+        const c = bookCtx();
+        if (!c) return;
+        const on = !bookEntry(c.q.id).later;
+        saveBook(c.q.id, { later: on });
+        toast(on ? 'Marked to solve later' : 'Removed from "solve later"');
+        return rerender();
+      }
+      case 'book-star': { const c = bookCtx(); if (c) { toggleBookmark(c.q.id); rerender(); } return; }
+      case 'book-filter': bookFilter = el.dataset.key; return rerender();
+      case 'next-open': return bookJump(p => !bookEntry(p.id).done);
+      case 'next-later': return bookJump(p => !!bookEntry(p.id).later);
       case 'history-page': historyPage = Number(el.dataset.page); return route();
       case 'prev': return go(-1);
       case 'next': return go(1);
@@ -1103,7 +1368,7 @@
             `Importing replaces your current ${store.attempts.length} attempt(s), statistics and bookmarks with the ${data.attempts.length} attempt(s) in this file. Export first if you want to keep the current data.`,
             'Replace with file', true, 'Keep current progress');
           if (!ok) return;
-          store = Object.assign({ attempts: [], qstats: {}, bookmarks: [], session: null, prefs: {} }, data);
+          store = Object.assign({ attempts: [], qstats: {}, bookmarks: [], session: null, prefs: {}, book: store.book, bookPos: store.bookPos, bookPending: store.bookPending }, data);
           saveStore();
           toast('Progress imported');
           rerender();
@@ -1113,15 +1378,42 @@
       }
       case 'reset': {
         const ok = await confirmModal('Reset all progress?', 'This deletes every attempt, statistic and bookmark stored in this browser.', 'Reset everything', true, 'Keep my progress');
-        if (ok) { store = { attempts: [], qstats: {}, bookmarks: [], session: null, prefs: store.prefs }; saveStore(); rerender(); }
+        if (ok) { store = { attempts: [], qstats: {}, bookmarks: [], session: null, prefs: store.prefs, book: store.book, bookPos: store.bookPos, bookPending: store.bookPending }; saveStore(); rerender(); }
         return;
       }
     }
   });
 
+  // Notes autosave: local immediately, cloud after a short pause in typing
+  document.addEventListener('input', e => {
+    if (e.target.id !== 'pageNote') return;
+    saveBook(e.target.dataset.qid, { note: e.target.value.slice(0, 20000) }, 800);
+    setCloud('syncing');
+  });
+
+  function bookKeys(e) {
+    const c = bookCtx();
+    if (!c) return;
+    const k = e.key.toLowerCase();
+    const done = bookEntry(c.q.id).done;
+    if (/^[1-6]$/.test(k)) return bookSelect(Number(k) - 1);
+    if (/^[a-f]$/.test(k)) return bookSelect(k.charCodeAt(0) - 97);
+    if (k === 'arrowright' && c.i < c.pages.length - 1) return gotoPage(c.key, c.i + 1);
+    if (k === 'arrowleft' && c.i > 0) return gotoPage(c.key, c.i - 1);
+    if (k === 'm') return $('[data-action="toggle-later"]').click();
+    if (k === 's') return $('[data-action="book-star"]').click();
+    if (k === 'n') { e.preventDefault(); return $('#pageNote').focus(); }
+    if (k === 'enter') {
+      e.preventDefault();
+      if (!done) return bookCheck();
+      if (c.i < c.pages.length - 1) return gotoPage(c.key, c.i + 1);
+    }
+  }
+
   document.addEventListener('keydown', e => {
-    if (location.hash !== '#/quiz' || !store.session || !$('#modal').hidden) return;
-    if (e.ctrlKey || e.metaKey || e.altKey || /input|select|textarea/i.test(e.target.tagName)) return;
+    if (!$('#modal').hidden || e.ctrlKey || e.metaKey || e.altKey || /input|select|textarea/i.test(e.target.tagName)) return;
+    if (location.hash.startsWith('#/book/')) return bookKeys(e);
+    if (location.hash !== '#/quiz' || !store.session) return;
     const k = e.key.toLowerCase();
     const s = store.session;
     if (/^[1-6]$/.test(k)) return selectOption(Number(k) - 1);
@@ -1160,7 +1452,10 @@
 
   function boot() {
     app().innerHTML = '<div class="loading">Loading question bank…</div>';
-    loadBank().then(route).catch(err => {
+    loadBank().then(() => {
+      route();
+      pullBook().then(ok => { if (ok && /^#\/(book|topics|notes)/.test(location.hash) && !/textarea/i.test((document.activeElement || {}).tagName)) rerender(); });
+    }).catch(err => {
       console.error('Failed to load question bank', err);
       app().innerHTML = `<div class="empty">
         <h3 style="color:var(--text);margin-bottom:6px">We couldn't load the questions</h3>

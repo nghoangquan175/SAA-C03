@@ -26,6 +26,15 @@ async function handler(event) {
   }
   if (cookie && expected && cookie.value === expected) return request;
 
+  // The book API answers with a status code instead of a redirect to the login page.
+  if (request.uri.indexOf('/api/') === 0) {
+    return {
+      statusCode: 401,
+      statusDescription: 'Unauthorized',
+      headers: { 'cache-control': { value: 'no-store' } },
+    };
+  }
+
   return {
     statusCode: 302,
     statusDescription: 'Found',

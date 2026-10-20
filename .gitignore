@@ -9,3 +9,7 @@ infras/crash.log
 
 # Screenshots shared for review, not part of the app
 example/
+
+# Local book API data (server.js) and Terraform build output
+.local/
+infras/.build/
