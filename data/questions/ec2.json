@@ -1777,5 +1777,501 @@
     "explanation": "AWS charges for every public IPv4 address, including addresses on running instances and Elastic IP addresses, whether associated or not, so releasing unused Elastic IP addresses and removing public addresses that are not needed reduces the bill. An EC2 Instance Connect Endpoint provides SSH to instances that have no public IP address. Converting to Elastic IP addresses does not avoid the charge, and detailed monitoring and placement groups have no effect on public IPv4 addressing.",
     "subtopic": "Public IPv4 address charges",
     "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-ip-addressing.html"
+  },
+  {
+    "id": "ec2-091",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security software vendor wants to run its own type-1 hypervisor on Amazon EC2 to test its products. The hypervisor needs direct access to processor hardware virtualization features such as Intel VT, and the vendor's license terms require a non-virtualized environment. Which EC2 option meets these requirements?",
+    "options": [
+      "Launch the largest virtualized size of a Nitro-based instance family, such as a 48xlarge size",
+      "Launch the instances on an EC2 Dedicated Host so that the vendor can see the sockets and physical cores",
+      "Launch a bare metal (metal) instance size of a Nitro-based family, which gives the operating system direct access to the host hardware",
+      "Run the hypervisor inside an AWS Nitro Enclave that is attached to a standard instance"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Bare metal instances remove the virtualization layer and are intended for workloads that need low-level hardware features such as Intel VT, or that need a non-virtualized environment for licensing or support. Even the largest virtualized size still runs on the Nitro hypervisor. A Dedicated Host gives visibility of sockets and cores for licensing, but instances on it are still virtual machines. Nitro Enclaves are constrained, isolated environments for processing sensitive data and cannot host a hypervisor.",
+    "subtopic": "Bare metal instances",
+    "source": "https://docs.aws.amazon.com/ec2/latest/instancetypes/ec2-nitro-instances.html"
+  },
+  {
+    "id": "ec2-092",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A bioinformatics team runs a Linux batch tool that is compiled only for Arm and is CPU bound. Each job writes about 300 GB of intermediate files that are deleted when the job ends, and the team wants that scratch space on fast local NVMe disks that are included in the instance price instead of on separate EBS volumes. Which instance type fits these requirements?",
+    "options": [
+      "c7g.4xlarge",
+      "c7gd.4xlarge",
+      "c7gn.4xlarge",
+      "c7i.4xlarge"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "In EC2 instance type names, c is the compute optimized series, 7 is the generation, g means AWS Graviton (Arm) processors, and d means the type includes local instance store volumes, so c7gd provides Arm CPUs plus local NVMe storage at no extra charge. c7g is EBS-only, the n in c7gn means network and EBS optimized rather than local storage, and the i in c7i means Intel x86 processors, which cannot run an Arm-only build.",
+    "subtopic": "Instance type naming",
+    "source": "https://docs.aws.amazon.com/ec2/latest/instancetypes/instance-type-names.html"
+  },
+  {
+    "id": "ec2-093",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs a licensing server in us-east-1a. For disaster recovery, the team pre-created a secondary elastic network interface on the server and planned to move it to a standby instance in us-east-1b if us-east-1a becomes unavailable. During a test, attaching the network interface to the standby instance fails. What is the cause, and what should the team do?",
+    "options": [
+      "The standby instance must be stopped before a network interface can be attached; stop it, attach the interface, and start it again",
+      "Source/destination checking must be disabled on the network interface before it can move between instances",
+      "Only a primary network interface can move between instances; make the interface the primary interface of the server",
+      "A network interface belongs to a subnet in one Availability Zone; for cross-AZ failover, remap an Elastic IP address or use DNS failover or a load balancer"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A network interface is created in a subnet, and subnets live in a single Availability Zone, so an interface can only be attached to instances in that same Availability Zone. Moving an interface is a same-AZ standby technique; failover to another Availability Zone needs a mechanism that can point to a new subnet, such as remapping an Elastic IP address, Route 53 failover, or a load balancer. Secondary interfaces can be attached to running instances, source/destination checking only matters for routing appliances, and the primary interface cannot be detached at all.",
+    "subtopic": "Elastic network interfaces",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html"
+  },
+  {
+    "id": "ec2-094",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company deploys a third-party firewall appliance on EC2 with two network interfaces: the primary interface in a management subnet and a secondary interface in a data subnet in the same Availability Zone. Which statements about this design are correct? (Select TWO.)",
+    "options": [
+      "Each network interface can have its own security groups, so management traffic and data traffic can be filtered with different rules",
+      "Security groups are applied to the instance as a whole, so both network interfaces always share the same rules",
+      "The primary network interface can be detached and attached to a replacement appliance to keep its management IP address",
+      "Each network interface automatically receives its own public IPv4 address when the instance is launched",
+      "The secondary interface keeps its private IP addresses and MAC address when it is moved to a replacement appliance in the same AZ"
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "Security groups are an attribute of a network interface, so a multi-homed instance can apply different rules on each interface. A secondary interface carries its attributes, including private IP addresses, Elastic IP addresses, MAC address, and security groups, when it is detached and attached to another instance in the same Availability Zone. The primary network interface can never be detached from its instance. A public IPv4 address assigned at launch goes to the primary network interface, not to every interface.",
+    "subtopic": "Elastic network interfaces",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-eni.html"
+  },
+  {
+    "id": "ec2-095",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A partner allow-listed the auto-assigned public IPv4 address of a company's EC2 instance. To make sure the address never changes, an engineer plans to associate an Elastic IP address with the instance so that the current public IPv4 address becomes static. What will happen when the engineer does this?",
+    "options": [
+      "The current public IPv4 address is released back to the AWS pool and replaced by the Elastic IP address, so the partner must allow-list the new address",
+      "EC2 converts the current public IPv4 address into an Elastic IP address that stays allocated to the account until it is released",
+      "The instance keeps both addresses, and the original public IPv4 address becomes static while the Elastic IP address stays associated",
+      "The association fails, because an instance that received an auto-assigned public IPv4 address cannot use an Elastic IP address"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "When an Elastic IP address is associated with an instance that already has a public IPv4 address, that public address is released back to Amazon's pool and cannot be reused or converted into an Elastic IP address. From then on the Elastic IP address stays the same across stop and start, so the partner needs to update its allow list once. The association does not fail, and the instance does not keep the original auto-assigned address.",
+    "subtopic": "Elastic IP addresses",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html"
+  },
+  {
+    "id": "ec2-096",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An administrator launched a Windows Server instance from an AWS Windows AMI and selected a key pair. The administrator now needs the initial password of the local Administrator account to connect over RDP. How is this password obtained?",
+    "options": [
+      "Read it from the instance user data, where EC2 writes the generated password",
+      "Retrieve it from AWS Secrets Manager, where EC2 automatically stores a secret for each Windows instance",
+      "Use Get Windows password in the EC2 console and supply the private key of the key pair to decrypt the generated password",
+      "Query the instance metadata service from another instance in the same subnet"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "For Windows instances, EC2 generates the initial Administrator password and makes it available encrypted, and the administrator decrypts it with the private key (.pem file) of the key pair chosen at launch; the caller also needs permission for GetPasswordData. The password is not placed in user data or in Secrets Manager. The instance metadata service is reachable only from the instance itself through a link-local address.",
+    "subtopic": "Key pairs and Windows access",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/connect-rdp.html"
+  },
+  {
+    "id": "ec2-097",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A software vendor shares a hardened AMI with a customer's AWS account. The vendor sometimes deregisters older AMIs without notice, and the customer must be able to keep launching instances from this exact image for at least 3 years. What should the customer do?",
+    "options": [
+      "Turn on deregistration protection for the shared AMI from the customer account",
+      "Create a Recycle Bin retention rule in the customer account that covers the shared AMI",
+      "Reference the shared AMI ID in a launch template, which keeps the AMI available while the template exists",
+      "Copy the shared AMI into the customer account, creating a new AMI that the customer owns and that is not affected if the source is deregistered"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Copying an AMI that is shared with you creates a distinct target AMI with its own ID that your account owns, and deregistering the source AMI has no effect on the copy. The vendor must grant read access to the backing snapshots and, if they are encrypted, share the KMS key. Deregistration protection and Recycle Bin protect only AMIs that the account itself owns, and a launch template only stores an AMI ID, so launches fail once that AMI is deregistered.",
+    "subtopic": "AMI copy and sharing",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/how-ami-copy-works.html"
+  },
+  {
+    "id": "ec2-098",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A platform team deregisters an EBS-backed AMI from its account without selecting any additional options. Which statements describe the result? (Select THREE.)",
+    "options": [
+      "Instances that were launched from the AMI are stopped automatically",
+      "Instances that were already launched from the AMI keep running and continue to be billed",
+      "New instances can no longer be launched from the AMI",
+      "The EBS snapshots that back the AMI are deleted together with the AMI",
+      "Copies of the AMI that were made in other Regions are also deregistered",
+      "The backing snapshots remain in the account and continue to incur storage charges"
+    ],
+    "answer": [
+      1,
+      2,
+      5
+    ],
+    "explanation": "Deregistering an AMI only stops it from being used for new launches; instances already launched from it keep running and keep incurring charges. By default the backing snapshots are not deleted and continue to cost money, unless the option to delete associated snapshots is chosen or they are deleted afterward. A copied AMI is an independent AMI with its own ID, so deregistering the source does not affect copies in other Regions.",
+    "subtopic": "AMI deregistration",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/deregister-ami.html"
+  },
+  {
+    "id": "ec2-099",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A central imaging account shares a golden AMI in us-east-1 with 30 workload accounts. For disaster recovery, the imaging team copies the AMI to us-west-2. Workload accounts can launch the AMI in us-east-1 but cannot find the copy in us-west-2. What is the MOST likely reason?",
+    "options": [
+      "AMI copies stay private until the source AMI is deregistered",
+      "Launch permissions are not copied with the AMI, so the imaging team must share the new AMI in us-west-2 with the workload accounts",
+      "The copied AMI keeps the same AMI ID, so the workload accounts must search for it by name instead of by ID",
+      "A cross-Region AMI copy can be used only by the account that copied it, so each workload account must copy the AMI itself"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS does not copy launch permissions from the source AMI to the new AMI, so the copy in us-west-2 is private to the imaging account until it is shared again. The copy has its own new AMI ID, and if its snapshots are encrypted, the KMS key used in us-west-2 must also allow the workload accounts. Copies can be shared like any other AMI, and they do not depend on the source being deregistered.",
+    "subtopic": "AMI copy and sharing",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html"
+  },
+  {
+    "id": "ec2-100",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "An engineer creates a golden AMI from a running EBS-backed instance. The instance has an EBS root volume, an attached EBS data volume, two NVMe instance store volumes that hold a warmed cache, and a user data script that sets its hostname at first boot. Which items will NOT be present on instances launched from the new AMI? (Select TWO.)",
+    "options": [
+      "Packages installed on the EBS root volume",
+      "Files stored on the instance store volumes",
+      "Data stored on the attached EBS data volume",
+      "The user data script of the source instance",
+      "Configuration files edited on the root volume"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "An EBS-backed AMI is built from snapshots of the EBS volumes attached to the instance, so the contents of the root volume and the attached EBS data volume are included. Data on instance store volumes is not included in an EBS-backed AMI and is not present on instances launched from it. User data is an attribute of the instance, not of its disks, so it is not part of the AMI and must be supplied again at launch, for example in a launch template.",
+    "subtopic": "AMI contents",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-store-lifetime.html"
+  },
+  {
+    "id": "ec2-101",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 1,
+    "question": "Four days ago, a company bought a 3-year Compute Savings Plan with an hourly commitment of $60, but it meant to buy a 1-year plan. It is still the same calendar month, and the company has not reached its return limit. What should the company do?",
+    "options": [
+      "Return the Savings Plan, which is allowed for plans with an hourly commitment of $100 or less bought within the last 7 days in the same calendar month",
+      "List the Savings Plan on the Reserved Instance Marketplace and then buy the 1-year plan",
+      "Exchange the Savings Plan for a 1-year plan of equal or greater value, as is done with Convertible Reserved Instances",
+      "Cancel the Savings Plan with 30 days of notice, after which the remaining commitment is waived"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A Savings Plan with an hourly commitment of $100 or less can be returned if it was bought within the last seven days and in the same calendar month, and any upfront payment is refunded in full. Savings Plans cannot be sold on the Reserved Instance Marketplace, cannot be exchanged like Convertible Reserved Instances, and cannot be cancelled with notice once the return window has passed.",
+    "subtopic": "Savings Plans returns",
+    "source": "https://docs.aws.amazon.com/savingsplans/latest/userguide/return-sp.html"
+  },
+  {
+    "id": "ec2-102",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company owns 1-year Standard Reserved Instances with zonal scope for 10 m6i.xlarge Linux instances in us-east-1a. Eight months into the term, a network redesign moves the workload to us-east-1b. The company wants to keep both the billing discount and the capacity reservation without paying anything extra. What should the company do?",
+    "options": [
+      "Exchange the Standard Reserved Instances for new Reserved Instances in us-east-1b",
+      "Sell the Reserved Instances on the Reserved Instance Marketplace and buy new ones in us-east-1b",
+      "Modify the Reserved Instances to change their Availability Zone to us-east-1b",
+      "Do nothing, because zonal Reserved Instances apply automatically to any Availability Zone in the Region"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Both Standard and Convertible Reserved Instances can be modified at no charge to change the Availability Zone, the scope, or the size within the same family, and after the change the capacity reservation and discount apply in the new Availability Zone. Only Convertible Reserved Instances can be exchanged. Selling and rebuying adds cost and effort. Zonal Reserved Instances apply only in their own Availability Zone; regional ones apply anywhere in the Region but do not reserve capacity.",
+    "subtopic": "Modifying Reserved Instances",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-modifying.html"
+  },
+  {
+    "id": "ec2-103",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A compliance officer is reviewing a design that uses Dedicated Instances for a workload that must not share physical hardware with other customers. Which statement about Dedicated Instances is accurate?",
+    "options": [
+      "They are isolated at the host level from instances of other AWS accounts, but they might share hardware with non-dedicated instances from the same account",
+      "They can share hardware with other accounts in the same AWS Organization, because those accounts are linked to a single payer account",
+      "They are guaranteed to return to the same physical host after a stop and start, which supports host-affinity licensing",
+      "Their attached EBS volumes are also placed on single-tenant storage hardware that is dedicated to the account"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Dedicated Instances run on hardware dedicated to a single AWS account and are physically isolated from instances of every other account, even accounts under the same payer, but they might share hardware with non-dedicated instances from the same account. They offer no host affinity or placement control, so a stopped and started instance might move to another host; that requires Dedicated Hosts. EBS volumes attached to a Dedicated Instance do not run on single-tenant hardware.",
+    "subtopic": "Dedicated Instances",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html"
+  },
+  {
+    "id": "ec2-104",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Before a product launch, a company created an On-Demand Capacity Reservation for 20 c7i.2xlarge Linux instances in one Availability Zone. After the launch, only 12 matching instances still run, but the team left the reservation in place as free insurance. Finance now sees charges for capacity that nobody is using. Which statement explains the charges and the correct action?",
+    "options": [
+      "Only the 12 running instances are charged; the reservation itself is free until it is fully used",
+      "The unused slots are charged only because no zonal Reserved Instance covers them, so buying zonal Reserved Instances will make them free",
+      "Capacity Reservations are charged only for their first 30 days, so the charges will stop automatically",
+      "Unused reserved capacity is billed at the On-Demand rate, so the company should reduce or cancel the reservation when the capacity is no longer needed"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A Capacity Reservation is charged at the equivalent On-Demand rate whether or not instances run in it, so the 8 idle slots are billed as unused reservation. Savings Plans and regional Reserved Instance discounts can apply to Capacity Reservations, but zonal Reserved Instance discounts do not, so buying zonal Reserved Instances does not make the idle capacity free. Billing continues for as long as the reservation is provisioned, so the right action is to modify or cancel it.",
+    "subtopic": "On-Demand Capacity Reservations",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/capacity-reservations-pricing-billing.html"
+  },
+  {
+    "id": "ec2-105",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "An EC2 instance has termination protection (the DisableApiTermination attribute) enabled. Which events can still terminate the instance? (Select THREE.)",
+    "options": [
+      "Amazon EC2 Auto Scaling terminates the instance during a scale-in event because it belongs to an Auto Scaling group",
+      "An administrator chooses Terminate instance for it in the EC2 console",
+      "A script calls the TerminateInstances API for it with credentials that have full EC2 permissions",
+      "A user runs the operating system shutdown command while the instance-initiated shutdown behavior is set to terminate",
+      "AWS carries out a scheduled event that terminates the instance",
+      "An operator stops the instance from the console to change its instance type"
+    ],
+    "answer": [
+      0,
+      3,
+      4
+    ],
+    "explanation": "Termination protection only blocks TerminateInstances requests made through the console, CLI, or API. It does not stop Amazon EC2 Auto Scaling from terminating the instance during scale-in or health replacement (use instance scale-in protection for scale-in), it does not stop a shutdown from inside the operating system when the shutdown behavior is terminate, and it does not stop AWS from carrying out a scheduled termination event. Stopping an instance is not a termination. Termination protection also cannot be enabled on Spot Instances.",
+    "subtopic": "Termination protection",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_ChangingDisableAPITermination.html"
+  },
+  {
+    "id": "ec2-106",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "After an engineer edited /etc/fstab and rebooted an EBS-backed Linux instance, the instance stopped responding. The system status check passes but the instance status check fails, and a CloudWatch alarm with the EC2 recover action on StatusCheckFailed_System never triggered. What should the team do?",
+    "options": [
+      "Wait for AWS to repair the underlying host, because instance status check failures require AWS involvement",
+      "Fix the configuration inside the instance, for example through the EC2 Serial Console or by attaching the root volume to a rescue instance and correcting the file",
+      "Change the alarm to apply the recover action to StatusCheckFailed_Instance so that the instance is moved to new hardware",
+      "Stop and start the instance so that it moves to a new host, which repairs the file system configuration"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An instance status check failure with a passing system status check points to a problem inside the instance, such as an incorrect startup configuration or a corrupted file system, which the customer must fix. The bad fstab entry travels with the EBS root volume, so recovery or a stop and start onto new hardware would boot into the same error. The recover action works with the system status check, which detects AWS infrastructure problems, and those are not the cause here.",
+    "subtopic": "Status checks",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-system-instance-status-check.html"
+  },
+  {
+    "id": "ec2-107",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company receives an AWS Health notification that an EBS-backed EC2 instance running a stateful application has a scheduled instance-stop event in 10 days because of degraded host hardware. The company prefers to deal with it during its own maintenance window this weekend. What should a solutions architect do during the window?",
+    "options": [
+      "Reboot the instance, which moves it to healthy hardware and clears the scheduled event",
+      "Create an AMI of the instance and wait for AWS to stop it on the scheduled date",
+      "Stop the instance and then start it, which migrates it to a new host",
+      "Change the instance type while it is running so that it is placed on new hardware"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "For an instance with an EBS root volume, stopping and starting it at a convenient time migrates it to a new host, which is how to handle a scheduled instance-stop event on your own schedule. A reboot is not the same as a stop and start, because the instance stays on the same host. Waiting for the scheduled stop gives up control of the timing, and the instance type can be changed only while the instance is stopped.",
+    "subtopic": "Scheduled events",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/schedevents_actions_retire.html"
+  },
+  {
+    "id": "ec2-108",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "To lower costs, an engineer stops an m6i.large Linux instance and tries to change its instance type to m7g.large, but the change is rejected as incompatible. What is the reason, and how should the engineer move the workload?",
+    "options": [
+      "m7g is an Arm-based Graviton type and the instance runs an x86_64 AMI, so the engineer must launch a new instance from an arm64 AMI and migrate the application",
+      "Instance types can be changed only within the same generation, so the engineer must first change to m6g.large and then to m7g.large",
+      "The instance must be running when its type is changed, so the engineer should start it and use Elastic Volumes to apply the change",
+      "All EBS volumes must be detached before the type can be changed to a lower-cost type, so the engineer should detach them and retry"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Vertical scaling by changing the instance type works only between compatible types, and AMIs are specific to a processor architecture, so an x86_64 instance cannot be changed to an Arm-based Graviton type such as m7g. The workload must be moved to a new instance launched from an arm64 AMI. m6g is also Arm-based, so it would fail the same way. Instance types are changed while the instance is stopped, Elastic Volumes changes EBS volumes rather than instance types, and volumes stay attached during the change.",
+    "subtopic": "Vertical scaling",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/resize-limitations.html"
+  },
+  {
+    "id": "ec2-109",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company with a single AWS account wants every new EC2 instance in eu-west-1 to require IMDSv2 by default, with a hop limit of 2 for container hosts, even when teams launch instances from launch templates or AMIs that do not specify metadata options. Existing instances will be handled separately. Which solution requires the LEAST effort?",
+    "options": [
+      "Enable EBS encryption by default in eu-west-1",
+      "Set the imds-support attribute to v2.0 on every AMI that the teams use",
+      "Deploy an AWS Config rule that reports instances on which IMDSv2 is not required",
+      "Set the account-level instance metadata defaults in eu-west-1 to require IMDSv2 with a hop limit of 2"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Account-level instance metadata defaults are set per Region and apply to every new instance that does not override them at launch, so one setting makes IMDSv2 required with the chosen hop limit; existing instances are not changed. IMDSv2 can additionally be enforced so that launches that would allow IMDSv1 fail. Setting imds-support on each AMI must be repeated for every image and cannot be undone. A Config rule only detects noncompliance, and EBS encryption by default is unrelated to the metadata service.",
+    "subtopic": "IMDSv2 account defaults",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-new-instances.html"
+  },
+  {
+    "id": "ec2-110",
+    "topic": "ec2",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A web server on EC2 runs third-party plugins as the local user www. A monitoring agent on the same instance runs as root and needs the instance role credentials from the instance metadata service. The security team wants to stop every process running as www from reaching the instance metadata service. Which solution meets this requirement?",
+    "options": [
+      "Add an outbound security group rule that denies traffic to 169.254.169.254",
+      "Add a network ACL rule that denies outbound traffic from the subnet to 169.254.169.254",
+      "Add a local firewall rule, such as an iptables owner match, that rejects traffic to 169.254.169.254 from processes running as www",
+      "Turn off the instance metadata service by setting HttpEndpoint to disabled"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "The instance metadata service is reached through a link-local address that is handled by the host, so security groups and network ACLs do not filter that traffic, and security groups cannot express deny rules anyway. A local firewall rule in the operating system can block specific users or allow only trusted users, which keeps the root agent working. Turning off the metadata service would also break the agent. Requiring IMDSv2 alone would not stop a local process from requesting a token.",
+    "subtopic": "Instance metadata security",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-metadata-limiting-access.html"
+  },
+  {
+    "id": "ec2-111",
+    "topic": "ec2",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company wants to hibernate EC2 instances at night instead of stopping them. Every candidate instance uses an instance family that supports hibernation, is launched with hibernation enabled, uses a supported AMI, and has an encrypted gp3 root volume large enough to hold its RAM. Which instances will NOT be able to hibernate? (Select TWO.)",
+    "options": [
+      "A Linux instance with 64 GiB of RAM that was launched from a persistent Spot Instance request",
+      "A Windows Server instance with 16 GiB of RAM",
+      "A Linux instance with 256 GiB of RAM",
+      "A standalone Linux instance with 32 GiB of RAM and an associated Elastic IP address",
+      "A Linux instance with 8 GiB of RAM that is a member of an Auto Scaling group"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Linux instances must have less than 150 GiB of RAM to hibernate, so a 256 GiB instance cannot. Instances in an Auto Scaling group cannot be hibernated, and Auto Scaling would mark the stopped instance unhealthy and might replace it. Windows instances can hibernate with up to 16 GiB of RAM, Spot Instances can hibernate when the request is persistent, and an instance keeps its Elastic IP address while hibernated.",
+    "subtopic": "EC2 hibernation",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-hibernate-overview.html"
+  },
+  {
+    "id": "ec2-112",
+    "topic": "ec2",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A developer hibernates a large EC2 development instance before leaving on a 3-month sabbatical and plans to resume exactly where the work stopped. The developer also plans to switch the instance to a smaller instance type while it is hibernated so that it costs less after the return. Which statement is correct?",
+    "options": [
+      "Both plans work, because a hibernated instance is in the stopped state and can be modified and kept for any length of time",
+      "AWS does not support keeping an instance hibernated for more than 60 days, and a hibernated instance cannot be modified, for example by changing its instance type",
+      "The instance can stay hibernated indefinitely, but its saved RAM contents are moved to Amazon S3 after 30 days",
+      "The instance type can be changed while the instance is hibernated, but the instance is started automatically after 14 days"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS does not support keeping an instance hibernated for more than 60 days; to keep it longer, the instance must be started and then stopped normally, which loses the saved memory state. Unlike a normally stopped instance, a hibernated instance cannot be modified, so changing its instance type is not possible while it is hibernated. The RAM contents stay on the encrypted EBS root volume, which keeps incurring storage charges.",
+    "subtopic": "EC2 hibernation",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-hibernate-overview.html"
+  },
+  {
+    "id": "ec2-113",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs 400 virtual machines on VMware vSphere in its data center and must exit the data center within 6 months. The workloads cannot be refactored or re-platformed, and the operations team wants to keep its VMware Cloud Foundation tools, licenses, IP addresses, and runbooks while running the environment inside the company's own Amazon VPC. Which AWS service meets these requirements?",
+    "options": [
+      "Amazon Elastic VMware Service (Amazon EVS)",
+      "AWS Outposts racks installed in a colocation facility",
+      "AWS Application Migration Service to convert the virtual machines into native EC2 instances",
+      "Amazon EC2 Dedicated Hosts that run the existing virtual machine images directly"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Amazon EVS deploys and runs a VMware Cloud Foundation environment on EC2 bare metal instances inside the customer's VPC, so VMware workloads move without changing IP addresses, retraining staff, or rewriting runbooks. Application Migration Service rehosts servers as native EC2 instances, which replaces the VMware tooling. Outposts keeps hardware on premises or in a colocation site rather than in an AWS Region, and Dedicated Hosts run EC2 instances, not a vSphere environment. VMware Cloud on AWS is no longer resold by AWS and is sold by Broadcom.",
+    "subtopic": "VMware on AWS",
+    "source": "https://docs.aws.amazon.com/evs/latest/userguide/what-is-evs.html"
+  },
+  {
+    "id": "ec2-114",
+    "topic": "ec2",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A solutions architect is choosing between EC2 instance store and Amazon EBS for several workloads. Which requirements mean that the data must be kept on EBS rather than on instance store? (Select TWO.)",
+    "options": [
+      "The data must survive when the instance is stopped and started again",
+      "The data is a cache that can be rebuilt from a database at any time",
+      "The storage must be included in the instance price with no separate volume charge",
+      "The volume must be detachable so that it can be attached to a replacement instance",
+      "The data is scratch space for a batch job and is discarded after each run"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Instance store data is lost when an instance is stopped, hibernated, or terminated, and an instance store volume cannot be detached from one instance and attached to another, so persistence across stop and start and the ability to move a volume both require EBS. Rebuildable caches and throwaway scratch space are good fits for instance store, which is included in the instance price at no additional charge.",
+    "subtopic": "Instance store vs EBS",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-store-lifetime.html"
   }
 ]

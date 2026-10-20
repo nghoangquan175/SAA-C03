@@ -1388,5 +1388,45 @@
     "explanation": "With Fargate, AWS Batch provisions compute that closely matches the CPU and memory each job requests, so there are no instances to choose, scale, or over-provision, and jobs can typically start in about 30 seconds. These jobs do not need a GPU, a custom AMI, or large sizes that would require EC2. Unmanaged environments add operational work, a higher minimum keeps idle capacity running, and a Savings Plan discounts underutilized instances without removing the waste.",
     "subtopic": "AWS Batch on Fargate",
     "source": "https://docs.aws.amazon.com/batch/latest/userguide/when-to-use-fargate.html"
+  },
+  {
+    "id": "ec2-advanced-071",
+    "topic": "ec2-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "To harden a new fleet, an engineer launched Amazon Linux instances with the instance metadata service turned off (HttpEndpoint set to disabled) and with a user data script that installs the application. The instances boot, but the application is not installed and SSH logins with the launch key pair fail. What is the cause?",
+    "options": [
+      "User data scripts run only when IMDSv1 is allowed, so the instances must permit IMDSv1",
+      "User data and the launch public key are delivered through the instance metadata service, so turning it off at launch stops the script from running and the key from being installed",
+      "User data runs only on instances that have a public IPv4 address, because the script is downloaded from the internet",
+      "Turning off the instance metadata service also disables the primary network interface until the service is turned back on"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "EC2 user data and the public SSH key (public-keys/0/openssh-key) are both served by the instance metadata service, so disabling it at launch means the user data does not run and the key pair is not installed. The service can be re-enabled after launch. A better hardening step is to keep the service enabled and require IMDSv2. User data does not depend on a public IP address, and disabling the metadata service does not affect the network interface.",
+    "subtopic": "Instance metadata and user data",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-IMDS-new-instances.html"
+  },
+  {
+    "id": "ec2-advanced-072",
+    "topic": "ec2-advanced",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An engineer needs to replace the startup script that was passed as user data to a running EBS-backed Amazon Linux instance and wants the new script to reconfigure the instance. Which statement describes how this works?",
+    "options": [
+      "The user data can be edited while the instance is running, and cloud-init runs the new script within a few minutes",
+      "The user data can be edited only while the instance is stopped, and the new script runs automatically at the next start",
+      "User data is fixed at launch and can never be changed, so a new instance must be launched",
+      "The user data can be edited only while the instance is stopped, and by default the new script does not run at the next start unless cloud-init is configured to run it"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "User data can be viewed on a running instance but can be changed only after the instance is stopped. When the instance starts again, the new user data is visible in instance metadata, but by default user data scripts and cloud-init directives run only during the first boot after launch, so the script does not run unless the instance is configured to run user data on every boot. For repeatable changes, a new launch template version or Systems Manager is usually a better choice.",
+    "subtopic": "User data",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html"
   }
 ]

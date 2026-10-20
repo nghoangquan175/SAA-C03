@@ -55,8 +55,9 @@
     "answer": [
       2
     ],
-    "explanation": "With SSE-C the client sends its own key in each request, S3 uses it to perform server-side encryption or decryption, and then discards the key, storing only a salted HMAC to validate future requests. SSE-S3 uses keys that S3 manages. SSE-KMS and DSSE-KMS use keys stored in AWS KMS, so AWS holds the key.",
-    "subtopic": "SSE-C"
+    "explanation": "With SSE-C the client sends its own key in each request, S3 uses it to perform server-side encryption or decryption, and then discards the key, storing only a salted HMAC to validate future requests. SSE-S3 uses keys that S3 manages. SSE-KMS and DSSE-KMS use keys stored in AWS KMS, so AWS holds the key. Since April 2026, SSE-C is blocked by default on new general purpose buckets, so a bucket must first allow it by setting BlockedEncryptionTypes to NONE in its default encryption configuration.",
+    "subtopic": "SSE-C",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerSideEncryptionCustomerKeys.html"
   },
   {
     "id": "s3-004",
@@ -1974,5 +1975,943 @@
     "explanation": "S3 Event Notifications are delivered at least once and are not guaranteed to arrive in the order the events occurred, so consumers should be idempotent and use the sequencer key, which increases for later PUT and DELETE events on the same key, to order events. SQS FIFO queues cannot be direct S3 notification destinations, and Transfer Acceleration and Replication Time Control do not change event delivery semantics.",
     "subtopic": "Event notification ordering and duplicates",
     "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-content-structure.html"
+  },
+  {
+    "id": "s3-101",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A marketing team creates a new S3 bucket in an account where nobody has changed the default S3 settings. The team enables static website hosting and tries to save a bucket policy that allows s3:GetObject to Principal \"*\". The request is rejected with an Access Denied error, even though the team has full S3 permissions. What must the team do so the public website works?",
+    "options": [
+      "Grant public read access with a public-read ACL on each uploaded object instead of using a bucket policy.",
+      "Add the s3:PutBucketPolicy permission to the team's IAM role through a permissions boundary and retry.",
+      "Turn off the Block Public Access settings for public policies on the bucket, and on the account if set there.",
+      "Change default encryption to SSE-S3 so that anonymous users are able to decrypt the website objects."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "New buckets have all four Block Public Access settings turned on, and BlockPublicPolicy makes S3 reject any PutBucketPolicy call whose policy grants public access. Because S3 enforces the most restrictive combination of bucket-level and account-level settings, the setting must be off at both levels for a public website. A public-read ACL fails because ACLs are disabled by default (Bucket owner enforced) and BlockPublicAcls would also reject it. The team already has permission to call the API, and new objects are already encrypted with SSE-S3, which is transparent to readers.",
+    "subtopic": "S3 Block Public Access",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"
+  },
+  {
+    "id": "s3-102",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company moved a legacy upload service to a newly created S3 bucket. Every upload now fails with an HTTP 400 AccessControlListNotSupported error. The service adds an x-amz-grant-read header to each upload to give a partner AWS account read access to the object. The company wants to follow AWS recommendations. What should a solutions architect do?",
+    "options": [
+      "Remove the ACL grant from the upload requests and grant the partner account s3:GetObject access in the bucket policy.",
+      "Change the bucket's Object Ownership setting to Object writer so that the service can keep granting access through object ACLs.",
+      "Turn off the IgnorePublicAcls Block Public Access setting on the bucket so that the grant header is accepted.",
+      "Replace the custom grant with the bucket-owner-read canned ACL, which buckets with ACLs disabled accept."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "New buckets use the Bucket owner enforced setting, so ACLs are disabled and S3 accepts only uploads that specify no ACL or the bucket-owner-full-control ACL; any other ACL fails with 400 AccessControlListNotSupported. AWS recommends keeping ACLs disabled and granting cross-account access through the bucket policy. Re-enabling ACLs with Object writer would work but goes against that recommendation and keeps access tied to per-object ACLs. IgnorePublicAcls concerns public ACLs and does not enable ACLs, and bucket-owner-read is still an ACL that is rejected.",
+    "subtopic": "S3 Object Ownership and ACLs",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/about-object-ownership.html"
+  },
+  {
+    "id": "s3-103",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A bucket policy has three statements: one allows the AWS CloudTrail service principal to write logs, one allows a partner AWS account to read objects under shared/, and one allows Principal \"*\" to read objects under public/ with no conditions. After the security team turns on the RestrictPublicBuckets setting for the bucket, the partner account can no longer read the shared/ objects. How can the partner's access be restored while RestrictPublicBuckets stays enabled?",
+    "options": [
+      "Attach an IAM policy in the partner account that explicitly allows s3:GetObject on the shared/ prefix.",
+      "Change the partner statement to use the aws:PrincipalOrgID condition instead of the partner account ID.",
+      "Turn off IgnorePublicAcls and grant the partner account read access through object ACLs.",
+      "Remove the anonymous public statement so that the bucket policy is no longer considered public."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "RestrictPublicBuckets takes effect only when the bucket policy is public, and a single public statement makes the whole policy public. While it applies, only AWS service principals and authorized users in the bucket owner's account can access the bucket, so cross-account access is blocked even for a statement that names a specific account. Removing the public statement makes the policy non-public, and the partner regains access. Extra IAM permissions in the partner account cannot override the block, rewriting the partner statement leaves the public statement in place, and ACLs are not the recommended fix.",
+    "subtopic": "S3 Block Public Access",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"
+  },
+  {
+    "id": "s3-104",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company serves a public marketing site from an Amazon S3 website endpoint and must keep using that endpoint. To meet a new internal standard, an engineer changed the bucket's default encryption to SSE-KMS with a customer managed key and re-copied every object. Visitors now get errors on every page, although the bucket policy still allows public s3:GetObject. Which change restores the site while keeping the objects encrypted at rest?",
+    "options": [
+      "Add a statement to the KMS key policy that allows Principal \"*\" to call kms:Decrypt on the key.",
+      "Re-encrypt the objects with SSE-S3, because anonymous website requests cannot use a KMS key.",
+      "Enable S3 Bucket Keys so that S3 no longer needs to call AWS KMS for each website request.",
+      "Enable S3 Transfer Acceleration so that website requests reach S3 over an encrypted connection."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Every GET for an SSE-KMS object must be signed with valid credentials and sent over TLS, but the website endpoint serves only anonymous, publicly readable content and does not support HTTPS, so SSE-KMS objects cannot be served from it. SSE-S3 still encrypts the objects at rest and is transparent to anonymous readers. A key policy cannot turn anonymous requests into signed ones, S3 Bucket Keys still rely on AWS KMS and the requester's access, and Transfer Acceleration is for uploads and transfers, not website endpoints.",
+    "subtopic": "S3 static website and SSE-KMS",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html"
+  },
+  {
+    "id": "s3-105",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A bakery wants its static website in Amazon S3 to be reachable at both http://example.com and http://www.example.com, with requests for www.example.com redirected to example.com. The domain is hosted in Amazon Route 53, and the bakery wants the lowest-cost setup with no servers. Which actions should a solutions architect take? (Select TWO.)",
+    "options": [
+      "Create one bucket named bakery-site and add CNAME records for both example.com and www.example.com that point to its website endpoint.",
+      "Create a bucket named example.com that hosts the site and a bucket named www.example.com that redirects all requests to example.com.",
+      "Add an S3 Lifecycle rule to the example.com bucket that redirects requests arriving for www.example.com.",
+      "Create Route 53 alias records for example.com and www.example.com that target the S3 website endpoints of the matching buckets.",
+      "Enable S3 Transfer Acceleration on the example.com bucket and point www.example.com to the accelerate endpoint."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "To serve a custom domain from S3 website endpoints, each bucket name must exactly match the host name, and the www bucket can use the \"redirect requests for an object\" website setting to send visitors to the apex bucket. Route 53 alias records can point both names, including the zone apex, at the S3 website endpoints. A differently named bucket cannot be used, and a CNAME is not allowed at the zone apex. Lifecycle rules manage storage, not HTTP redirects, and Transfer Acceleration does not serve websites.",
+    "subtopic": "S3 static website redirects",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/website-hosting-custom-domain-walkthrough.html"
+  },
+  {
+    "id": "s3-106",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A team suspended versioning on a bucket to stop paying for new object versions. Last week a good copy of reports/q3.csv was uploaded. Yesterday a faulty script uploaded a corrupted file to the same key, and the team cannot find the good copy among the object versions. What explains this?",
+    "options": [
+      "Suspending versioning makes S3 permanently delete noncurrent versions after 7 days to stop version charges.",
+      "The corrupted upload created a delete marker that hides the good copy, and removing the marker will restore it.",
+      "New uploads got the null version ID, and the later upload to the same key replaced that null version.",
+      "The good copy became a noncurrent version that only the root user can list and restore."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "After versioning is suspended, S3 gives every newly stored object the null version ID, and if a null version already exists, a PUT with the same key replaces its contents, so the good copy was overwritten. Versions created while versioning was enabled are kept, but objects written during suspension have no history. Suspending versioning never deletes versions on a schedule, a PUT does not create a delete marker, and listing versions does not require the root user.",
+    "subtopic": "S3 Versioning suspended state",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/AddingObjectstoVersionSuspendedBuckets.html"
+  },
+  {
+    "id": "s3-107",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company used the root user to enable versioning and MFA Delete on a bucket that stores contracts. The operations team now wants to add an S3 Lifecycle rule that permanently deletes noncurrent versions 60 days after they become noncurrent. What should a solutions architect tell the team?",
+    "options": [
+      "MFA Delete cannot be used with lifecycle configurations, so one of the two must be given up.",
+      "The rule will work, but the root user must approve each lifecycle deletion by entering an MFA code.",
+      "The rule must be created by an IAM user who has an MFA device, and lifecycle runs under that user's session.",
+      "The team should suspend versioning first, because lifecycle rules bypass MFA Delete in suspended buckets."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS documents that you cannot use MFA Delete with lifecycle configurations, so the bucket cannot have both a lifecycle rule and MFA Delete. MFA Delete requires the bucket owner's root user and an MFA code for permanent version deletions and versioning state changes, and only the root user can enable or disable it, through the CLI or API. Lifecycle actions do not run under a user session or prompt for MFA codes, and suspending versioning does not change this restriction.",
+    "subtopic": "MFA Delete",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/MultiFactorAuthenticationDelete.html"
+  },
+  {
+    "id": "s3-108",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A design studio enabled versioning on a bucket of 2 GB project files. Each file is saved about 20 times a month, and the storage bill has grown sharply. The studio wants to keep only the five most recent previous versions of each file for recovery and delete older versions as soon as possible. Which solution is MOST cost-effective?",
+    "options": [
+      "Suspend versioning on the bucket, which makes S3 keep only the latest five versions of each object.",
+      "Move the files to S3 Intelligent-Tiering, which stores each later version only as a change from the previous one.",
+      "Enable MFA Delete so that users cannot create more than five versions of each object.",
+      "Add a NoncurrentVersionExpiration rule with NewerNoncurrentVersions set to 5 and NoncurrentDays set to 1."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Each version is a complete object, not a diff, so 20 saves of a 2 GB file add about 40 GB of billed storage. A NoncurrentVersionExpiration action can retain a set number of newer noncurrent versions and permanently delete the rest once both the NewerNoncurrentVersions and NoncurrentDays values are exceeded. Suspending versioning does not remove existing versions, no storage class stores deltas, and MFA Delete protects deletions rather than limiting versions.",
+    "subtopic": "S3 Versioning costs",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html"
+  },
+  {
+    "id": "s3-109",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A bucket uses SSE-KMS default encryption with a customer managed key. An ingestion role has s3:PutObject on the bucket and kms:GenerateDataKey on the key. Small files upload successfully, but large files uploaded with the AWS CLI fail with an AccessDenied error. What is the MOST likely fix?",
+    "options": [
+      "Grant the role s3:PutObjectAcl, because the CLI sets an ACL on every part of a multipart upload.",
+      "Grant the role kms:Decrypt on the key, which multipart uploads need in addition to kms:GenerateDataKey.",
+      "Enable S3 Bucket Keys, which removes the need for KMS permissions during multipart uploads.",
+      "Grant the role kms:Encrypt on the key, because S3 calls the Encrypt API once for every uploaded part."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The AWS CLI switches to multipart upload for large files, and a multipart upload encrypted with a KMS key requires both kms:GenerateDataKey and kms:Decrypt, because S3 must decrypt and read the encrypted parts before it completes the upload. A single PutObject needs only kms:GenerateDataKey, which is why small files work. ACLs are not needed and are disabled by default, Bucket Keys still require the caller's KMS permissions, and S3 does not use the Encrypt API for object data.",
+    "subtopic": "Multipart upload with SSE-KMS",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/mpuoverview.html"
+  },
+  {
+    "id": "s3-110",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A genomics lab's custom uploader uses S3 multipart upload with a fixed part size of 5 MiB. It works for files of up to about 40 GB, but uploads of 80 GB files always fail near the end. Which change will fix the problem?",
+    "options": [
+      "Upload files larger than 50 GB in a single PUT request instead of using multipart upload.",
+      "Enable S3 Transfer Acceleration, which raises the maximum number of parts per upload.",
+      "Increase the part size, for example to 16 MiB, to stay within the 10,000-part limit.",
+      "Request a service quota increase for the maximum number of parts per multipart upload."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A multipart upload can have at most 10,000 parts, and with 5 MiB parts that limits an object to about 48.8 GiB, which is why 80 GB files fail. Parts can be up to 5 GiB, so a larger part size solves the problem. A single PUT is limited to 5 GB, Transfer Acceleration changes the network path but not the part limit, and the 10,000-part limit is a fixed specification rather than an adjustable quota.",
+    "subtopic": "Multipart upload limits",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/qfacts.html"
+  },
+  {
+    "id": "s3-111",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A media company wants faster uploads from customers on several continents to its bucket named uploads.example-media.com. When an engineer tries to enable S3 Transfer Acceleration on the bucket, it is not allowed. What should the engineer do?",
+    "options": [
+      "Create a new bucket whose name has no periods, enable acceleration, and upload to its s3-accelerate endpoint.",
+      "Send path-style requests to the accelerate endpoint so that the periods in the bucket name do not matter.",
+      "Enable Requester Pays on the bucket first, because it is a prerequisite for Transfer Acceleration.",
+      "Enable Transfer Acceleration on the bucket's S3 website endpoint instead of the REST endpoint."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Transfer Acceleration requires a bucket name that is DNS-compliant and does not contain periods, and clients must use the bucketname.s3-accelerate.amazonaws.com endpoint. Transfer Acceleration supports only virtual-hosted style requests, so path-style requests are not an option. Requester Pays is unrelated, and website endpoints do not provide acceleration.",
+    "subtopic": "S3 Transfer Acceleration requirements",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/transfer-acceleration.html"
+  },
+  {
+    "id": "s3-112",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is considering S3 Transfer Acceleration for uploads from 12 offices. Some offices are far from the bucket's Region and some are in the same Region. Finance does not want to pay for acceleration that provides no benefit. What should a solutions architect recommend?",
+    "options": [
+      "Route uploads through an S3 interface VPC endpoint, which removes the Transfer Acceleration charge.",
+      "Use AWS Global Accelerator with the bucket registered as an endpoint, which has no data transfer premium.",
+      "Use an S3 Multi-Region Access Point, which accelerates uploads over the internet at no additional charge.",
+      "Test each office with the Speed Comparison tool, knowing S3 waives the fee when acceleration isn't faster."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "The Speed Comparison tool compares accelerated and non-accelerated upload speeds to S3 Regions, and AWS states that when Transfer Acceleration is not likely to be faster than a regular transfer, it does not charge for acceleration and may bypass it. Interface endpoints do not remove acceleration charges, S3 buckets are not Global Accelerator endpoints, and Multi-Region Access Point internet acceleration carries its own routing and acceleration charges.",
+    "subtopic": "S3 Transfer Acceleration pricing",
+    "source": "https://aws.amazon.com/s3/faqs/"
+  },
+  {
+    "id": "s3-113",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Account A owns a bucket whose default encryption is SSE-KMS with no KMS key specified. A partner role in Account B uploads files under a bucket policy that allows s3:PutObject. Account A's analytics role can list the new objects but gets AccessDenied when it reads them. Which solution will fix the problem for future uploads?",
+    "options": [
+      "Grant the analytics role kms:Decrypt on Account A's AWS managed key aws/s3 in its IAM policy.",
+      "Use a customer managed key in Account A that the partner role can use, set as the default by full key ARN.",
+      "Edit the key policy of the aws/s3 key in Account B to allow Account A to decrypt with it.",
+      "Set the bucket default encryption to a key alias such as alias/shared-data so S3 always resolves it in Account A."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "When no KMS key is specified, objects are encrypted with the AWS managed key aws/s3 of the uploading account, which cannot be shared across accounts because its key policy cannot be changed. Sharing SSE-KMS data across accounts requires a customer managed key whose policy grants the other account access, and AWS recommends a fully qualified key ARN because KMS resolves an alias in the requester's account. Granting access to Account A's aws/s3 key does not help because the objects were encrypted with Account B's key.",
+    "subtopic": "SSE-KMS cross-account uploads",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html"
+  },
+  {
+    "id": "s3-114",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A security team is choosing a KMS key for SSE-KMS default encryption on a new bucket in eu-west-1. Which requirements must the key meet? (Select TWO.)",
+    "options": [
+      "The key must be in the same AWS Region as the bucket.",
+      "The key must be an AWS managed key, because customer managed keys cannot be set as a bucket default.",
+      "The key must have automatic key rotation enabled before S3 can use it.",
+      "The key must be stored in a custom key store backed by AWS CloudHSM.",
+      "The key must be a symmetric encryption KMS key."
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "For SSE-KMS, the KMS key must be in the same Region as the bucket, and Amazon S3 supports only symmetric encryption KMS keys. Customer managed keys are commonly used as bucket defaults and give more control. Automatic rotation is optional, and custom key stores are supported but not required.",
+    "subtopic": "SSE-KMS key requirements",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html"
+  },
+  {
+    "id": "s3-115",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "In mid-2026, a team created a new general purpose bucket for an existing application that encrypts every upload with SSE-C over HTTPS. All uploads to the new bucket fail with 403 AccessDenied, while the same IAM role still uploads successfully to the application's older bucket, which already holds SSE-C objects. What should the team do?",
+    "options": [
+      "Upload the objects through the S3 console, which accepts the customer key in its upload form.",
+      "Turn off the Block Public Access settings on the new bucket so that requests carrying customer keys are accepted.",
+      "Use PutBucketEncryption to set BlockedEncryptionTypes to NONE so that SSE-C writes are allowed.",
+      "Import the customer keys into AWS KMS so that S3 can retrieve them during each upload."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Since April 2026, SSE-C is disabled by default for new general purpose buckets, and SSE-C writes are rejected with 403 AccessDenied until the bucket owner sets BlockedEncryptionTypes to NONE through PutBucketEncryption. The S3 console does not support SSE-C at all. Block Public Access controls public access and has nothing to do with encryption types, and keys imported into AWS KMS would be SSE-KMS, not SSE-C.",
+    "subtopic": "SSE-C default setting",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerSideEncryptionCustomerKeys.html"
+  },
+  {
+    "id": "s3-116",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company is evaluating server-side encryption with customer-provided keys (SSE-C) for a new bucket. Which statements about SSE-C are correct? (Select TWO.)",
+    "options": [
+      "Amazon S3 stores each customer key in AWS KMS so that services such as Amazon Athena can read the objects.",
+      "Users can upload SSE-C objects through the S3 console by pasting the key into the upload page.",
+      "Amazon S3 rejects SSE-C requests that are sent over HTTP, so every SSE-C request must use HTTPS.",
+      "SSE-C automatically rotates the customer key once a year without any client changes.",
+      "Amazon S3 does not store the encryption key, so if the company loses a key it cannot read the objects encrypted with that key."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "With SSE-C, S3 uses the key supplied with each request and never stores it, so the customer must track which key encrypted which object and loses the data if a key is lost. S3 rejects SSE-C requests over HTTP, and AWS advises treating any key sent over HTTP as compromised. AWS managed services cannot natively decrypt SSE-C objects, the console does not support SSE-C, and any key rotation is the customer's responsibility.",
+    "subtopic": "SSE-C",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerSideEncryptionCustomerKeys.html"
+  },
+  {
+    "id": "s3-117",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A startup must be able to see in AWS CloudTrail every time the key that protects its S3 objects is used. It does not need to control key policies, rotation schedules, or cross-account sharing, and it wants the LEAST operational overhead with no monthly key fee. Which encryption option meets these requirements?",
+    "options": [
+      "SSE-KMS with the AWS managed key aws/s3",
+      "SSE-S3 default encryption with Amazon S3 managed keys",
+      "SSE-KMS with a customer managed key that has automatic rotation enabled",
+      "SSE-C with keys stored in AWS Secrets Manager"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Use of an AWS managed key such as aws/s3 is recorded in CloudTrail, AWS KMS manages its policy and annual rotation, and there is no monthly fee for the key (KMS request charges still apply). SSE-S3 does not use AWS KMS, so there are no key-usage events to audit. A customer managed key adds a monthly fee and key management work that the startup does not need, and SSE-C makes the startup manage keys and send them with every request.",
+    "subtopic": "Choosing S3 encryption keys",
+    "source": "https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html"
+  },
+  {
+    "id": "s3-118",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A KMS key policy allows kms:Decrypt only when the aws:s3:arn encryption context matches objects under arn:aws:s3:::claims-data/approved/*. After the storage team enabled S3 Bucket Keys on the claims-data bucket to lower AWS KMS costs, applications cannot read newly written objects, but older objects are still readable. What is the cause?",
+    "options": [
+      "S3 Bucket Keys work only with the AWS managed key aws/s3, so new objects are encrypted with a different key.",
+      "S3 Bucket Keys replace kms:Decrypt with a separate s3:GetBucketKey permission that the applications lack.",
+      "S3 Bucket Keys switch new objects to DSSE-KMS, which needs a second key policy statement.",
+      "S3 now uses the bucket ARN as the encryption context, so the key policy condition no longer matches."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Without a Bucket Key, SSE-KMS uses the object ARN as the encryption context, but with a Bucket Key it uses the bucket ARN, so IAM or key policies that restrict access by object ARN no longer match. AWS advises updating such policies to the bucket ARN before enabling Bucket Keys, and CloudTrail KMS events then show the bucket ARN. Bucket Keys work with customer managed keys, there is no s3:GetBucketKey permission, and Bucket Keys are not supported for DSSE-KMS.",
+    "subtopic": "S3 Bucket Keys and encryption context",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-key.html"
+  },
+  {
+    "id": "s3-119",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company enabled S3 Bucket Keys on a bucket that already holds 800 million SSE-KMS objects, which are read heavily. A month later, AWS KMS request charges for writing new objects have dropped, but charges for reads have barely changed. What should the company do to reduce the read-related KMS charges?",
+    "options": [
+      "Wait for the Bucket Key setting to propagate, because S3 applies it to existing objects over the next 90 days.",
+      "Copy the existing objects in place with an S3 Batch Operations Copy job to apply the Bucket Key.",
+      "Switch the bucket to DSSE-KMS, which uses S3 Bucket Keys automatically for every object.",
+      "Rotate the KMS key so that the existing objects are rewrapped under the bucket-level key."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Enabling an S3 Bucket Key affects only objects written afterward; objects already in the bucket keep their individual data keys, so each read still calls AWS KMS. Copying the objects (CopyObject, at scale through Batch Operations) re-encrypts them with the Bucket Key. S3 does not apply the setting retroactively, Bucket Keys are not supported with DSSE-KMS, and key rotation does not re-encrypt existing data.",
+    "subtopic": "S3 Bucket Keys for existing objects",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucket-key.html"
+  },
+  {
+    "id": "s3-120",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A bucket uses SSE-KMS default encryption with a customer managed key whose key policy lets IAM policies grant access. A new uploader role has s3:PutObject on the bucket, but every PutObject call fails with AccessDenied. Which additional permission does the role need?",
+    "options": [
+      "kms:Encrypt on the KMS key",
+      "kms:CreateGrant on the KMS key",
+      "kms:GenerateDataKey on the KMS key",
+      "s3:PutEncryptionConfiguration on the bucket"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "To upload an object encrypted with a KMS key, the caller needs kms:GenerateDataKey, because S3 asks AWS KMS for a data key to encrypt the object; reading it later needs kms:Decrypt. This separation is what lets S3 administrators manage buckets without being able to read SSE-KMS data. S3 does not use the Encrypt API for object data, grants are not required, and s3:PutEncryptionConfiguration changes the bucket default encryption rather than allowing uploads.",
+    "subtopic": "SSE-KMS permissions and role separation",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html"
+  },
+  {
+    "id": "s3-121",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An analytics team writes about 5 million JSON files of 40 KB each to S3 Standard-IA every day. Each file is read a few times during its first week and deleted after 10 days. The S3 bill is much higher than expected. Which change is MOST cost-effective?",
+    "options": [
+      "Store the files in S3 Standard, which has no minimum object size, minimum duration, or retrieval fee.",
+      "Store the files in S3 One Zone-IA, which has no minimum billable object size or storage duration.",
+      "Store the files in S3 Glacier Instant Retrieval, which has the lowest cost for millisecond access.",
+      "Store the files in S3 Glacier Flexible Retrieval and use Expedited retrievals for reads."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Standard-IA is meant for long-lived, infrequently accessed objects larger than 128 KB: smaller objects are billed as 128 KB, objects deleted before 30 days are charged for the full 30 days, and every read adds a retrieval fee. Small, short-lived, frequently read files are cheaper in S3 Standard. One Zone-IA has the same 128 KB and 30-day minimums, Glacier Instant Retrieval has a 90-day minimum and higher retrieval fees, and Glacier Flexible Retrieval requires restores and has a 90-day minimum.",
+    "subtopic": "S3 Standard-IA minimums",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-class-intro.html"
+  },
+  {
+    "id": "s3-122",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A news agency stores raw interview footage that is rarely accessed. A few times a year, an editor needs a specific clip within 15 minutes, without having restored it in advance. The agency wants the lowest storage cost that meets this requirement. Which option should it use?",
+    "options": [
+      "S3 Glacier Deep Archive, using Expedited retrievals when a clip is urgently needed",
+      "S3 Glacier Deep Archive, using Standard retrievals when a clip is urgently needed",
+      "S3 Standard-IA, using byte-range GET requests when a clip is urgently needed",
+      "S3 Glacier Flexible Retrieval, using Expedited retrievals for urgent clips"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Expedited retrievals from S3 Glacier Flexible Retrieval typically complete in 1 to 5 minutes, and provisioned capacity can guarantee Expedited capacity during peak demand. S3 Glacier Deep Archive does not offer Expedited retrievals; its Standard retrievals complete within 12 hours and Bulk within 48 hours. Standard-IA gives millisecond access but costs more to store than Glacier Flexible Retrieval for rarely read data.",
+    "subtopic": "S3 Glacier retrieval times",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/restoring-objects-retrieval-options.html"
+  },
+  {
+    "id": "s3-123",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company restored a 2 TB dataset from S3 Glacier Deep Archive and specified a 7-day restore period. The dataset will now be used every day for at least a year. After a week, the jobs that read the dataset start failing because the objects are archived again. What should the company have done after the restore completed?",
+    "options": [
+      "Added a lifecycle rule that transitions the objects from S3 Glacier Deep Archive back to S3 Standard.",
+      "Copied the restored objects to the S3 Standard storage class before the restore period ended.",
+      "Set the restore period to 0 days, which makes the restored copy permanent.",
+      "Enabled S3 Versioning so the restored copy became a permanent new version."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A restore makes a temporary copy that is available only for the number of days requested, and the object's storage class stays S3 Glacier Deep Archive. To move the data back permanently, restore it and then copy it (CLI, SDK, or API) with a storage class such as S3 Standard. Lifecycle transitions out of Glacier Deep Archive are not supported, there is no permanent restore option, and versioning does not change how restores work.",
+    "subtopic": "Restoring archived objects",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-transition-general-considerations.html"
+  },
+  {
+    "id": "s3-124",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A solutions architect is designing S3 Lifecycle rules for several buckets. Which storage class transitions can a lifecycle rule perform? (Select TWO.)",
+    "options": [
+      "S3 Standard-IA to S3 Glacier Instant Retrieval",
+      "S3 Glacier Flexible Retrieval to S3 Standard-IA",
+      "S3 One Zone-IA to S3 Glacier Deep Archive",
+      "S3 One Zone-IA to S3 Standard-IA",
+      "S3 Glacier Instant Retrieval to S3 Standard"
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "Lifecycle transitions follow a downward waterfall: Standard-IA can move to Intelligent-Tiering, One Zone-IA, or any Glacier class, and One Zone-IA can move only to Glacier Flexible Retrieval or Glacier Deep Archive. Lifecycle rules cannot move objects to a warmer class, such as from One Zone-IA to Standard-IA or from any Glacier class to Standard. Objects in Glacier Flexible Retrieval can only transition to Glacier Deep Archive; anything else requires a restore and a copy.",
+    "subtopic": "S3 Lifecycle supported transitions",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-transition-general-considerations.html"
+  },
+  {
+    "id": "s3-125",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company had a lifecycle rule that expires log objects 30 days after creation. After the company enabled versioning on the bucket to support replication, storage keeps growing, and version listings show many delete markers and old versions. Which lifecycle actions should be added to control storage? (Select TWO.)",
+    "options": [
+      "A Transition action that moves current versions to S3 Glacier Deep Archive after 30 days",
+      "A NoncurrentVersionExpiration action that permanently deletes versions a set number of days after they become noncurrent",
+      "Suspension of versioning so that the existing Expiration action permanently deletes objects again",
+      "MFA Delete on the bucket so that noncurrent versions are removed automatically",
+      "An action that removes expired object delete markers once no noncurrent versions remain"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "In a versioned bucket, the Expiration action only adds a delete marker and turns the current version into a noncurrent version, which keeps being billed. AWS advises adding a NoncurrentVersionExpiration action to keep the old permanent-delete behavior, and removing expired object delete markers cleans up markers that have no versions left. Transitioning current versions does not remove noncurrent data, replication requires versioning to stay enabled and suspension does not delete existing versions, and MFA Delete cannot be used with lifecycle configurations.",
+    "subtopic": "S3 Lifecycle with versioning",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html"
+  },
+  {
+    "id": "s3-126",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "To clean up a legacy dataset, an engineer created a lifecycle rule with an empty filter and an Expiration action set to a specific date in the past. The legacy objects were deleted as planned, but objects uploaded since then are also being deleted within about a day. Why?",
+    "options": [
+      "S3 converts a past date into a 1-day expiration period that applies to every new object.",
+      "The rule's AbortIncompleteMultipartUpload action deletes objects that were uploaded with multipart upload.",
+      "A date-based action keeps applying to every matching object, including new ones, while the rule is enabled.",
+      "An empty filter applies the rule to objects in all buckets in the account, including the new uploads."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A date-based lifecycle action is not a one-time action: after the date passes, S3 continues to apply it to every qualifying object, including newly created ones, until the action is removed or the rule is disabled or deleted. S3 does not convert the date into a period. AbortIncompleteMultipartUpload removes only unfinished uploads, not completed objects, and a lifecycle configuration applies only to the bucket it is attached to; an empty filter means all objects in that bucket.",
+    "subtopic": "S3 Lifecycle date-based rules",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/intro-lifecycle-rules.html"
+  },
+  {
+    "id": "s3-127",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company replicates bucket A in us-east-1 to bucket B in us-west-2. To keep a third copy in eu-west-1, it added a replication rule from bucket B to bucket C. Objects written directly to bucket B appear in bucket C, but objects that originate in bucket A never do. What should a solutions architect do?",
+    "options": [
+      "Add bucket C as a second destination of bucket A's rule, and use Batch Replication for existing objects.",
+      "Enable S3 Replication Time Control on the replication rule from bucket B to bucket C.",
+      "Enable replica modification sync on bucket B so that replicas are forwarded to bucket C.",
+      "Enable delete marker replication on the B-to-C rule so that replicated objects are forwarded."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "S3 does not replicate objects that are themselves replicas created by another replication rule, so A to B to C chaining does not carry A's objects to C. Live replication can send objects from bucket A to more than one destination, and Batch Replication can replicate existing replicas when needed. RTC speeds up and monitors replication but does not change what is eligible, replica modification sync copies metadata changes back to the source, and delete marker replication only affects deletes.",
+    "subtopic": "S3 Replication chaining",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-what-is-isnot-replicated.html"
+  },
+  {
+    "id": "s3-128",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company adds a Cross-Region Replication rule with default settings to a versioned bucket that has been in use for two years. Which of the following will NOT be replicated by the new rule? (Select THREE.)",
+    "options": [
+      "Objects that were stored in the bucket before the rule was created",
+      "Tags on objects that are uploaded after the rule is created",
+      "Object Lock retention settings on objects uploaded after the rule is created",
+      "New objects stored in the S3 Glacier Flexible Retrieval or S3 Glacier Deep Archive storage classes",
+      "New objects that are encrypted with SSE-S3 by default encryption",
+      "Changes made later to the source bucket's lifecycle configuration"
+    ],
+    "answer": [
+      0,
+      3,
+      5
+    ],
+    "explanation": "Live replication applies only to objects created after the rule exists, so existing objects need S3 Batch Replication. Objects in Glacier Flexible Retrieval, Glacier Deep Archive, or the Intelligent-Tiering archive tiers are not replicated, and bucket-level settings such as lifecycle or notification configurations are never copied to the destination. New objects are replicated together with their tags and Object Lock retention information, and SSE-S3 encrypted objects are replicated by default.",
+    "subtopic": "What S3 Replication copies",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-what-is-isnot-replicated.html"
+  },
+  {
+    "id": "s3-129",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A replication rule copies only objects that have the tag replicate=true. An application uploads each object and then adds the tag with a separate PutObjectTagging call a few seconds later. None of these objects are replicated. What should the company do?",
+    "options": [
+      "Enable replica modification sync so that tag changes start replication of the objects.",
+      "Enable S3 Replication Time Control so that tags are evaluated again after 15 minutes.",
+      "Add an s3:ObjectTagging:Put event notification that makes S3 replicate an object when its tag is added.",
+      "Add the tag in the PutObject request, and use S3 Batch Replication for objects tagged after upload."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "With live replication and tag-based rules, the matching tag must be present in the PutObject request; objects that are tagged afterward are not replicated. S3 Batch Replication can replicate those existing objects. Replica modification sync copies metadata changes from replicas back to the source, RTC does not re-evaluate tags, and event notifications deliver messages but do not trigger replication.",
+    "subtopic": "Tag-based replication",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/replication-what-is-isnot-replicated.html"
+  },
+  {
+    "id": "s3-130",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A support engineer whose IAM role has no s3:GetObject permission on a bucket ran a script that generated presigned GET URLs for customers. The URLs were generated without any errors, but customers receive 403 Access Denied responses. What is the reason?",
+    "options": [
+      "Presigned URLs work only after Block Public Access is turned off for the bucket.",
+      "A presigned URL works only if the principal who signed it has permission for the operation.",
+      "Customers must sign the presigned URL again with their own AWS credentials before using it.",
+      "Presigned URLs work only for objects that are encrypted with SSE-C."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A presigned URL carries the credentials of the IAM principal that generated it, and S3 grants access only if that principal is allowed to perform the operation, so the role needs s3:GetObject. Generating the URL is a local signing step and does not check permissions. Presigned URLs work with Block Public Access enabled, recipients do not need AWS credentials, and they work with any encryption type the signer can use.",
+    "subtopic": "Presigned URL permissions",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html"
+  },
+  {
+    "id": "s3-131",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A developer used an IAM user's access key to create presigned download URLs that expire in 7 days. Two days later, the security team suspects the key was leaked and deactivates it. What happens to the presigned URLs that were already sent to customers?",
+    "options": [
+      "They keep working until their 7-day expiration, because the signature is self-contained.",
+      "They keep working until the bucket policy is changed to deny the IAM user.",
+      "They stop working, because deactivating the signing credential invalidates the URLs.",
+      "They keep working for 12 hours, which is the maximum lifetime after the signing key is deactivated."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS documents that a presigned URL generally expires when the credential used to create it is revoked, deleted, or deactivated, even if the URL was created with a later expiration time. The company must issue new URLs signed by valid credentials. A signature cannot keep working after its key is deactivated, and no extra grace period applies. The 12-hour value is the maximum expiration for URLs created in the S3 console.",
+    "subtopic": "Presigned URL credential revocation",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html"
+  },
+  {
+    "id": "s3-132",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Developers in many teams create presigned URLs for a sensitive bucket and sometimes set expirations of up to 7 days. A new rule says no presigned URL may be usable more than 10 minutes after it was signed, whatever expiration the developer chooses. Which solution meets this requirement with the LEAST operational overhead?",
+    "options": [
+      "Add a bucket policy that denies S3 actions when s3:signatureAge exceeds 600,000 milliseconds.",
+      "Require all developers to sign URLs with IAM roles whose maximum session duration is 10 minutes.",
+      "Add an S3 Lifecycle rule that expires presigned URLs 10 minutes after they are created.",
+      "Enable S3 Object Lock in governance mode with a 10-minute retention period on every object."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The s3:signatureAge condition key in a bucket or access point policy limits how old a SigV4 signature can be, so a Deny when it exceeds 600,000 ms blocks any presigned URL older than 10 minutes, no matter which expiration was set. IAM role sessions cannot be shorter than 15 minutes, and controlling every team's credentials adds overhead. Lifecycle rules act on objects, not URLs, and Object Lock prevents deletion rather than limiting access.",
+    "subtopic": "Restricting presigned URLs",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-presigned-url.html"
+  },
+  {
+    "id": "s3-133",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company serves its website at https://www.example.com from a bucket named www-site through Amazon CloudFront. The pages load web fonts directly from a second bucket named brand-fonts by using that bucket's S3 endpoint. Browsers block the fonts with CORS errors. Where should the CORS configuration be added?",
+    "options": [
+      "On the www-site bucket, with a rule that allows requests from the brand-fonts bucket endpoint",
+      "In the brand-fonts bucket policy, as an Allow statement with an aws:Referer condition",
+      "In the www-site bucket's website routing rules, as a redirect to the brand-fonts bucket",
+      "On the brand-fonts bucket, allowing GET requests from the https://www.example.com origin"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "CORS is evaluated by the resource that receives the cross-origin request, so the bucket that hosts the fonts must have a CORS rule whose AllowedOrigins includes the site's origin and whose AllowedMethods includes GET. AWS uses hosting web fonts as a standard example of needing CORS on the font bucket. A rule on the website bucket does not affect responses from the font bucket, bucket policies control authorization rather than browser CORS headers, and routing rules perform redirects.",
+    "subtopic": "S3 CORS",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/cors.html"
+  },
+  {
+    "id": "s3-134",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A browser application at https://portal.example.com fetches reports from a private bucket. After a CORS rule that allows GET from that origin was added to the bucket, the browser no longer shows CORS errors, but the requests now return 403 Access Denied. What is the reason?",
+    "options": [
+      "CORS rules can take up to 24 hours to propagate, and requests are denied until then.",
+      "CORS does not grant access, so requests must still be authorized, for example with presigned URLs.",
+      "The CORS rule must also list HEAD in AllowedMethods before GET requests are allowed.",
+      "CORS works only after all Block Public Access settings are turned off for the bucket."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "CORS only tells the browser whether a cross-origin request is allowed; S3 states that ACLs and policies continue to apply when CORS is enabled. A private bucket therefore still needs authenticated requests, such as presigned URLs generated by the backend. CORS changes do not take a day to apply, GET does not depend on HEAD being listed, and CORS does not require public access.",
+    "subtopic": "S3 CORS and permissions",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/cors.html"
+  },
+  {
+    "id": "s3-135",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An administrator created an S3 access point for the finance team with an access point policy that allows the finance role s3:GetObject on finance/*. The role's IAM policy also allows this access. Requests made through the access point still return AccessDenied. The bucket policy allows only the data platform role. What should the administrator do with the LEAST ongoing effort?",
+    "options": [
+      "Turn off Block Public Access on the access point so that its access point policy takes effect.",
+      "Recreate the access point with a VPC network origin so that its policy is evaluated before the bucket policy.",
+      "Delegate access control from the bucket policy to the account's access points with s3:DataAccessPointAccount.",
+      "Grant the finance role read access with object ACLs on the finance/ objects in the bucket."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A request through an access point succeeds only if both the access point policy and the underlying bucket allow it. AWS recommends delegating access control from the bucket to the account's access points, so that each access point policy alone governs access through it; otherwise every grant must be duplicated in the bucket policy. Block Public Access and network origin do not grant permissions, and ACLs are disabled by default and are not recommended.",
+    "subtopic": "S3 Access Points permissions",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-policies.html"
+  },
+  {
+    "id": "s3-136",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company created an S3 access point with a VPC network origin and a restrictive policy for each team so that a shared bucket is accessed only from its VPCs. A penetration test shows that a user with broad IAM permissions can still read objects from the internet by calling the bucket directly. What should a solutions architect do?",
+    "options": [
+      "Add a bucket policy that denies object operations unless s3:AccessPointNetworkOrigin is VPC.",
+      "Add more restrictive statements to each access point policy so that they also apply to direct bucket requests.",
+      "Enable all four Block Public Access settings on each of the team access points.",
+      "Set Object Ownership on the bucket to Bucket owner enforced to disable direct access."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Access point policies and network origins apply only to requests made through the access point; requests sent directly to the bucket are evaluated against the bucket policy and IAM as before. A bucket policy that denies object operations when s3:AccessPointNetworkOrigin is not VPC forces all access through VPC-origin access points, after checking that no needed feature (such as replication) requires direct access. Block Public Access does not stop authorized IAM principals, and Object Ownership affects ACLs, not network paths.",
+    "subtopic": "S3 Access Points network controls",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-points-policies.html"
+  },
+  {
+    "id": "s3-137",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A central security account wants daily S3 Inventory reports for buckets in eu-west-1 and ap-southeast-2 delivered into one bucket in us-east-1. The inventory configurations cannot use the us-east-1 bucket as the destination. What should a solutions architect do?",
+    "options": [
+      "Enable S3 Transfer Acceleration on the us-east-1 bucket so that it can receive reports from other Regions.",
+      "Use an S3 Multi-Region Access Point as the inventory destination so that reports reach the us-east-1 bucket.",
+      "Change the inventory frequency to weekly, because weekly reports support cross-Region destinations.",
+      "Use a destination bucket in each source bucket's Region; it can be owned by the security account."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "An S3 Inventory destination bucket must be in the same Region as the source bucket, but it can belong to a different AWS account and needs a bucket policy that allows S3 to verify ownership and write files. The reports can then be replicated or queried centrally. Transfer Acceleration and Multi-Region Access Points do not change inventory destination rules, and the frequency setting does not affect where reports can be delivered.",
+    "subtopic": "S3 Inventory destination",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html"
+  },
+  {
+    "id": "s3-138",
+    "topic": "s3",
+    "domain": "performance",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A data team plans to replace millions of ListObjectsV2 calls in a nightly job with S3 Inventory reports for a busy bucket. Which statements about S3 Inventory are correct? (Select TWO.)",
+    "options": [
+      "Inventory reports are produced without using the List API and do not affect the bucket's request rate.",
+      "Inventory reports can be generated every hour for near-real-time processing.",
+      "The first inventory report is delivered within 5 minutes of creating the configuration.",
+      "Inventory lists are eventually consistent, so the job should confirm object state with HeadObject before acting.",
+      "Inventory reports can be delivered only as uncompressed CSV files with a fixed set of fields."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "S3 Inventory is a scheduled alternative to synchronous List calls that does not use the List API and does not affect the bucket's request rate. Each report is an eventually consistent snapshot that might not include recently added or deleted objects, so AWS recommends checking object state with HeadObject before acting. Reports are daily or weekly, the first one can take up to 48 hours, and formats include GZIP-compressed CSV, ORC, and Parquet.",
+    "subtopic": "S3 Inventory behavior",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html"
+  },
+  {
+    "id": "s3-139",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A compliance team must receive a message in an SQS queue whenever any object is removed from a bucket, including removals by S3 Lifecycle expiration rules. An s3:ObjectRemoved:* event notification to the queue works for user deletions but produces no messages for lifecycle expirations. What should be added?",
+    "options": [
+      "An event notification for s3:ObjectRestore:Delete events that sends messages to the same queue",
+      "An event notification for s3:LifecycleExpiration:* events that sends messages to the same queue",
+      "An event notification for s3:ObjectRemoved:DeleteMarkerCreated events sent to the same queue",
+      "A daily S3 Inventory report that is compared with the previous day's report"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "ObjectRemoved event types do not report automatic deletes performed by lifecycle configurations, while s3:LifecycleExpiration:Delete and s3:LifecycleExpiration:DeleteMarkerCreated report objects that lifecycle deletes or marks as deleted. ObjectRestore:Delete fires when a temporary restored copy expires, DeleteMarkerCreated under ObjectRemoved still covers only requests, and inventory comparisons are delayed snapshots rather than per-event messages.",
+    "subtopic": "S3 Event Notifications for lifecycle actions",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-event-types-and-destinations.html"
+  },
+  {
+    "id": "s3-140",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An operations team wants an alert whenever an object fails to replicate under a Cross-Region Replication rule that does not use S3 Replication Time Control. The team configured an event notification for s3:Replication:OperationFailedReplication, but no events arrive. What must be enabled?",
+    "options": [
+      "Server access logging on the destination bucket",
+      "Delete marker replication on the replication rule",
+      "S3 Replication metrics on the replication rule",
+      "S3 Transfer Acceleration on the source bucket"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Replication event types such as s3:Replication:OperationFailedReplication are published only for replication configurations that have S3 Replication metrics or S3 RTC enabled. Turning on replication metrics without RTC provides the failure events. Server access logs are best-effort request records, delete marker replication changes what is replicated, and Transfer Acceleration is unrelated to replication monitoring.",
+    "subtopic": "S3 replication event notifications",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-event-types-and-destinations.html"
+  },
+  {
+    "id": "s3-141",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A bucket in eu-west-1 must send a notification to subscribers whenever a new object is created. The topic access policy already allows S3 to publish, but saving an event notification that targets an Amazon SNS topic in us-east-1 fails. Which destination will work?",
+    "options": [
+      "An SNS standard topic in eu-west-1",
+      "An SNS FIFO topic in us-east-1",
+      "An AWS Lambda function in us-east-1",
+      "An SNS FIFO topic in eu-west-1"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "For S3 Event Notifications, an SNS topic, SQS queue, or Lambda function destination must be in the same Region as the bucket, and only SNS standard topics are supported, not SNS FIFO topics. A Lambda function in another Region fails for the same Regional reason. To reach other Regions or FIFO targets, events can be routed through Amazon EventBridge.",
+    "subtopic": "S3 Event Notification destinations",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-how-to-event-types-and-destinations.html"
+  },
+  {
+    "id": "s3-142",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company enabled S3 server access logging to a log bucket that uses SSE-KMS default encryption with a customer managed key. Auditors report that some log objects cannot be read. The company wants log delivery to an S3 bucket to keep working reliably. What should a solutions architect do?",
+    "options": [
+      "Enable S3 Bucket Keys on the log bucket so that the logging service can reuse the KMS key.",
+      "Change the log bucket's default encryption to DSSE-KMS.",
+      "Enable S3 Versioning on the log bucket so that unreadable log objects are replaced.",
+      "Change the log bucket's default encryption to SSE-S3."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A bucket that receives server access logs must use SSE-S3; if it uses SSE-KMS default encryption, S3 might deliver log objects encrypted with a key the company cannot access, and AWS says to switch the destination to SSE-S3. Bucket Keys and DSSE-KMS are still KMS-based options, and versioning does not change how log objects are encrypted. If KMS encryption of the logs is required, the logs can instead be delivered to Amazon CloudWatch Logs.",
+    "subtopic": "S3 server access logging encryption",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html"
+  },
+  {
+    "id": "s3-143",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company needs S3 server access logs from buckets in four AWS Regions and 30 accounts collected in one central account, encrypted with AWS KMS, and available for SQL queries. Which approach meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Configure every bucket to deliver its server access logs directly to one SSE-KMS encrypted S3 bucket in the central account.",
+      "Deliver the server access logs to Amazon CloudWatch Logs with cross-account and cross-Region delivery.",
+      "Configure daily S3 Inventory reports from every bucket to the central account and query them with Amazon Athena.",
+      "Create an S3 Storage Lens organization dashboard and export its metrics to the central account."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "When server access logs are delivered to an S3 bucket, the destination must be in the same Region and account as the source and support only SSE-S3, so one central KMS-encrypted bucket is not possible. The CloudWatch Logs delivery option supports cross-account and cross-Region aggregation and KMS encryption, and logs can be queried with CloudWatch Logs Insights or mirrored to S3 Tables. Inventory lists objects and Storage Lens provides aggregated metrics; neither records individual requests.",
+    "subtopic": "S3 server access logging delivery",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ServerLogs.html"
+  },
+  {
+    "id": "s3-144",
+    "topic": "s3",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A bucket uses S3 Object Lock with a 5-year compliance mode default retention. An attacker who had s3:PutObject permission uploaded new files using the same keys as existing invoices, and the application now reads the altered invoices. What is true about the original invoices?",
+    "options": [
+      "The originals were overwritten, which shows that the retention mode was governance rather than compliance.",
+      "The originals were overwritten because the attacker also held the s3:BypassGovernanceRetention permission.",
+      "They remain locked as earlier versions and can be read by version ID; Object Lock does not block new versions.",
+      "The originals were deleted, and they can be recovered only from a replicated copy in another bucket."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Object Lock retention and legal holds protect specific object versions; they do not prevent new versions or delete markers from being created on top. A PUT to the same key creates a new current version while the locked version remains unchanged and retrievable by its version ID. Neither compliance nor governance mode blocks new versions, BypassGovernanceRetention is not involved in uploads, and nothing was deleted. Least-privilege write permissions are needed to stop such uploads.",
+    "subtopic": "S3 Object Lock and new versions",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html"
+  },
+  {
+    "id": "s3-145",
+    "topic": "s3",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "An object version has a governance mode retention period that ends on June 30, and the legal team has also placed a legal hold on it. Which statements are correct? (Select TWO.)",
+    "options": [
+      "Placing the legal hold extended the retain-until date by the length of time the hold stays in place.",
+      "Only the root user of the account can remove the legal hold from the object version.",
+      "After June 30, the version stays protected until a user with the s3:PutObjectLegalHold permission removes the legal hold.",
+      "If the legal hold is removed before June 30, the version is still protected by its retention period until June 30.",
+      "A legal hold can be placed only on object versions that already use compliance mode retention."
+    ],
+    "answer": [
+      2,
+      3
+    ],
+    "explanation": "Legal holds are independent of retention periods: if the retention period ends, the legal hold keeps protecting the version, and if the hold is removed first, the retention period still applies. A legal hold has no expiration and does not change the retain-until date, and any user with s3:PutObjectLegalHold can place or remove it. Legal holds can be used with either retention mode or with no retention period at all.",
+    "subtopic": "S3 Object Lock legal hold",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock.html"
+  },
+  {
+    "id": "s3-146",
+    "topic": "s3",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A data provider enabled Requester Pays on a large public-research bucket. To simplify access, it created an IAM role in its own account that partner users assume before downloading data. The provider is still billed for the partners' requests and downloads. What should the provider change?",
+    "options": [
+      "Have partners use roles in their own accounts, allowed by the bucket policy, so that their accounts are billed.",
+      "Enable S3 Transfer Acceleration so that data transfer charges move to the requesters.",
+      "Turn off Requester Pays and allow anonymous access so that downloads are free for the provider.",
+      "Ask partners to download through the bucket's static website endpoint, which always bills the requester."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "With Requester Pays, the requester pays for requests and data downloads, but when the requester assumes an IAM role first, the account that owns the role is charged, so a role in the provider's account bills the provider. Partners should use their own credentials, include the request payer parameter, and be granted access in the bucket policy. Transfer Acceleration adds charges, anonymous access is not allowed on Requester Pays buckets and would leave the provider paying, and website endpoints return 403 for Requester Pays buckets.",
+    "subtopic": "S3 Requester Pays with roles",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html"
   }
 ]

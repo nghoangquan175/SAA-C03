@@ -1485,5 +1485,207 @@
     "explanation": "To leave the chain of trust safely, the DS record must be removed from the parent zone first, and the company must wait for the DS TTL so that resolvers stop expecting signed answers; only then should signing be disabled and the KSK deactivated. Disabling signing or deleting the key while the DS record still exists makes validating resolvers reject the zone. A records' TTLs are unrelated, and a new KSK keeps signing enabled.",
     "subtopic": "Disabling DNSSEC",
     "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring-dnssec-disable.html"
+  },
+  {
+    "id": "route53-076",
+    "topic": "route53",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "In a Route 53 public hosted zone, shop.example.com is a CNAME record that points to the DNS name of an Application Load Balancer. A marketing tool now requires a TXT record named shop.example.com for domain verification, but Route 53 rejects the new record. What should a solutions architect do so that both requirements are met?",
+    "options": [
+      "Create the TXT record in a second public hosted zone for example.com and keep the CNAME record in the original zone.",
+      "Append the verification string to the CNAME record's value after the load balancer's DNS name, separated by a space.",
+      "Replace the CNAME record with an alias A record for shop.example.com that targets the ALB, and then create the TXT record.",
+      "Lower the CNAME record's TTL to 0 seconds, because Route 53 allows other record types only alongside short-lived CNAME records."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "DNS does not allow a CNAME record to coexist with any other record of the same name, so once shop.example.com is a CNAME, a TXT record for that name is rejected. An alias A record that targets the ALB is an ordinary A record from the DNS point of view, so other record types such as TXT can exist for the same name, and alias queries to the ALB are free. Only the hosted zone whose name servers are delegated at the registrar answers queries, so a second zone would be ignored. A CNAME value is a single domain name, and its TTL has no effect on the coexistence rule.",
+    "subtopic": "DNS Record Types",
+    "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/ResourceRecordTypes.html"
+  },
+  {
+    "id": "route53-077",
+    "topic": "route53",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company runs two mail servers, mx1.example.com and mx2.example.com. Email for example.com must always be delivered to mx1 and go to mx2 only when mx1 is unavailable. How should the MX record for example.com be configured in Route 53?",
+    "options": [
+      "10 mx1.example.com and 20 mx2.example.com",
+      "10 mx2.example.com and 20 mx1.example.com",
+      "10 mx1.example.com and 10 mx2.example.com",
+      "10 192.0.2.10 and 20 192.0.2.20, using the servers' IP addresses"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Each MX value has a priority and the domain name of a mail server, and the server with the lowest priority value takes precedence, so mx1 with 10 receives mail and mx2 with 20 is used only when mx1 is unavailable. Equal priorities spread mail roughly evenly across both servers. The MX value must be the name of an A or AAAA record, not an IP address, and it must not be the name of a CNAME record.",
+    "subtopic": "DNS Record Types",
+    "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/ResourceRecordTypes.html"
+  },
+  {
+    "id": "route53-078",
+    "topic": "route53",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An application on an Amazon EC2 instance sends order confirmation emails for example.com. Several recipient mail servers flag the messages as spam because a reverse DNS lookup of the sending IP address does not return the company's mail host name. The domain is hosted in a Route 53 public hosted zone. What should the company do?",
+    "options": [
+      "Create a PTR record for the instance's current public IPv4 address in the example.com public hosted zone.",
+      "Associate an Elastic IP address with the instance, create an A record for mail.example.com that points to it, and then set the Elastic IP address's reverse DNS name to mail.example.com.",
+      "Create a Route 53 private hosted zone for the in-addr.arpa domain and associate it with the instance's VPC.",
+      "Enable DNS hostnames on the VPC so that the instance's public DNS name is returned for reverse lookups."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Reverse DNS for AWS public IPv4 addresses is not controlled by records in your own hosted zone. AWS recommends sending email from Elastic IP addresses and assigning a static reverse DNS record to each address with the EC2 Update reverse DNS action, which requires a forward A record that resolves to the Elastic IP address first. A PTR record in example.com is never queried for reverse lookups of the IP address. A private in-addr.arpa zone affects only resolution inside the VPC, and DNS hostnames gives the instance a generic ec2 host name rather than the company's mail host name.",
+    "subtopic": "DNS Record Types",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Elastic_Addressing_Reverse_DNS.html"
+  },
+  {
+    "id": "route53-079",
+    "topic": "route53",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company is moving email for example.com to a new email provider. The provider requires the domain to publish the provider's mail servers and a Sender Policy Framework (SPF) policy that authorizes the provider to send mail for the domain. Which records should the company create in its Route 53 public hosted zone? (Select TWO.)",
+    "options": [
+      "An MX record for example.com that lists the provider's mail server host names with priorities",
+      "An SPF-type record for example.com, because Route 53 recommends the dedicated SPF record type for sender policies",
+      "A CNAME record for example.com that points to the provider's mail domain",
+      "A PTR record for example.com that maps the domain to the provider's IP address range",
+      "A TXT record for example.com that contains the provider's v=spf1 policy string"
+    ],
+    "answer": [
+      0,
+      4
+    ],
+    "explanation": "MX records name the mail servers and their priority order, so they tell senders where to deliver mail for example.com. Route 53 recommends publishing SPF policies in TXT records, because the dedicated SPF record type is deprecated by RFC 7208. A CNAME record is not allowed at the zone apex and would conflict with every other record there. PTR records map IP addresses to names for reverse lookups and do not authorize senders.",
+    "subtopic": "DNS Record Types",
+    "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/ResourceRecordTypes.html"
+  },
+  {
+    "id": "route53-080",
+    "topic": "route53",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "The record www.example.com is a Route 53 alias A record that targets an Application Load Balancer. To reduce Route 53 query charges, an engineer wants to raise the record's TTL to 3,600 seconds, but the console does not offer a TTL setting for the record. What should the engineer know?",
+    "options": [
+      "Alias records always use a TTL of 0 seconds, so resolvers query Route 53 on every request and the record should be converted to a CNAME.",
+      "The TTL becomes editable only after Evaluate Target Health is turned off on the alias record.",
+      "Alias records inherit the minimum TTL from the hosted zone's SOA record, so the SOA record must be edited instead.",
+      "The TTL of an alias record that targets an AWS resource cannot be set because Route 53 uses the resource's default TTL, and alias queries to AWS resources are not charged anyway."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "When an alias record points to an AWS resource such as a load balancer, you cannot set the TTL; Route 53 uses the default TTL for that resource (and an alias to another record in the same zone uses that record's TTL). Route 53 does not charge for alias queries to AWS resources, so the TTL has no effect on query charges for this record. Converting it to a CNAME would add query charges. Evaluate Target Health and the SOA record do not control alias TTLs.",
+    "subtopic": "Route 53 Alias Records",
+    "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html"
+  },
+  {
+    "id": "route53-081",
+    "topic": "route53",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company uses a third-party SaaS help desk that gives each customer a host name such as example-corp.helpdesk-saas.net. The company wants support.example.com to send users to that host name, and the SaaS provider can change its IP addresses at any time. The domain is hosted in Route 53. Which record should the company create?",
+    "options": [
+      "An alias A record for support.example.com that targets example-corp.helpdesk-saas.net",
+      "An A record for support.example.com that contains the IP addresses currently returned for the SaaS host name",
+      "A CNAME record for support.example.com whose value is example-corp.helpdesk-saas.net",
+      "An NS record for support.example.com that delegates the name to example-corp.helpdesk-saas.net"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Alias records can target only selected AWS resources, such as load balancers, CloudFront distributions, and S3 website endpoints, or another record in the same hosted zone, so they cannot point to a third-party host name. A CNAME record can redirect queries to any DNS name and is allowed for a subdomain such as support.example.com. Hard-coding the provider's IP addresses in an A record breaks when those addresses change. An NS record delegates a subdomain to name servers, and the SaaS host name is not a name server for the zone.",
+    "subtopic": "Route 53 Alias Records",
+    "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html"
+  },
+  {
+    "id": "route53-082",
+    "topic": "route53",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company registered 25 domains with Amazon Route 53 to protect its brand. It uses a third-party DNS provider for all DNS hosting and has already changed each domain's name servers to the provider's servers. The AWS bill still shows a monthly charge for 25 Route 53 hosted zones. What is the MOST cost-effective action?",
+    "options": [
+      "Delete the 25 hosted zones that Route 53 created automatically when the domains were registered.",
+      "Transfer the 25 domains to another registrar, because Route 53 charges a hosted zone fee for every domain it registers.",
+      "Turn off automatic renewal for the domains so that the hosted zone charges stop at the next renewal date.",
+      "Enable DNSSEC signing on the hosted zones so that the third-party provider serves the records on Route 53's behalf."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "When Route 53 registers a domain, it automatically creates a hosted zone and charges a monthly fee for it, separate from the annual registration fee. Domain registration and DNS hosting are independent, so when another DNS service answers queries for the domains, the unused hosted zones can be deleted to stop the charges. Transferring the registrations is unnecessary, and turning off auto-renew risks losing the domains while the zone charges continue. DNSSEC signing does not change which service hosts DNS.",
+    "subtopic": "Registering a Domain with Route 53",
+    "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-register.html"
+  },
+  {
+    "id": "route53-083",
+    "topic": "route53",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A company's marketing website suddenly became unreachable for all users. The Application Load Balancer and EC2 instances are healthy, and nobody changed the Route 53 records. The domain was registered with Route 53, and an administrator turned off automatic renewal for it last year. What is the MOST likely cause, and how can the company prevent this in the future?",
+    "options": [
+      "Route 53 deletes hosted zones automatically after 12 months; enable deletion protection on the hosted zone.",
+      "The ALB's DNS name changed; replace the alias record with a CNAME record that has a longer TTL.",
+      "Route 53 health checks expire after one year; recreate the health checks and associate them with the records.",
+      "The domain registration expired, which made the domain unavailable on the internet; keep automatic renewal enabled for domains the company wants to keep."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Route 53 enables automatic renewal by default when a domain is registered or transferred. If it is turned off and the registration is not renewed, the domain becomes unavailable on the internet on or near the expiration date, and some registries delete domains early or charge a premium to restore them, so AWS strongly recommends leaving automatic renewal enabled. Hosted zones and health checks do not expire, and an alias record automatically follows changes to the ALB's IP addresses.",
+    "subtopic": "Registering a Domain with Route 53",
+    "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-renew.html"
+  },
+  {
+    "id": "route53-084",
+    "topic": "route53",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A startup is registering a domain with Amazon Route 53. The founders do not want their names, home address, phone numbers, and email addresses to be returned by public WHOIS queries. What should the startup do?",
+    "options": [
+      "Create a private hosted zone for the domain so that the contact details are visible only inside the company's VPC.",
+      "Keep privacy protection enabled for all of the domain's contacts, which Route 53 turns on by default where the TLD registry supports it.",
+      "Enable DNSSEC signing for the domain so that WHOIS responses are encrypted for anyone outside the company.",
+      "Store the contact details in AWS Secrets Manager and reference the secret from the domain registration instead."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Route 53 enables privacy protection by default for all contacts when a domain is registered or transferred, which hides most contact information from WHOIS queries or replaces it with the registrar's or a REDACTED FOR PRIVACY value; the same setting must be used for all contacts, and some TLD registries limit or do not support it. Hosted zones store DNS records, not registration contact data. DNSSEC protects the integrity of DNS responses and has nothing to do with WHOIS, and registrations cannot reference Secrets Manager secrets.",
+    "subtopic": "Registering a Domain with Route 53",
+    "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-privacy-protection.html"
+  },
+  {
+    "id": "route53-085",
+    "topic": "route53",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A hosting provider manages 300 customer domains in Route 53 public hosted zones in one AWS account. It wants every hosted zone to use the same four name servers so that it can give customers one standard set, and it later wants to brand them as ns1 to ns4.provider.example (white-label name servers). Many of the hosted zones already exist. What must the provider do?",
+    "options": [
+      "Edit the NS record in each existing hosted zone so that it lists the same four Route 53 name servers.",
+      "Associate all of the hosted zones with a single Route 53 Profile so that they share the Profile's name servers.",
+      "Create one hosted zone for provider.example and add NS records in it that delegate every customer domain to that zone.",
+      "Create a reusable delegation set, create the hosted zones (re-creating existing ones) with that delegation set, and then set up the white-label name server records and glue records."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Each hosted zone is linked to a delegation set of four name servers. A reusable delegation set lets many hosted zones in the same account share the same four name servers, and it is the basis for white-label name servers. The name servers of an existing hosted zone cannot be changed, and a reusable delegation set can be linked only when a hosted zone is created, so existing zones must be re-created and their records copied. Editing the NS record does not change which servers actually host the zone, and Route 53 Profiles share VPC DNS settings such as private hosted zones and Resolver rules, not public name servers.",
+    "subtopic": "Route 53 Fundamentals",
+    "source": "https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/white-label-name-servers.html"
   }
 ]

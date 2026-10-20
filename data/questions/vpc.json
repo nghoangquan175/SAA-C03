@@ -1997,5 +1997,395 @@
     "explanation": "Every subnet is associated with exactly one route table and one network ACL, so routing and subnet-level filtering can differ only between subnets. Separate tier subnets let the public tier route to the internet gateway while the database tier keeps only the local route, and let each tier have its own network ACL. Security groups work within a subnet, a VPC has a single internet gateway, and subnet layout does not change network throughput.",
     "subtopic": "Multi-tier Subnets",
     "source": "https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html"
+  },
+  {
+    "id": "vpc-101",
+    "topic": "vpc",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company created a VPC with dedicated instance tenancy two years ago for a regulated workload, and only those regulated instances run in it today. The company now plans to launch a large development fleet in the same VPC that has no single-tenant hardware requirement, and the finance team does not want to pay Dedicated Instance pricing for it. The regulated instances must stay on dedicated hardware. Which solution meets these requirements with the LEAST effort?",
+    "options": [
+      "Set the tenancy to default in the launch template for the development fleet, because instance-level tenancy overrides the VPC tenancy.",
+      "Edit the VPC settings in the Amazon VPC console to change the instance tenancy to default, which also moves the regulated instances to shared hardware.",
+      "Change the VPC instance tenancy from dedicated to default by using the AWS CLI or API, and launch the regulated instances with dedicated tenancy specified in the future.",
+      "Create a new VPC with default tenancy, migrate the regulated instances into it, and delete the dedicated VPC."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A VPC's instance tenancy can be changed from dedicated to default after creation by using the CLI or API (modify-vpc-tenancy), and the change does not affect the tenancy of existing instances, so the regulated instances stay dedicated while new launches default to shared tenancy unless dedicated is specified. Any instance launched into a VPC whose tenancy is dedicated runs as a Dedicated Instance, so a default setting in the launch template does not help. VPC tenancy cannot be modified in the console and the change does not convert existing instances. Building a new VPC and migrating works but is far more effort.",
+    "subtopic": "VPC Tenancy",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/change-tenancy-vpc.html"
+  },
+  {
+    "id": "vpc-102",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A solutions architect is reviewing VPC tenancy options for a company that must run a small number of instances on single-tenant hardware in an existing VPC that was created with default tenancy. Which statements about instance tenancy are correct? (Select TWO.)",
+    "options": [
+      "Individual instances can be launched as Dedicated Instances in a default-tenancy VPC by specifying dedicated tenancy at launch.",
+      "The existing VPC can be changed from default to dedicated tenancy later by using the AWS CLI.",
+      "EBS volumes attached to Dedicated Instances also run on single-tenant hardware.",
+      "Changing a VPC's tenancy from dedicated to default does not change the tenancy of instances that are already running in it.",
+      "VPC tenancy can be changed in the Amazon VPC console by editing the VPC settings."
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "In a default-tenancy VPC, an instance runs as a Dedicated Instance when dedicated tenancy is specified at launch, and modifying a VPC's tenancy from dedicated to default affects only later launches, not existing instances. A VPC's tenancy cannot be changed from default to dedicated after it is created, and VPC tenancy cannot be modified in the console. EBS volumes attached to a Dedicated Instance do not run on single-tenant hardware.",
+    "subtopic": "VPC Tenancy",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dedicated-instance.html"
+  },
+  {
+    "id": "vpc-103",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A VPC uses the primary CIDR block 10.30.0.0/16. Its private route table contains a static route for 10.40.0.0/24 that targets a virtual private gateway for a small on-premises segment. An engineer tries to associate 10.40.0.0/16 with the VPC as a secondary CIDR block, and the request fails. What is the cause?",
+    "options": [
+      "When the primary CIDR block is from 10.0.0.0/8, secondary CIDR blocks must come from the 100.64.0.0/10 range.",
+      "A secondary CIDR block cannot be the same as or larger than the destination of an existing route in any of the VPC's route tables.",
+      "A secondary CIDR block must be smaller than the primary CIDR block of the VPC.",
+      "Secondary CIDR blocks cannot be associated while a virtual private gateway is attached to the VPC."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS rejects a new VPC CIDR block that is the same as or larger than a destination CIDR range in a route in any of the VPC's route tables, so 10.40.0.0/16 conflicts with the existing 10.40.0.0/24 route; only a /25 or smaller block from that range could be added, and a range that does not overlap the on-premises network is the better choice. A VPC with a 10.0.0.0/8 primary block can add other unrestricted 10.x blocks as well as 100.64.0.0/10 or publicly routable blocks. Secondary blocks can be any size from /16 to /28, and an attached virtual private gateway does not block associations.",
+    "subtopic": "VPC Secondary CIDR",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-cidr-blocks.html"
+  },
+  {
+    "id": "vpc-104",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An audit finds that automation scripts sometimes launch EC2 instances without specifying a security group. Those instances can then exchange traffic on all ports with every other resource that uses the same security group. The security team wants any resource that ends up in this security group to receive and send no traffic. What should the solutions architect do?",
+    "options": [
+      "Delete the default security group in each VPC so that launches without a security group fail.",
+      "Add an inbound rule that denies all traffic to the default security group in each VPC.",
+      "Associate a network ACL with every subnet that denies traffic between instances in the same subnet.",
+      "Remove all inbound and outbound rules from the default security group in each VPC, and use purpose-built security groups for workloads."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Resources launched without a security group are associated with the VPC's default security group, which by default allows inbound traffic from members of the same group and all outbound traffic. The default security group cannot be deleted, but its rules can be changed, so removing all rules leaves accidentally associated resources with no allowed traffic. Security groups support only allow rules, and network ACLs do not evaluate traffic between instances in the same subnet.",
+    "subtopic": "Default Security Group",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/default-security-group.html"
+  },
+  {
+    "id": "vpc-105",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Web servers with public IPv4 addresses in a public subnet call an internal API that runs on an EC2 instance in another public subnet of the same VPC. The API instance's security group allows TCP 8443 only from the web servers' security group. The web servers are configured to call the API by its Elastic IP address, and every connection times out. Which change will fix the problem while keeping the security group reference?",
+    "options": [
+      "Configure the web servers to call the API by its private IP address or private DNS name.",
+      "Add the web servers' security group as a source in the network ACL of the API subnet.",
+      "Move the Elastic IP address from the API instance to the web servers' network interfaces.",
+      "Add an outbound rule to the API security group that allows ephemeral ports to the web servers' security group."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A rule that references a security group allows traffic only from the private IP addresses of the network interfaces associated with that group. When the web servers connect to the API's Elastic IP address, the traffic is sent through the internet gateway and arrives from the web servers' public addresses, which the reference does not match. Using the private address keeps traffic inside the VPC so the reference applies. Network ACLs cannot reference security groups, moving the Elastic IP does not change how the reference is matched, and security groups are stateful so no return rule is needed.",
+    "subtopic": "Security Group Referencing",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html"
+  },
+  {
+    "id": "vpc-106",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A distributed cache cluster runs on EC2 instances in an Auto Scaling group that share one security group. The nodes must communicate with each other on TCP ports 7000-7100, and instances are replaced often. No other resource should reach those ports. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Add an inbound rule for TCP 7000-7100 from the CIDR blocks of the subnets that the Auto Scaling group uses.",
+      "Use a lifecycle hook and an AWS Lambda function to add each new node's private IP address to the security group.",
+      "Add an inbound rule for TCP 7000-7100 whose source is the ID of the cluster's own security group.",
+      "Add network ACL rules that allow TCP 7000-7100 only between the nodes' private IP addresses."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Instances that share a security group cannot talk to each other unless a rule explicitly allows it, and a rule whose source is the group's own ID allows traffic from every member automatically as nodes are replaced. Subnet CIDR rules would also admit any other resource in those subnets. Per-IP rules maintained by Lambda or in network ACLs need constant updates, and network ACLs do not filter traffic between instances in the same subnet.",
+    "subtopic": "Security Group Referencing",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-rules-reference.html"
+  },
+  {
+    "id": "vpc-107",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An EC2 instance has two security groups. The legacy group allows inbound TCP 22 from 0.0.0.0/0. The new restrictive group allows inbound TCP 22 only from the corporate network. A penetration test shows that SSH is still reachable from the internet. What should the solutions architect do?",
+    "options": [
+      "Move the restrictive security group to the first position on the network interface so that its rules are evaluated first.",
+      "Remove the SSH rule from the legacy security group or detach that group, because the rules of all associated security groups are combined.",
+      "Add a rule to the restrictive security group that denies TCP 22 from 0.0.0.0/0.",
+      "Replace both groups with a single group, because only the most recently attached security group is enforced."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "When multiple security groups are associated with a resource, their rules are aggregated into one set, so any rule that allows the traffic permits it. The legacy rule therefore keeps SSH open regardless of the restrictive group. Security groups have no rule order or priority and cannot contain deny rules, and every associated group is enforced, not only the newest one.",
+    "subtopic": "Security Groups",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html"
+  },
+  {
+    "id": "vpc-108",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An application VPC and a database VPC in the same Region are attached to the same transit gateway. The database security group currently allows TCP 5432 from the application subnets' CIDR blocks. The security team wants the rule to allow only the application's security group, but adding the application security group ID as the source fails. What should the solutions architect do?",
+    "options": [
+      "Add an outbound rule to the application security group that references the database security group, because transit gateways support security group references only in outbound rules.",
+      "Enable appliance mode on both VPC attachments so that the transit gateway preserves security group information for each flow.",
+      "Replace the transit gateway with an inter-Region VPC peering connection, because security group references are supported only over peering.",
+      "Enable security group referencing support on the transit gateway and on both VPC attachments, and then add the inbound rule that references the application security group."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Security group referencing across VPCs attached to the same transit gateway works only when the feature is enabled on both the transit gateway and its VPC attachments, and it supports references in inbound rules only. Outbound rules cannot reference security groups across a transit gateway. Appliance mode controls Availability Zone symmetry for stateful appliances and has nothing to do with security group references, and security group references are not supported across inter-Region peering connections.",
+    "subtopic": "Security Group Referencing",
+    "source": "https://docs.aws.amazon.com/vpc/latest/tgw/tgw-vpc-attachments.html"
+  },
+  {
+    "id": "vpc-109",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A security group has 30 inbound rules, and the account uses the default quota of 60 inbound rules per security group. An engineer creates a customer-managed prefix list with a maximum of 50 entries that currently holds 6 partner CIDR blocks. Adding an inbound rule that references the prefix list fails because the rule quota would be exceeded. Which solution will allow the rule to be added?",
+    "options": [
+      "Resize the prefix list to a smaller maximum number of entries, such as 10, and add the rule again.",
+      "Replace the prefix list with six individual rules, because a prefix list reference always counts as 60 rules.",
+      "Request a quota increase for the number of security groups per network interface.",
+      "Reference an AWS-managed prefix list instead, because AWS-managed prefix lists do not count toward the rule quota."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A rule that references a customer-managed prefix list counts as the prefix list's maximum number of entries, not the number of entries it currently holds, so this rule counts as 50 rules. Resizing the prefix list to a maximum of 10 makes the rule count as 10, which fits within the 60-rule quota. A reference does not always count as 60 rules, the security groups per network interface quota is a different limit, and AWS-managed prefix lists count by their weight and cannot hold partner CIDR blocks.",
+    "subtopic": "Security Group Quotas",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html"
+  },
+  {
+    "id": "vpc-110",
+    "topic": "vpc",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A training company runs short-lived lab VPCs and wants to minimize cost by using one small EC2 instance in each lab as both the NAT device for private subnets and the SSH entry point for students. Which capabilities are available with a NAT instance but NOT with a NAT gateway? (Select THREE.)",
+    "options": [
+      "Using the same NAT device as a bastion server",
+      "Automatic bandwidth scaling up to 100 Gbps",
+      "Associating security groups with the NAT device itself",
+      "Redundancy within the Availability Zone without failover scripts",
+      "Controlling the NAT device's subnet traffic with a network ACL",
+      "Port forwarding configured on the NAT device"
+    ],
+    "answer": [
+      0,
+      2,
+      5
+    ],
+    "explanation": "A NAT instance is an EC2 instance that you manage, so you can associate security groups with it, customize it for port forwarding, and use it as a bastion server, none of which a NAT gateway supports. Automatic scaling to 100 Gbps and built-in redundancy within the Availability Zone are NAT gateway advantages. Both NAT gateways and NAT instances can be controlled with network ACLs on their subnets.",
+    "subtopic": "NAT Gateway vs NAT Instance",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-comparison.html"
+  },
+  {
+    "id": "vpc-111",
+    "topic": "vpc",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "EC2 instances in private subnets reach a partner's legacy server through a NAT gateway. Some TCP connections to that server hang or time out, while connections to other destinations work. A packet capture from a public instance shows that the partner's server sends fragmented TCP packets, and the partner cannot change this behavior. Which solution will resolve the issue?",
+    "options": [
+      "Associate secondary IPv4 addresses with the NAT gateway to increase the number of available source ports.",
+      "Enable jumbo frames with a 9001-byte MTU on the instances in the private subnets.",
+      "Route traffic for the partner's server through a NAT instance, which reassembles fragmented TCP packets.",
+      "Replace the NAT gateway with a regional NAT gateway that spans all Availability Zones."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "NAT gateways forward fragmented UDP packets but do not support IP fragmentation for TCP and ICMP, so fragmented TCP packets are dropped; NAT instances reassemble fragmented UDP, TCP, and ICMP packets, and AWS suggests a NAT instance when an endpoint sends fragmented TCP packets. Secondary IP addresses address port exhaustion, not fragmentation. A larger MTU does not help, and AWS recommends keeping the MTU at or below 1500 bytes for internet traffic through a public NAT gateway. A regional NAT gateway is still a NAT gateway.",
+    "subtopic": "NAT Gateway vs NAT Instance",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-troubleshooting.html"
+  },
+  {
+    "id": "vpc-112",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A reporting service in a private subnet keeps a long-lived TCP connection to an external SaaS database through a NAT gateway. The connection is often idle for several minutes between queries, and after about 6 minutes of inactivity the next query fails with a connection reset. Which solution will prevent these failures?",
+    "options": [
+      "Associate a secondary Elastic IP address with the NAT gateway so that idle connections are spread across more addresses.",
+      "Enable TCP keepalive on the instances with an interval of less than 350 seconds.",
+      "Add network ACL rules that allow inbound TCP 1024-65535 from the SaaS provider to the private subnet.",
+      "Add an outbound security group rule that allows ephemeral ports to the SaaS database."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A connection through a NAT gateway times out after 350 seconds of inactivity, and the NAT gateway then returns an RST packet to any resource that tries to continue it. Sending traffic periodically, for example with TCP keepalive set below 350 seconds, keeps the connection active. More IP addresses increase concurrent connection capacity, not idle time, and the connection already works until it goes idle, so network ACL and security group changes do not address the timeout.",
+    "subtopic": "NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-troubleshooting.html"
+  },
+  {
+    "id": "vpc-113",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A security team requires that a new VPC contain no public subnets, to reduce the chance of accidentally exposing resources. Workloads in private subnets across three Availability Zones still need highly available outbound IPv4 internet access. Which actions should the solutions architect take? (Select TWO.)",
+    "options": [
+      "Create a public subnet in each Availability Zone with a 0.0.0.0/0 route to an internet gateway to host the NAT gateway.",
+      "Attach an internet gateway to the VPC.",
+      "Add a 0.0.0.0/0 route to the internet gateway in the private subnets' route tables.",
+      "Attach an egress-only internet gateway and route 0.0.0.0/0 from the private subnets to it.",
+      "Create a regional NAT gateway and route 0.0.0.0/0 from the private subnets to it."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "A regional NAT gateway does not need a public subnet: it is a standalone resource with its own route table that AWS creates with a route to the internet gateway, and it expands across the Availability Zones where workloads run. The VPC still needs an attached internet gateway for that route. Creating public subnets defeats the requirement, a route from private subnets directly to the internet gateway would make them public subnets, and an egress-only internet gateway handles only IPv6 traffic.",
+    "subtopic": "Regional NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateways-regional.html"
+  },
+  {
+    "id": "vpc-114",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company wants to use a regional NAT gateway for internet egress. A partner allows traffic only from specific Elastic IP addresses that the company already owns, and the company's change process requires it to decide which addresses serve each Availability Zone and when egress is extended to a new zone. Which configuration meets these requirements?",
+    "options": [
+      "Create a regional NAT gateway in automatic mode and add the Elastic IP addresses as routes in its route table.",
+      "Create a zonal private NAT gateway in each Availability Zone and associate the Elastic IP addresses with them.",
+      "Create a regional NAT gateway in automatic mode and let it expand to new Availability Zones as workloads appear.",
+      "Create a regional NAT gateway in manual mode and associate the company's Elastic IP addresses with it for each Availability Zone."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "In manual mode, you manage the regional NAT gateway's IP addresses and network address translation for each Availability Zone, including expanding and contracting it across zones, which gives the required control. Automatic mode lets AWS manage IP addresses and Availability Zone expansion, which removes the control the change process requires, and route tables hold routes, not IP address associations. Private NAT gateways cannot have Elastic IP addresses and cannot reach the internet.",
+    "subtopic": "Regional NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateways-regional.html"
+  },
+  {
+    "id": "vpc-115",
+    "topic": "vpc",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A market data workload in one Availability Zone opens a very large number of concurrent connections to a single external IP address and port through a zonal NAT gateway. The NAT gateway already has the maximum of eight IPv4 addresses, and the ErrorPortAllocation metric is still rising. The team wants to keep the workload in its current subnet. Which solution will provide more concurrent connections to that destination?",
+    "options": [
+      "Replace the zonal NAT gateway with a regional NAT gateway in manual mode and associate more than eight IP addresses in that Availability Zone.",
+      "Assign a second private IPv4 address to each instance so that each instance can open more connections.",
+      "Enable jumbo frames on the instances so that fewer connections are needed for the same throughput.",
+      "Replace the NAT gateway with an egress-only internet gateway, which has no connection limits."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Each NAT IP address supports up to 55,000 simultaneous connections to a unique destination, and a regional NAT gateway supports up to 32 IP addresses per Availability Zone compared with 8 for a zonal NAT gateway. Adding addresses to the NAT gateway, not to the instances, increases the available source ports. Jumbo frames do not reduce the number of connections and should not be used for internet traffic through a NAT gateway, and an egress-only internet gateway handles only IPv6.",
+    "subtopic": "Regional NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateways-regional.html"
+  },
+  {
+    "id": "vpc-116",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company has zonal NAT gateways in three Availability Zones and wants to replace them with one regional NAT gateway. Partners have allow-listed the Elastic IP addresses of the current NAT gateways, so those exact addresses must continue to be used. What should the solutions architect plan?",
+    "options": [
+      "Create the regional NAT gateway with new addresses, move the Elastic IP addresses to it while the zonal NAT gateways keep running, and then update the routes without interruption.",
+      "Modify each zonal NAT gateway's availability mode to regional so that it keeps its Elastic IP address and existing connections.",
+      "In a maintenance window, delete the zonal NAT gateways to release the addresses, create the regional NAT gateway with those addresses, and update the route tables.",
+      "Create the regional NAT gateway with the same Elastic IP addresses while the zonal NAT gateways still use them, and shift traffic gradually with weighted routes."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "To reuse existing IP addresses, AWS documents deleting the zonal NAT gateways to release their addresses, creating the regional NAT gateway with the released addresses, and then pointing the route tables to it. Traffic is interrupted and existing connections are reset, so this requires a maintenance window. An Elastic IP address can be associated with only one resource at a time, there is no in-place conversion of a zonal NAT gateway, and VPC route tables do not support weighted routes.",
+    "subtopic": "Regional NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateways-regional.html"
+  },
+  {
+    "id": "vpc-117",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "After an acquisition, VPC A and VPC B both use 10.0.0.0/16, and re-addressing is not possible. Instances in VPC A must call an HTTP service that runs on instances in VPC B. All traffic between VPCs must stay private and must pass through the company's existing transit gateway for central monitoring. The network team has reserved 100.64.1.0/24 for VPC A and 100.64.2.0/24 for VPC B. Which solution meets these requirements?",
+    "options": [
+      "Create a VPC peering connection and add routes for the service subnet in both VPCs' route tables.",
+      "Add each reserved range to its VPC, create a private NAT gateway in a VPC A subnet from 100.64.1.0/24 and an Application Load Balancer in a VPC B subnet from 100.64.2.0/24, attach both VPCs to the transit gateway using those subnets, and route only the reserved ranges through it.",
+      "Attach both VPCs to the transit gateway with route propagation enabled so that the transit gateway routes 10.0.0.0/16 to the correct VPC based on the source attachment.",
+      "Create a public NAT gateway in each VPC and send traffic between the VPCs through their internet gateways by using Elastic IP addresses."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS documents this pattern: each VPC adds a routable range, VPC A's non-routable subnets send traffic to a private NAT gateway in its routable subnet, the transit gateway uses static routes for the routable ranges only, and an Application Load Balancer in VPC B's routable subnet forwards to targets in its non-routable subnets. Responses return to the private NAT gateway's address, which translates them back. Peering cannot be created between overlapping CIDR blocks, and a transit gateway does not route between identical or overlapping VPC CIDRs. Public NAT gateways would send traffic over the internet and bypass the transit gateway.",
+    "subtopic": "Private NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-scenarios.html"
+  },
+  {
+    "id": "vpc-118",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "A company must inspect all traffic between an application subnet and a database subnet in the same VPC by using firewall appliances behind a Gateway Load Balancer endpoint in a separate inspection subnet. The database security group currently allows TCP 3306 from the application security group. Which actions should the solutions architect take? (Select TWO.)",
+    "options": [
+      "Delete the local route from both subnets' route tables and add a 0.0.0.0/0 route to the Gateway Load Balancer endpoint.",
+      "Add /32 routes for each database instance to the application subnet's route table that target the Gateway Load Balancer endpoint.",
+      "Add a route in each subnet's route table whose destination is the entire CIDR block of the other subnet and whose target is the Gateway Load Balancer endpoint.",
+      "Change the database security group rule to allow TCP 3306 from the application subnet's CIDR block instead of the application security group.",
+      "Move the firewall appliances into the database subnet so that they see all traffic that enters it."
+    ],
+    "answer": [
+      2,
+      3
+    ],
+    "explanation": "A route can be more specific than the local route only when its destination matches the entire CIDR block of a subnet in the VPC, and a Gateway Load Balancer endpoint is a valid target, so each subnet routes traffic for the other subnet through the endpoint. When traffic between instances in different subnets passes through a middlebox, security group rules must use the other instance's private IP address or subnet CIDR, because referencing the other instance's security group no longer allows the traffic. The local route cannot be deleted, host routes do not match an entire subnet CIDR, and appliances must sit in a separate subnet from the source and destination traffic.",
+    "subtopic": "Route Tables",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/route-table-options.html"
+  },
+  {
+    "id": "vpc-119",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A centralized egress VPC is attached to a transit gateway, and spoke VPCs in the 10.0.0.0/8 range send internet-bound traffic to it. The team replaced the zonal NAT gateways in the egress VPC's public subnets with a regional NAT gateway and pointed the transit gateway attachment subnets' default route to it. Outbound packets now leave through the internet gateway, but responses never reach the spoke instances. What should the solutions architect do?",
+    "options": [
+      "Enable appliance mode on the egress VPC's transit gateway attachment so that return traffic uses the same Availability Zone.",
+      "Add a 10.0.0.0/8 route that targets the regional NAT gateway in the transit gateway route table.",
+      "Re-create public subnets in the egress VPC and associate them with the regional NAT gateway.",
+      "Add a 10.0.0.0/8 route that targets the transit gateway in the regional NAT gateway's route table."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A regional NAT gateway has its own route table, which AWS creates with a route to the internet gateway, and the transit gateway is a supported target in it, so return routes to other networks belong there. After translating responses back to the spoke instances' private addresses, the NAT gateway needs a 10.0.0.0/8 route to the transit gateway to deliver them. Transit gateway route tables target attachments, not NAT gateways, appliance mode does not add missing routes, and a regional NAT gateway does not use public subnets.",
+    "subtopic": "Regional NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateways-regional.html"
   }
 ]

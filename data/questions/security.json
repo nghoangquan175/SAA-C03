@@ -1488,5 +1488,47 @@
     "explanation": "Cognito user pools can federate with SAML 2.0 and OIDC identity providers, and Amazon Cognito issues its own user pool tokens to federated users so the backend can standardize on one set of tokens. IAM users are for access to AWS, not application end users. Guest access gives no authentication, and AD Connector does not federate customers' SAML or OIDC providers into the application.",
     "subtopic": "Cognito user pool federation",
     "source": "https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-identity-federation.html"
+  },
+  {
+    "id": "security-076",
+    "topic": "security",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company uses AWS managed keys, such as aws/s3 and aws/ebs, for most of its encrypted resources. A new policy requires that encrypted resources can be shared with a separate auditing account and that keys can be deleted when a project ends. Why can AWS managed keys NOT meet these requirements? (Select TWO.)",
+    "options": [
+      "They are never rotated, so they cannot meet key lifecycle rules.",
+      "Their key policies cannot be changed, so resources encrypted under them cannot be shared with other accounts.",
+      "They cannot be scheduled for deletion by the customer.",
+      "Their use is not recorded in AWS CloudTrail.",
+      "Each AWS managed key has a monthly fee that the auditing account would have to pay."
+    ],
+    "answer": [
+      1,
+      2
+    ],
+    "explanation": "AWS KMS controls the policies of AWS managed keys, which can be used only by principals in the same account through the owning service, so resources encrypted with them cannot be shared with another account. Customers also cannot schedule AWS managed keys for deletion. These keys are rotated automatically every year, their use is logged in CloudTrail, and they have no monthly fee. A customer managed key meets both requirements.",
+    "subtopic": "KMS AWS managed keys",
+    "source": "https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html"
+  },
+  {
+    "id": "security-077",
+    "topic": "security",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An administrator scheduled a customer managed KMS key for deletion with a 30-day waiting period. Three days later, an application that reads SSE-KMS encrypted S3 objects with that key starts failing. How can the application be restored with no data loss?",
+    "options": [
+      "Do nothing, because a key that is pending deletion can still decrypt data until the waiting period ends.",
+      "Create a new key and assign it the old key's alias so that S3 decrypts the objects with the new key.",
+      "Import the old key's key material into a new symmetric KMS key so that it can decrypt the existing objects.",
+      "Cancel the key deletion and then enable the key, which returns in the Disabled state."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "A key in the Pending deletion state cannot be used in cryptographic operations, which is why reads fail. Canceling deletion during the waiting period keeps the key, but it returns in the Disabled state and must be enabled with EnableKey before it works again. A new key cannot decrypt data encrypted under another symmetric key, even with the same alias or the same imported key material, so cancelling is the only way to avoid data loss.",
+    "subtopic": "KMS key deletion recovery",
+    "source": "https://docs.aws.amazon.com/kms/latest/APIReference/API_CancelKeyDeletion.html"
   }
 ]

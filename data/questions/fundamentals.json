@@ -1489,5 +1489,557 @@
     "explanation": "Warm standby keeps a smaller, fully working copy of the stack that can handle traffic immediately at reduced capacity and then scales out, which meets a 15-minute RTO at lower cost than running full capacity. Hot standby and active/active run full production capacity in the second Region, which costs more than required. Pilot light cannot process requests until servers are deployed and started, so it cannot serve traffic immediately after failover.",
     "subtopic": "DR Strategies",
     "source": "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-options-in-the-cloud.html"
+  },
+  {
+    "id": "fundamentals-076",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company launched an Amazon EC2 instance into a subnet whose route table sends 0.0.0.0/0 to an internet gateway. Auto-assign public IPv4 is disabled on the subnet, so the instance has only a private IPv4 address. An application on the instance times out when it calls Amazon DynamoDB in the same Region. The instance must not be reachable from the internet, and the company wants the MOST cost-effective fix. What should a solutions architect do?",
+    "options": [
+      "Add an outbound security group rule that allows HTTPS traffic to the DynamoDB public endpoint.",
+      "Create a NAT gateway in the same subnet and add a second 0.0.0.0/0 route that targets the NAT gateway.",
+      "Create a gateway VPC endpoint for DynamoDB and associate it with the subnet's route table.",
+      "Associate an Elastic IP address with the instance so that its traffic can use the internet gateway."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "DynamoDB is a public AWS service, and an internet gateway only carries traffic for instances that have a public IPv4 address (or an IPv6 address), so a route to the internet gateway alone does not help an instance with only a private address. A gateway endpoint for DynamoDB adds a prefix-list route to the route table, keeps the instance private, and has no additional charge. An Elastic IP address would work but adds a public IPv4 charge and makes the instance reachable from the internet. Security groups allow all outbound traffic by default, and a route table cannot hold two routes for the same 0.0.0.0/0 destination, while a NAT gateway also adds hourly and data processing charges.",
+    "subtopic": "Public vs Private Services",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html"
+  },
+  {
+    "id": "fundamentals-077",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A healthcare company in Germany must make sure that patient documents stored in Amazon S3 are kept only in the EU. Developers will upload the documents to a single general purpose bucket by using the AWS SDK. A team member worries that because S3 bucket names are global, S3 might store copies of the objects in other Regions. Which statement is correct?",
+    "options": [
+      "S3 is a global service, so the company must enable S3 Object Lock in compliance mode to pin the objects to one Region.",
+      "Objects stay in the Region where the bucket was created unless the company explicitly transfers or replicates them, so the bucket must be created in an EU Region.",
+      "S3 automatically replicates every object to a second Region for durability, so the company must disable that replication on the bucket.",
+      "S3 stores each object in the Region closest to the client that uploads it, so all uploads must come from clients located in the EU."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Bucket names share a global namespace within a partition, but each bucket is created in a specific Region, and objects in that bucket never leave the Region unless you explicitly transfer them, for example with replication. Creating the bucket in an EU Region such as eu-central-1 satisfies the residency requirement. S3 does not replicate to other Regions automatically and does not place objects based on the client location. Object Lock provides write-once-read-many retention and has nothing to do with data location.",
+    "subtopic": "AWS Global Infrastructure",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingBucket.html"
+  },
+  {
+    "id": "fundamentals-078",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company runs an application in us-east-1 on Amazon EC2 instances launched from a custom AMI. Partners allow-list the application's two Elastic IP addresses. The application also uses IAM roles, a Route 53 public hosted zone, and an Amazon CloudFront distribution. The company is building a second copy of the application in eu-west-1. Which tasks are required because the resources involved are Region-specific? (Select TWO.)",
+    "options": [
+      "Copy the custom AMI to eu-west-1 and launch the new instances from the copied AMI.",
+      "Re-create the IAM roles in eu-west-1, because IAM roles exist only in the Region where they are created.",
+      "Allocate new Elastic IP addresses in eu-west-1 and ask the partners to allow-list them as well.",
+      "Create a second Route 53 public hosted zone for the same domain in eu-west-1.",
+      "Create a second CloudFront distribution in eu-west-1, because each distribution serves only one Region."
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "AMIs are Region-specific, so an instance can be launched only from an AMI in the same Region, which means the AMI must be copied to eu-west-1. An Elastic IP address can be used only in its Region and cannot be moved to another Region, so new addresses must be allocated and allow-listed. IAM is a global (partitional) service, so existing roles can be used in every Region of the partition. Route 53 public DNS and CloudFront are global edge services, so the existing hosted zone and distribution can serve both Regions.",
+    "subtopic": "AWS Global Infrastructure",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/CopyingAMIs.html"
+  },
+  {
+    "id": "fundamentals-079",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A solutions architect is explaining the AWS Global Infrastructure to a team that is planning a highly available deployment with synchronous database replication. Which statement about Availability Zones is correct?",
+    "options": [
+      "Each Availability Zone is a single data center, so two instances in the same zone always share one building and one power feed.",
+      "Availability Zones in a Region are hundreds of kilometers apart, so replication between them must always be asynchronous.",
+      "Every AWS Region has exactly two Availability Zones, so a design that spans two zones uses all of the Region's capacity.",
+      "An Availability Zone is one or more discrete data centers with independent power, cooling, and physical security, and the zones in a Region are within about 100 km of each other."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "AWS defines an Availability Zone as one or more discrete data centers with independent power, cooling, and physical security. AZs in a Region are physically separated by a meaningful distance but are within 100 km (60 miles) of each other, which keeps latency low enough for synchronous replication such as RDS Multi-AZ. An AZ is not necessarily a single building, and each Region has at least three AZs rather than exactly two.",
+    "subtopic": "AWS Global Infrastructure",
+    "source": "https://aws.amazon.com/about-aws/global-infrastructure/regions_az/"
+  },
+  {
+    "id": "fundamentals-080",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An administrator deleted the default VPC in eu-central-1 while cleaning up an account. Since then, a legacy deployment script that launches Amazon EC2 instances without specifying a subnet fails in that Region. The team wants the script to work again without changing it. What should the administrator do?",
+    "options": [
+      "Create a new default VPC in the Region by using the VPC console or the create-default-vpc command.",
+      "Open an AWS Support case to restore the deleted default VPC with its original VPC and subnet IDs.",
+      "Mark one of the existing custom VPCs in the Region as the default VPC for the account.",
+      "Restore the default VPC from the most recent AWS Config configuration snapshot for the Region."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "If the default VPC is deleted, you must explicitly specify a subnet when launching instances, which is why the script fails. You can create a new default VPC with the console or the create-default-vpc command, and it comes with the standard components, including a default subnet in each Availability Zone. AWS documents that a deleted default VPC cannot be restored and that an existing nondefault VPC cannot be marked as the default. AWS Config records configuration history but cannot recreate resources.",
+    "subtopic": "Default VPC",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/work-with-default-vpc.html"
+  },
+  {
+    "id": "fundamentals-081",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Auto Scaling group uses a target tracking scaling policy on average CPUUtilization. During sudden traffic spikes, the group takes several minutes longer to add instances than the team expects. The launch template uses the default monitoring settings, and the team has confirmed that the warmup settings are appropriate. Which change will let the group respond to load changes faster?",
+    "options": [
+      "Change the scaling policy to evaluate CPUUtilization with a 10-second period.",
+      "Create a CloudWatch composite alarm on CPUUtilization so that the policy is evaluated more often.",
+      "Increase the health check grace period so that new instances are counted toward capacity sooner.",
+      "Enable detailed monitoring in the launch template so that instance metrics are published every minute."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "By default, instances use basic monitoring, which publishes EC2 metrics such as CPUUtilization in 5-minute periods. AWS strongly recommends detailed monitoring (1-minute granularity, at an additional charge) for groups with scaling policies because it gives a faster response to load changes. Sub-minute periods are supported only for high-resolution custom metrics, not for EC2 instance metrics. Composite alarms cannot perform Auto Scaling actions, and the health check grace period only delays health checks on new instances.",
+    "subtopic": "CloudWatch Metrics Basics",
+    "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/enable-as-instance-metrics.html"
+  },
+  {
+    "id": "fundamentals-082",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A development team stops its EBS-backed Amazon EC2 instances every evening and over weekends to save money. Each instance has a 200 GiB gp3 root volume and an associated Elastic IP address. The finance team sees that some charges related to the instances continue while they are stopped. Which charges continue to accrue while the instances are in the stopped state? (Select TWO.)",
+    "options": [
+      "Hourly instance usage, billed at a reduced rate for stopped instances",
+      "Storage for the attached EBS volumes",
+      "Data transfer for the private IPv4 addresses that the instances keep",
+      "The Elastic IP addresses that are associated with the stopped instances",
+      "Instance store volumes that keep their data while the instances are stopped"
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "AWS does not charge instance usage or data transfer for a stopped instance, but EBS volumes persist and their storage continues to be billed. Elastic IP addresses stay associated through a stop, and AWS charges for all public IPv4 addresses, including Elastic IP addresses associated with a stopped instance. There is no reduced stopped-instance usage rate. Instance store data is erased when an instance stops, so there is nothing kept on instance store to bill for.",
+    "subtopic": "EC2 Basics",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/how-ec2-instance-stop-start-works.html"
+  },
+  {
+    "id": "fundamentals-083",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is choosing an Amazon EC2 instance type for a general purpose web application that must run on AWS Graviton processors. The application writes large temporary files that can be lost without impact, and the team wants fast local NVMe instance store volumes for those files instead of paying for extra EBS storage. Which instance type meets these requirements?",
+    "options": [
+      "m7g.xlarge",
+      "m7gd.xlarge",
+      "m6id.xlarge",
+      "c7gn.xlarge"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "In EC2 instance type names, the first letter is the series (m is general purpose), the number is the generation, and the following letters are options: g means AWS Graviton processors and d means the instance includes instance store volumes. m7gd.xlarge is therefore a general purpose Graviton type with local instance store. m7g has no instance store, m6id has instance store but uses Intel (i) processors, and c7gn is compute optimized with enhanced networking (n) but no instance store.",
+    "subtopic": "EC2 Basics",
+    "source": "https://docs.aws.amazon.com/ec2/latest/instancetypes/instance-type-names.html"
+  },
+  {
+    "id": "fundamentals-084",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A startup created an S3 general purpose bucket named acme-raw-data in us-east-1 and stored 40 TB of objects in it. A new regulation requires the data to be stored in eu-central-1, and the company also wants the bucket to be named acme-eu-raw-data. What must the company do?",
+    "options": [
+      "Edit the bucket properties to change the bucket's Region and name, and S3 moves the objects in the background.",
+      "Enable S3 Transfer Acceleration on the bucket and rename it so that it is served from eu-central-1.",
+      "Create a new bucket named acme-eu-raw-data in eu-central-1, copy the objects into it, and then delete the original bucket.",
+      "Create a Multi-Region Access Point named acme-eu-raw-data that points to the existing bucket in us-east-1."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "After an S3 bucket is created, its name and Region cannot be changed, so the only way to meet both requirements is to create a new bucket with the desired name in eu-central-1, copy or replicate the data, update applications, and delete the old bucket. Transfer Acceleration only speeds up transfers to the existing bucket through edge locations and does not move data. A Multi-Region Access Point provides a global endpoint over existing buckets but leaves the data in us-east-1, which violates the regulation.",
+    "subtopic": "S3 Basics",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/BucketRestrictions.html"
+  },
+  {
+    "id": "fundamentals-085",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 1,
+    "question": "A SaaS provider wants to create a separate S3 general purpose bucket for each of its 3,000 customers to simplify per-customer access policies and cost allocation. An engineer objects that an AWS account can own only 100 buckets. Which statement is correct?",
+    "options": [
+      "By default an account can create up to 10,000 general purpose buckets, and the company can request a higher quota through Service Quotas if needed.",
+      "The engineer is correct; 100 buckets per account is a hard limit, so the company must spread its customers across 30 AWS accounts.",
+      "Bucket quotas apply per Region, so the company can create 100 buckets in each of 30 Regions to reach 3,000 buckets.",
+      "S3 does not allow more than 1,000 buckets in any account, so the company must use one shared bucket with a prefix per customer."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The default general purpose bucket quota is 10,000 buckets per AWS account, and an increase can be requested through the Service Quotas console, so 3,000 buckets fit within the default. The old 100-bucket figure is outdated and was never a hard limit. The bucket quota is an account-level quota rather than a per-Region one. A shared bucket with prefixes is a valid design but is not required by any 1,000-bucket limit.",
+    "subtopic": "S3 Basics",
+    "source": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/BucketRestrictions.html"
+  },
+  {
+    "id": "fundamentals-086",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An engineer is developing a large AWS CloudFormation template. Stack creation repeatedly fails near the end because of one misconfigured resource, and CloudFormation then rolls back and deletes the 40 resources that were created successfully, which takes a long time on every attempt. The engineer wants to keep the successfully created resources, fix the problem, and continue from the point of failure. What should the engineer do?",
+    "options": [
+      "Add a DeletionPolicy of Retain to every resource so that the rollback leaves them in place for the next attempt.",
+      "Create the stack with the Preserve successfully provisioned resources option (--disable-rollback), fix the issue, and then retry or update the stack.",
+      "Apply a stack policy that denies Update:Delete on all resources so that the rollback cannot remove them.",
+      "Add a CreationPolicy with a longer timeout to every resource so that the stack waits instead of rolling back."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "By default, a failed stack creation rolls back and deletes everything it created. With the Preserve successfully provisioned resources stack failure option (--disable-rollback or --on-failure DO_NOTHING in the CLI), the stack stops in CREATE_FAILED, keeps the successful resources, and lets the engineer fix the problem and choose Retry or Update to continue. Retain would orphan the resources outside the stack, so the next attempt would create duplicates. Stack policies protect resources only during stack updates, and a CreationPolicy only waits for success signals; it does not prevent rollback.",
+    "subtopic": "CloudFormation Basics",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/stack-failure-options.html"
+  },
+  {
+    "id": "fundamentals-087",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A team's AWS CloudFormation template creates an S3 bucket with BucketName set to app-logs-prod and an IAM role with RoleName set to app-role. The first stack deploys successfully. When the team uses the same template to create a second stack for staging in the same account, stack creation fails. Later, an update to the first stack that changes a bucket property requiring replacement also fails. Which change fixes both problems?",
+    "options": [
+      "Enable termination protection on the first stack so that its resource names are reserved separately from other stacks.",
+      "Deploy the staging environment as a nested stack of the production stack so that both stacks can share the same names.",
+      "Add DependsOn attributes between the bucket and the role so that CloudFormation creates them in a fixed order.",
+      "Remove the custom name properties so that CloudFormation generates a unique physical name for each resource."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Custom resource names must be unique across active stacks, so reusing a template that hard-codes names fails on the second stack. CloudFormation also cannot perform an update that replaces a custom-named resource, because the replacement would need the same name while the old resource still exists. Letting CloudFormation generate physical names solves both issues. Termination protection only blocks stack deletion, nested stacks do not allow duplicate names, and DependsOn controls ordering but not naming.",
+    "subtopic": "CloudFormation Basics",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-properties-name.html"
+  },
+  {
+    "id": "fundamentals-088",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 3,
+    "question": "An AWS CloudFormation stack for a retired project contains an S3 bucket with archived reports and an AWS::EC2::Volume resource that holds database files. The company will delete the stack but must keep the bucket and its objects and must keep a snapshot of the EBS volume. Which template changes should be applied to the stack before it is deleted? (Select TWO.)",
+    "options": [
+      "Set DeletionPolicy: Snapshot on the S3 bucket resource.",
+      "Set DeletionPolicy: Retain on the S3 bucket resource.",
+      "Set DeletionPolicy: Snapshot on the AWS::EC2::Instance resource that the volume is attached to.",
+      "Make no change, because CloudFormation retains S3 buckets and EBS volumes by default when a stack is deleted.",
+      "Set DeletionPolicy: Snapshot on the AWS::EC2::Volume resource."
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "Retain can be used on any resource, so the bucket and its objects stay after the stack is deleted. Snapshot is supported only for resource types that support snapshots, such as AWS::EC2::Volume and RDS DB instances, so it belongs on the volume resource; S3 buckets and EC2 instances do not support the Snapshot policy. Without a DeletionPolicy, CloudFormation deletes resources by default (RDS resources are the exception, defaulting to Snapshot), and a non-empty S3 bucket would make the deletion fail.",
+    "subtopic": "CloudFormation DeletionPolicy",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-attribute-deletionpolicy.html"
+  },
+  {
+    "id": "fundamentals-089",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "An Amazon EC2 instance with an EBS root volume is managed by AWS CloudFormation. Its UserData property contains a bash script that installs and configures an application. An engineer changes the script in the template and updates the stack. The update succeeds, but the application configuration on the instance has not changed. What explains this behavior?",
+    "options": [
+      "CloudFormation ignores UserData changes on existing instances, so the update did not touch the instance at all.",
+      "Updating UserData replaced the instance, but the new instance was launched from an AMI that already contained the old configuration.",
+      "Updating UserData stops and starts the EBS-backed instance, but by default user data scripts run only during the first boot after launch, so the new script did not run.",
+      "The script ran, but CloudFormation reverted its changes because the instance did not send a cfn-signal to the stack."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "For an EBS-backed instance, changing UserData is an update with some interruption: CloudFormation restarts the instance with the new user data, but user data scripts run only on the first boot cycle by default, so the changed script is not executed. To apply configuration changes on running instances, use cfn-init metadata with cfn-hup, or replace the instance. The instance is not replaced for a UserData change on an EBS-backed instance, and a missing cfn-signal causes failures only when a CreationPolicy or UpdatePolicy waits for signals; CloudFormation never reverts changes made inside the operating system.",
+    "subtopic": "Simple Automation With CloudFormation",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-ec2-instance.html"
+  },
+  {
+    "id": "fundamentals-090",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An AWS CloudFormation template creates an AWS::EC2::Instance resource with the logical ID WebServer. The team wants the stack's Outputs section to display the public IPv4 address of the instance. Which expression should the output use?",
+    "options": [
+      "!Ref WebServer",
+      "!ImportValue WebServer-PublicIp",
+      "!GetAtt WebServer.PublicDnsName",
+      "!GetAtt WebServer.PublicIp"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "For AWS::EC2::Instance, Fn::GetAtt with the PublicIp attribute returns the instance's public IPv4 address. Ref on an instance returns the instance ID, not an IP address. PublicDnsName returns the public DNS name rather than the address. Fn::ImportValue reads values exported by other stacks and cannot read attributes of a resource in the same template.",
+    "subtopic": "CloudFormation Basics",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/TemplateReference/aws-resource-ec2-instance.html"
+  },
+  {
+    "id": "fundamentals-091",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Two years ago, a company created a VPC, several security groups, and an Amazon DynamoDB table manually in the AWS Management Console. The resources are in production and must not be deleted or recreated. The company now wants to manage them with AWS CloudFormation with the LEAST effort and no downtime. What should a solutions architect do?",
+    "options": [
+      "Write a new template, create a stack that builds replacement resources, and then delete the manually created resources.",
+      "Use the CloudFormation IaC generator to scan the resources and generate a template, and then import the existing resources into a stack.",
+      "Create an empty stack and run drift detection so that CloudFormation adopts the resources that it reports as drifted.",
+      "Create a StackSet that targets the account so that CloudFormation discovers and manages all existing resources automatically."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "CloudFormation can bring existing resources under management without deleting and recreating them. The IaC generator scans existing resources and produces a template, which can then be used to import those resources into a stack. Building replacements would cause downtime and data migration for the DynamoDB table. Drift detection only compares resources that are already in a stack with the template, and StackSets deploy stacks to accounts and Regions but do not adopt existing resources.",
+    "subtopic": "CloudFormation Basics",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/import-resources.html"
+  },
+  {
+    "id": "fundamentals-092",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application publishes a custom Amazon CloudWatch metric named PaymentFailures only when a payment fails, so most minutes have no data points. An alarm on this metric that uses the default settings spends most of the day in the INSUFFICIENT_DATA state, which confuses the on-call team. The alarm should be OK when no failures occur and go to ALARM when failures exceed the threshold. What should the team change?",
+    "options": [
+      "Configure the alarm to treat missing data as notBreaching.",
+      "Configure the alarm to treat missing data as breaching.",
+      "Publish the metric as a high-resolution metric so that a data point is stored every second.",
+      "Enable detailed monitoring so that CloudWatch fills in the missing data points automatically."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "The default missing-data treatment is missing, so an alarm whose evaluation range has no data points goes to INSUFFICIENT_DATA. For metrics that report data only when an error occurs, AWS recommends treating missing data as notBreaching, so the alarm is OK when nothing is reported and still alarms on real breaching data points. Treating missing data as breaching would put the alarm in ALARM during quiet periods. High resolution changes granularity, not whether data exists, and detailed monitoring applies to EC2 metrics and never invents custom data points.",
+    "subtopic": "CloudWatch Basics",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarms-and-missing-data.html"
+  },
+  {
+    "id": "fundamentals-093",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A capacity planning team needs 1-minute granularity Amazon EC2 and Application Load Balancer metrics for the previous 12 months to analyze traffic patterns. The team notices that CloudWatch returns only 5-minute or 1-hour data points for older time ranges. Which solution will meet this requirement going forward?",
+    "options": [
+      "Increase the metric retention setting for the AWS/EC2 and AWS/ApplicationELB namespaces to 12 months.",
+      "Enable detailed monitoring on all instances so that CloudWatch keeps 1-minute data points for 15 months.",
+      "Export the CloudWatch metrics to Amazon S3 with a CloudWatch Logs export task every day.",
+      "Create a CloudWatch metric stream that delivers the metrics through Amazon Data Firehose to an S3 bucket for analysis."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "CloudWatch keeps 1-minute data points for 15 days, then aggregates them to 5-minute data for 63 days and 1-hour data for 455 days, and there is no setting to change this retention. A metric stream continuously sends metrics in near real time through Amazon Data Firehose to destinations such as S3, where the original granularity can be kept as long as needed and queried with Amazon Athena. Detailed monitoring produces 1-minute data but does not change retention, and CloudWatch Logs export tasks export log data, not metrics.",
+    "subtopic": "CloudWatch Metrics Basics",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-Metric-Streams.html"
+  },
+  {
+    "id": "fundamentals-094",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Each Amazon EC2 instance in an Auto Scaling group publishes a custom metric named QueueLag in the namespace App/Orders with a single dimension, InstanceId. The team wants one alarm on the average QueueLag across the whole group, but when they request the metric statistics without specifying any dimension, CloudWatch returns no data. What is the cause, and what should the team do?",
+    "options": [
+      "Custom metrics are retained for only 3 hours, so the team must republish QueueLag as a high-resolution metric.",
+      "Custom metrics are stored in the AWS/EC2 namespace, so the team must request the statistics from that namespace instead.",
+      "CloudWatch does not aggregate custom metrics across dimensions, so the team should also publish QueueLag with only an AutoScalingGroupName dimension or use a metric math expression.",
+      "CloudWatch aggregates custom metrics only for instances that have detailed monitoring enabled, so the team must enable it in the launch template."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "A metric is uniquely identified by its namespace, name, and dimensions, and CloudWatch can return statistics only for the dimension combinations that were actually published. CloudWatch aggregates across dimensions for some AWS service metrics, such as AWS/EC2, but not for custom metrics. Publishing the metric with a group-level dimension, or using a metric math or SEARCH expression over the per-instance metrics, provides a fleet-wide value. Custom metrics stay in the namespace you choose and are retained like other metrics, and detailed monitoring affects only EC2 metrics.",
+    "subtopic": "CloudWatch Metrics Basics",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html"
+  },
+  {
+    "id": "fundamentals-095",
+    "topic": "fundamentals",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An Amazon CloudWatch alarm watches the p99 latency of an internal API with a 1-minute period and one evaluation period. Short garbage-collection pauses cause single 1-minute spikes several times a day, and each spike pages the on-call engineer even though the service recovers immediately. The team wants a page only when latency is high in at least 3 of the last 5 minutes. Which change should the team make?",
+    "options": [
+      "Set Evaluation Periods to 5 and Datapoints to Alarm to 3 on the existing alarm.",
+      "Create a composite alarm that combines the latency alarm with a CPU alarm by using an OR rule.",
+      "Change the alarm statistic from p99 to Maximum so that brief spikes are averaged out.",
+      "Configure the alarm to treat missing data as notBreaching so that isolated spikes are ignored."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "An M out of N alarm (Datapoints to Alarm = 3, Evaluation Periods = 5) goes to ALARM only when at least 3 of the 5 most recent data points breach, which filters out isolated one-minute spikes. A composite alarm with OR would page even more often. The Maximum statistic makes spikes more visible, not less. Missing-data treatment matters only when data points are absent, but here the spikes are real data points.",
+    "subtopic": "Simple Monitoring with CloudWatch",
+    "source": "https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/alarms-and-missing-data.html"
+  },
+  {
+    "id": "fundamentals-096",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs its database on Amazon RDS for PostgreSQL in a Multi-AZ DB instance deployment with one standby. During an Availability Zone failure test, RDS failed over to the standby automatically, and applications reconnected after about 90 seconds without losing committed data. The CTO asks how to classify this design. Which description is MOST accurate?",
+    "options": [
+      "It is fault tolerant, because the standby keeps serving requests with no interruption at all when the primary fails.",
+      "It is highly available, because it recovers automatically and quickly from a component failure, but clients see a brief interruption during failover.",
+      "It is a disaster recovery design, because the standby is located in another AWS Region and can be promoted after a Regional disaster.",
+      "It is a read scaling design, because the standby serves read traffic and takes over writes only when the primary fails."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "High availability minimizes downtime by recovering automatically, but it can involve a short outage; RDS Multi-AZ failovers typically take 60 to 120 seconds, the DNS endpoint is moved to the standby, and clients must reconnect. Fault tolerance means the system keeps operating with no interruption when a component fails, which this design does not provide. The standby is in another AZ of the same Region, so it does not protect against a Regional disaster, and a Multi-AZ DB instance standby cannot serve read traffic.",
+    "subtopic": "High Availability vs Fault Tolerance vs Disaster Recovery",
+    "source": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.Failover.html"
+  },
+  {
+    "id": "fundamentals-097",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A company runs a web application on Amazon EC2 instances in an Auto Scaling group across three Availability Zones, with an Amazon RDS Multi-AZ DB instance, all in us-east-1. Management believes that this design also provides disaster recovery. Which events would the current design NOT protect the company against? (Select TWO.)",
+    "options": [
+      "The failure of a single Availability Zone in us-east-1",
+      "A hardware failure on the host that runs the primary DB instance",
+      "An event that makes the entire us-east-1 Region unavailable",
+      "The loss of one EC2 instance in the Auto Scaling group",
+      "An operator accidentally dropping critical tables, a change that is replicated synchronously to the standby"
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Spreading the workload across Availability Zones protects against the loss of a data center, an AZ, a host, or an instance, which is high availability within one Region. It does not protect against a Region-wide event, which requires backups or replicas in another Region. Synchronous replication copies every change, including accidental deletions or corruption, to the standby, so point-in-time backups are still needed; AWS recommends continuous backup to reduce the risk of human error and backing up to another Region for Regional disasters.",
+    "subtopic": "High Availability vs Fault Tolerance vs Disaster Recovery",
+    "source": "https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-is-different-in-the-cloud.html"
+  },
+  {
+    "id": "fundamentals-098",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company deploys the same AWS CloudFormation template in commercial AWS Regions and in the AWS GovCloud (US-West) Region. The template creates IAM policies whose Resource elements contain hard-coded ARNs such as arn:aws:s3:::reports-bucket/*. The stacks deploy in GovCloud, but the applications there receive AccessDenied errors. How should the template be fixed?",
+    "options": [
+      "Replace the Region portion of each ARN with the AWS::Region pseudo parameter.",
+      "Use a wildcard in the partition field, such as arn:*:s3:::reports-bucket/*, so the ARN matches every partition.",
+      "Build each ARN with the AWS::Partition pseudo parameter, for example arn:${AWS::Partition}:s3:::reports-bucket/*.",
+      "Add the GovCloud account ID to each S3 ARN so that the ARN is unique across partitions."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "The partition is the first field of every ARN: aws for standard Regions, aws-cn for China, and aws-us-gov for GovCloud (US), so arn:aws:... never matches GovCloud resources. The AWS::Partition pseudo parameter returns the correct partition for wherever the stack runs, making the template portable. A wildcard is not allowed in the partition section of an ARN. S3 bucket and object ARNs omit both the Region and the account ID, so adding either does not help.",
+    "subtopic": "ARNs",
+    "source": "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html"
+  },
+  {
+    "id": "fundamentals-099",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A security engineer writes an IAM policy that allows ec2:DescribeInstances, ec2:StartInstances, and ec2:StopInstances with the Resource element set to arn:aws:ec2:us-east-1:111122223333:instance/*. Users can start and stop instances by ID with the AWS CLI, but every DescribeInstances call fails with an authorization error, so the console cannot list instances. What should the engineer change?",
+    "options": [
+      "Add a separate statement that allows ec2:DescribeInstances on Resource \"*\", because that action does not support resource-level permissions.",
+      "Change the Resource ARN to arn:aws:ec2:::instance/*, because EC2 instance ARNs do not include a Region or an account ID.",
+      "Add a condition that requires aws:RequestedRegion to equal us-east-1 for the ec2:DescribeInstances action.",
+      "Attach the policy to the instance profile of the instances, because describe calls are evaluated against the instance role."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Some EC2 API actions, including ec2:DescribeInstances, do not support resource-level permissions, so they must be granted with Resource set to \"*\"; a statement scoped to instance ARNs never matches them. StartInstances and StopInstances do support instance ARNs, so they can stay scoped. EC2 instance ARNs do include the Region and account ID. A Region condition does not fix the unsupported resource scope, and instance profiles grant permissions to software on the instances, not to the users.",
+    "subtopic": "ARNs",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ExamplePolicies_EC2.html"
+  },
+  {
+    "id": "fundamentals-100",
+    "topic": "fundamentals",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A developer is writing the Resource elements of several IAM policies. Which of the following ARNs are correctly formed? (Select TWO.)",
+    "options": [
+      "arn:aws:iam::123456789012:role/app-reader",
+      "arn:aws:iam:us-east-1:123456789012:role/app-reader",
+      "arn:aws:s3:::media-assets/videos/*",
+      "arn:aws:sns:::123456789012:alerts",
+      "arn:aws:s3:us-east-1:123456789012:media-assets"
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "IAM is a global service, so IAM ARNs leave the Region field empty, as in arn:aws:iam::123456789012:role/app-reader. S3 bucket and object ARNs omit both the Region and the account ID, and arn:aws:s3:::media-assets/videos/* matches all objects under the videos/ prefix. An IAM ARN that includes a Region is not valid. SNS topics are Regional, so their ARNs must include the Region, as in arn:aws:sns:us-east-1:123456789012:alerts.",
+    "subtopic": "ARNs",
+    "source": "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html"
+  },
+  {
+    "id": "fundamentals-101",
+    "topic": "fundamentals",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company must give a partner six static public IPv4 addresses for six Amazon EC2 instances in eu-west-1 that send data to the partner. When an engineer tries to allocate the sixth Elastic IP address, the request fails because the account has reached its Elastic IP address limit. What should the engineer do?",
+    "options": [
+      "Allocate the sixth Elastic IP address in eu-west-2 and associate it with the instance in eu-west-1.",
+      "Create a second VPC in eu-west-1, because the Elastic IP address quota applies separately to each VPC.",
+      "Enable auto-assign public IPv4 on the subnet, because auto-assigned addresses are static and do not count toward the quota.",
+      "Request an increase to the Elastic IP address quota for eu-west-1 through the Service Quotas console."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Accounts have a default quota of five Elastic IP addresses per Region, and it is an adjustable quota that can be increased from the Service Quotas console. Elastic IP addresses are Region-specific and cannot be used in another Region. The quota is per Region, not per VPC. Auto-assigned public IPv4 addresses are released when an instance stops and a new one is assigned on start, so they are not static and are unsuitable for a partner allow list.",
+    "subtopic": "Service Quotas",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/elastic-ip-addresses-eip.html"
+  },
+  {
+    "id": "fundamentals-102",
+    "topic": "fundamentals",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A platform team is reviewing how AWS service quotas apply before it expands a workload into three additional Regions. Which statements about service quotas are correct? (Select TWO.)",
+    "options": [
+      "Every quota can be increased on request, so an architecture never needs to change because of a quota.",
+      "Region-based quotas, such as the number of VPCs per Region, apply separately in each Region, so increases approved in one Region do not apply to the others.",
+      "Quotas are shared by all accounts in an AWS Organization, so one approved increase covers every member account.",
+      "Account-level global quotas, such as the number of IAM roles per account, apply in all Regions, and increases are requested from US East (N. Virginia).",
+      "Service Quotas raises a quota automatically when usage reaches 100 percent, so no increase request is needed."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "Quotas can be Region-based, such as VPCs per Region, in which case each Region has its own value and increases must be requested per Region, or account-level global quotas, such as IAM roles per account, which are requested from US East (N. Virginia) in the commercial partition. Not every quota is adjustable; the Service Quotas console shows an Adjustable column, and non-adjustable limits must be designed around. Quotas apply per account, and Service Quotas does not raise quotas automatically; increases must be requested and reviewed.",
+    "subtopic": "Service Quotas",
+    "source": "https://docs.aws.amazon.com/servicequotas/latest/userguide/intro.html"
   }
 ]

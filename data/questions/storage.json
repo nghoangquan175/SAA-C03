@@ -1484,5 +1484,129 @@
     "explanation": "AWS recommends a separate service account with only the delegated permissions needed to join and manage computer objects in the target OU, rather than Domain Admins, and recommends storing its credentials in AWS Secrets Manager and supplying the secret ARN so that they are not kept in plaintext and can be rotated. Plaintext template parameters or Domain Admins credentials violate least privilege, local accounts cannot join the domain, and FSx does not read join credentials from S3.",
     "subtopic": "FSx for Windows self-managed AD service account",
     "source": "https://docs.aws.amazon.com/fsx/latest/WindowsGuide/self-manage-prereqs.html"
+  },
+  {
+    "id": "storage-076",
+    "topic": "storage",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A payments company runs the core ledger database on EC2. The database needs only 12,000 IOPS, but the risk policy requires the EBS volume type with the highest designed durability and consistent sub-millisecond latency. Which volume type should a solutions architect choose?",
+    "options": [
+      "Provisioned IOPS SSD io2 Block Express",
+      "General Purpose SSD gp3 provisioned with 12,000 IOPS",
+      "Provisioned IOPS SSD io1 provisioned with 12,000 IOPS",
+      "General Purpose SSD gp2 sized at 4,000 GiB to obtain 12,000 IOPS"
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "io2 Block Express is designed for 99.999 percent durability, the highest of any EBS volume type, and for average latency under 500 microseconds, which matches the policy even though the IOPS requirement is modest. gp3 could deliver 12,000 IOPS more cheaply, but gp3, gp2, and io1 are designed for 99.8 to 99.9 percent durability, and the General Purpose types provide single-digit millisecond latency. The durability and latency requirements, not the IOPS number, decide the answer here.",
+    "subtopic": "EBS volume types",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/provisioned-iops.html"
+  },
+  {
+    "id": "storage-077",
+    "topic": "storage",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A latency-tolerant search index on EC2 needs 30,000 IOPS but holds only 40 GiB of data. A solutions architect wants the lowest-cost EBS configuration that delivers these IOPS on a single volume. Which configuration should be chosen?",
+    "options": [
+      "A 40 GiB gp3 volume provisioned with 30,000 IOPS",
+      "A 40 GiB io2 Block Express volume provisioned with 30,000 IOPS",
+      "A 60 GiB gp3 volume provisioned with 30,000 IOPS",
+      "A 10,000 GiB gp2 volume, which provides 30,000 baseline IOPS"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "gp3 supports up to 80,000 IOPS but only at a ratio of 500 IOPS per GiB, so a 40 GiB gp3 volume is limited to 20,000 IOPS and the volume must be at least 60 GiB to provision 30,000 IOPS. gp3 is the lowest-cost SSD type, so a slightly larger gp3 volume is cheaper than io2 Block Express, which allows 1,000 IOPS per GiB but costs more for both capacity and IOPS. gp2 baseline performance is capped at 16,000 IOPS regardless of size.",
+    "subtopic": "gp3 IOPS-to-size ratio",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html"
+  },
+  {
+    "id": "storage-078",
+    "topic": "storage",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A media ingest application on EC2 writes large sequential 256 KiB I/Os to a gp3 volume that uses the default performance settings. CloudWatch shows about 500 IOPS while the application is stuck at roughly 125 MiB/s, and the team needs about 400 MiB/s. Which change is the MOST cost-effective fix?",
+    "options": [
+      "Provision 16,000 IOPS on the gp3 volume, because throughput is limited by the IOPS setting",
+      "Change the volume type to io2 Block Express to raise the throughput limit",
+      "Change the volume type to gp2, which scales throughput with the I/O size",
+      "Provision 400 MiB/s of throughput on the gp3 volume, which is set independently of IOPS"
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Throughput equals IOPS multiplied by I/O size, so 500 IOPS at 256 KiB is about 125 MiB/s, which is exactly the gp3 baseline throughput; the volume is throughput bound, not IOPS bound. gp3 throughput can be provisioned up to 2,000 MiB/s at 0.25 MiB/s per provisioned IOPS, and 400 MiB/s fits within the included 3,000 IOPS baseline. Adding IOPS alone does not lift the 125 MiB/s throughput setting, gp2 tops out at 250 MiB/s, and io2 Block Express costs far more than needed.",
+    "subtopic": "IOPS vs throughput",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/general-purpose.html"
+  },
+  {
+    "id": "storage-079",
+    "topic": "storage",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A self-managed database on EC2 stripes its data across four EBS volumes in a RAID 0 array. The team needs scheduled point-in-time backups that restore without inconsistencies between the volumes, and the database cannot be stopped for backups. Which approach meets these requirements?",
+    "options": [
+      "Snapshot each volume one after another, starting with the volume that holds the most data",
+      "Back up the instance with AWS Backup, which takes crash-consistent snapshots of all attached EBS volumes at the same moment",
+      "Enable Fast Snapshot Restore on the four volumes so that their snapshots are synchronized",
+      "Snapshot only the root volume, because the RAID metadata references the data volumes"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "AWS Backup creates multi-volume, crash-consistent backups by default, taking the snapshots of every EBS volume attached to an instance at the exact same moment, so a striped set restores consistently without stopping the instance; EBS multi-volume snapshots and Data Lifecycle Manager provide the same capability. Snapshots taken one after another capture each volume at a different time, which can corrupt a RAID 0 set. Fast Snapshot Restore only speeds up restores, and the root volume does not contain the striped data.",
+    "subtopic": "Multi-volume snapshots",
+    "source": "https://docs.aws.amazon.com/aws-backup/latest/devguide/multi-volume-crash-consistent.html"
+  },
+  {
+    "id": "storage-080",
+    "topic": "storage",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A batch platform launches EC2 instances, and after each launch a script creates and attaches a 500 GiB gp3 scratch volume. When jobs finish, the instances are terminated. The EBS bill keeps growing, and the console shows hundreds of volumes in the available state. What is the cause, and what is the fix?",
+    "options": [
+      "Termination protection detaches volumes instead of deleting them, so the platform should disable termination protection",
+      "gp3 volumes are always kept after termination, so the platform should switch the scratch volumes to gp2",
+      "Volumes attached after launch default to DeleteOnTermination false, so the platform should set it to true or define the volumes in the launch template block device mapping",
+      "EBS volumes are deleted only after a final snapshot is taken, so the platform should enable Amazon Data Lifecycle Manager"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "The DeleteOnTermination attribute decides whether an EBS volume is deleted with its instance, and a data volume attached after launch is preserved by default, so every terminated instance leaves an orphaned, billable volume. Setting DeleteOnTermination to true for those volumes, or creating them through the launch template block device mapping with deletion on termination, fixes the leak. The behavior does not depend on the volume type, termination protection does not detach volumes, and EBS does not require a final snapshot.",
+    "subtopic": "DeleteOnTermination",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/preserving-volumes-on-termination.html"
+  },
+  {
+    "id": "storage-081",
+    "topic": "storage",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A security team is documenting how encryption state behaves for Amazon EBS volumes and snapshots. Which statements are correct? (Select THREE.)",
+    "options": [
+      "A volume created from an encrypted snapshot is always encrypted",
+      "An unencrypted copy of an encrypted snapshot can be created by clearing the encryption option during the copy",
+      "The KMS key of an existing encrypted volume cannot be changed, but a snapshot copy can be re-encrypted with a different KMS key",
+      "Encryption can be turned on for an existing unencrypted volume by modifying the volume while it is attached",
+      "Enabling EBS encryption by default encrypts all existing volumes in the Region during the next maintenance window",
+      "Enabling EBS encryption by default has no effect on existing volumes or snapshots"
+    ],
+    "answer": [
+      0,
+      2,
+      5
+    ],
+    "explanation": "Encryption cannot be removed from an encrypted volume or snapshot, so volumes restored from an encrypted snapshot and copies of an encrypted snapshot are always encrypted. The KMS key of an existing volume or snapshot is fixed, but a snapshot copy can use a new key. An existing unencrypted volume cannot be encrypted in place; it must be snapshotted and restored or copied with encryption. Encryption by default applies only to new volumes and snapshot copies and does not change existing resources.",
+    "subtopic": "EBS encryption",
+    "source": "https://docs.aws.amazon.com/ebs/latest/userguide/ebs-encryption.html"
   }
 ]

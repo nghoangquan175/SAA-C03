@@ -155,6 +155,11 @@
       hybrid: 75, 'iam-org': 75, 'nosql-caching': 75, rds: 85, route53: 75, s3: 100, security: 75,
       serverless: 105, storage: 75, 'vpc-advanced': 75, vpc: 75,
     },
+    {
+      analytics: 75, cdn: 75, containers: 70, 'ec2-advanced': 72, ec2: 114, fundamentals: 102, 'ha-scaling': 85,
+      hybrid: 75, 'iam-org': 133, 'nosql-caching': 75, rds: 85, route53: 85, s3: 146, security: 77,
+      serverless: 105, storage: 81, 'vpc-advanced': 77, vpc: 119,
+    },
   ];
   const releaseOf = q => {
     const n = Number(q.id.slice(q.id.lastIndexOf('-') + 1));
