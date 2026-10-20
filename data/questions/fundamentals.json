@@ -26,10 +26,10 @@
     "difficulty": 1,
     "question": "A solutions architect is explaining the difference between AWS public services and private services to a new operations team. Which statement correctly compares Amazon S3 and Amazon EC2?",
     "options": [
-      "S3 runs in the AWS public zone and is reached through public endpoints, while EC2 instances run inside a VPC and are reachable only through the paths the VPC allows.",
+      "S3 runs in the AWS public zone and is reached through public endpoints, while EC2 instances run in a VPC and are reachable only through paths the VPC allows.",
       "S3 buckets are created inside a subnet of a customer VPC, while EC2 instances run in the AWS public zone unless they are placed in a private subnet.",
-      "Both S3 and EC2 are private services, so neither can be reached from outside AWS without an AWS Direct Connect connection.",
-      "S3 objects are readable by anyone by default because S3 is a public service, while EC2 instances are private by default."
+      "Both S3 and EC2 are private services that run inside AWS-managed VPCs, so neither can be reached from outside AWS without AWS Direct Connect.",
+      "S3 objects are readable by anyone by default because S3 runs in the public zone, while EC2 instances in a VPC are private by default."
     ],
     "answer": [
       0
@@ -45,9 +45,9 @@
     "difficulty": 1,
     "question": "A company is deploying a web application on Amazon EC2. The application must remain available if a single data center fails, and the web tier must keep single-digit millisecond latency to its database tier. Which deployment approach meets these requirements?",
     "options": [
-      "Deploy all web instances in one Availability Zone inside a spread placement group so each instance runs on separate hardware.",
-      "Deploy the web and database tiers across at least two Availability Zones in one Region, with the web tier behind an Application Load Balancer.",
-      "Deploy the web tier in one AWS Region and the database tier in a second Region, connected through inter-Region VPC peering.",
+      "Deploy all web instances in one Availability Zone inside a spread placement group so that each instance runs on separate rack hardware.",
+      "Deploy both tiers across at least two Availability Zones in one Region, with the web tier behind an Application Load Balancer.",
+      "Deploy the web tier in one AWS Region and the database tier in a second Region, connected through inter-Region VPC peering for isolation.",
       "Deploy the web tier in a single Availability Zone and serve it through Amazon CloudFront edge locations to absorb failures."
     ],
     "answer": [
@@ -64,10 +64,10 @@
     "difficulty": 2,
     "question": "A visual effects studio in a large metropolitan area runs rendering and editing workstations on Amazon EC2. Its artists need single-digit millisecond latency to the instances, but the nearest AWS Region is several hundred kilometers away. The studio does not want to buy, install, or manage any hardware. Which solution meets these requirements?",
     "options": [
-      "Order AWS Outposts racks for the studio's office and launch the instances on the Outposts capacity.",
+      "Order AWS Outposts racks for the studio's office and launch the instances on the Outposts capacity that AWS manages.",
       "Place an Amazon CloudFront distribution in front of the EC2 instances to serve the sessions from edge locations.",
       "Extend the VPC to an AWS Local Zone in the studio's metro area and launch the instances in a subnet in that Local Zone.",
-      "Launch the instances in an AWS Wavelength Zone and connect the artists over the studio's wired office network."
+      "Launch the instances in an AWS Wavelength Zone in the metro area and connect the artists over the studio's wired office network."
     ],
     "answer": [
       2
@@ -106,10 +106,10 @@
     "difficulty": 3,
     "question": "Two AWS accounts in the same organization run tightly coupled services that must exchange traffic with the lowest possible latency and without cross-AZ data transfer charges. An engineer in each account launched instances in subnets in us-east-1a, but monitoring shows the traffic is crossing Availability Zones. What should the engineers do?",
     "options": [
-      "Select subnets by Availability Zone ID (for example, use1-az2) in both accounts, because AZ names are mapped to physical zones independently for each account.",
-      "Recreate the default VPC in both accounts so the 172.31.0.0/16 subnets resolve to the same physical Availability Zone.",
-      "Peer the two VPCs and enable DNS resolution over the peering connection so traffic stays within one Availability Zone.",
-      "Open a case with AWS Support to align the us-east-1a name in both accounts to the same physical Availability Zone."
+      "Select subnets by Availability Zone ID (such as use1-az2) in both accounts, because AZ names map to physical zones independently for each account.",
+      "Recreate the default VPC in both accounts so that their 172.31.0.0/16 subnets in us-east-1a resolve to the same physical Availability Zone.",
+      "Peer the two VPCs and enable DNS resolution over the peering connection so that traffic between the instances stays within a single Availability Zone.",
+      "Open a case with AWS Support to align the us-east-1a name in both accounts so that it maps to the same physical Availability Zone."
     ],
     "answer": [
       0
@@ -125,11 +125,11 @@
     "difficulty": 1,
     "question": "Which statements about the default VPC that AWS creates in each Region are true? (Select TWO.)",
     "options": [
-      "Its default security group allows all inbound traffic from the internet.",
+      "Its default security group allows all inbound traffic from the internet so that new instances are reachable immediately.",
       "Its default subnets route 0.0.0.0/0 to an attached internet gateway and assign public IPv4 addresses to instances by default.",
-      "Each Availability Zone in a Region has its own separate default VPC.",
+      "Each Availability Zone in a Region has its own separate default VPC, so instances in different AZs cannot communicate by default.",
       "It uses the 172.31.0.0/16 IPv4 CIDR block and has one default subnet in each Availability Zone.",
-      "Its default subnets are private and reach the internet through a NAT gateway that AWS manages."
+      "Its default subnets are private and reach the internet through a NAT gateway that AWS manages and bills to the account."
     ],
     "answer": [
       1,
@@ -147,7 +147,7 @@
     "question": "A research lab runs nightly genomics batch jobs on Amazon EC2. The jobs checkpoint their progress to Amazon S3 every few minutes and can resume on any instance if they are interrupted. The lab wants to minimize compute costs. Which purchasing option should the lab use?",
     "options": [
       "On-Demand Instances in a single Availability Zone for the duration of each job",
-      "Dedicated Hosts purchased with a 3-year All Upfront reservation",
+      "Dedicated Hosts purchased with a 3-year All Upfront host reservation for the batch fleet",
       "Spot Instances diversified across multiple instance types and Availability Zones",
       "On-Demand Capacity Reservations covering the full nightly processing window"
     ],
@@ -187,7 +187,7 @@
       "Remove the instance profile and store long-term IAM access keys in the application's configuration file instead.",
       "Require IMDSv2 on the instances so that metadata requests must include a session token obtained through a PUT request.",
       "Move the instances to private subnets so that the instance metadata service cannot be reached from the internet.",
-      "Add a security group rule that denies outbound traffic from the instances to the address 169.254.169.254."
+      "Add a security group rule that denies outbound traffic from the instances to the metadata address 169.254.169.254 on port 80."
     ],
     "answer": [
       1
@@ -243,7 +243,7 @@
     "options": [
       "S3 is eventually consistent for new objects, so the retries should wait at least one second before reading the object or listing the prefix.",
       "S3 is strongly consistent for GET requests but eventually consistent for LIST requests, so only the LIST request needs a retry loop.",
-      "S3 provides strong read-after-write consistency for GET and LIST requests, so the new object is returned immediately and the delays are unnecessary.",
+      "S3 provides strong read-after-write consistency for both GET and LIST requests, so the retry delays are unnecessary.",
       "S3 is strongly consistent only when versioning is enabled on the bucket, so versioning should be turned on before removing the retries."
     ],
     "answer": [
@@ -337,9 +337,9 @@
     "question": "A user accidentally deletes an important object from an Amazon S3 bucket that has versioning enabled. The DELETE request did not specify a version ID. How can the object be recovered?",
     "options": [
       "Delete the delete marker that S3 created, which makes the previous version of the object current again.",
-      "Restore the object from the S3 recycle bin within 24 hours of the deletion.",
+      "Restore the object from the S3 recycle bin, which keeps deleted objects for 24 hours by default.",
       "No recovery is possible, because a DELETE request permanently removes every version of the object.",
-      "Open a case with AWS Support to restore the object from internal S3 backups."
+      "Open a case with AWS Support to restore the object from the internal S3 backups kept for the bucket."
     ],
     "answer": [
       0
@@ -356,9 +356,9 @@
     "question": "A company hosts a static marketing website by using the Amazon S3 static website endpoint with a public bucket. The security team now requires HTTPS on a custom domain name and requires that the bucket no longer be publicly accessible. Which solution meets these requirements?",
     "options": [
       "Request an ACM certificate for the custom domain, attach it to the S3 website endpoint, and enable S3 Block Public Access on the bucket.",
-      "Keep the bucket public and add a bucket policy that denies requests unless the aws:SecureTransport condition key is true.",
-      "Create an Amazon CloudFront distribution with an ACM certificate and an S3 REST API origin that uses origin access control (OAC), and enable S3 Block Public Access.",
-      "Create a CloudFront distribution that uses the S3 website endpoint as a custom origin protected by an origin access identity (OAI)."
+      "Keep the bucket public and add a bucket policy that denies requests unless aws:SecureTransport is true, then point the custom domain at the endpoint.",
+      "Create a CloudFront distribution with an ACM certificate and an S3 REST API origin that uses origin access control (OAC), and enable S3 Block Public Access.",
+      "Create an Amazon CloudFront distribution with an ACM certificate that uses the S3 website endpoint as a custom origin protected by an origin access identity (OAI)."
     ],
     "answer": [
       2
@@ -393,9 +393,9 @@
     "difficulty": 1,
     "question": "A web application runs on Amazon EC2 instances behind an Application Load Balancer. The security team requires that the instances accept HTTP traffic only from the load balancer and from nowhere else. Which configuration meets this requirement?",
     "options": [
-      "Add a network ACL rule that allows inbound HTTP only from the load balancer's DNS name.",
+      "Add a network ACL rule that allows inbound HTTP to the instances' subnets only from the load balancer's DNS name.",
       "Add a deny rule for 0.0.0.0/0 to the instances' security group and allow all other inbound traffic.",
-      "Assign Elastic IP addresses to the instances and restrict access by using load balancer listener rules.",
+      "Assign Elastic IP addresses to the instances and restrict direct access to them by using load balancer listener rules.",
       "Allow inbound HTTP in the instances' security group only from the security group attached to the load balancer."
     ],
     "answer": [
@@ -412,10 +412,10 @@
     "difficulty": 2,
     "question": "A company stores critical design files in an Amazon S3 bucket in us-east-1. It must be able to recover from accidental overwrites and deletions, and it must keep a copy of the data in another Region for disaster recovery. Which actions should a solutions architect take? (Select TWO.)",
     "options": [
-      "Enable S3 server access logging to a bucket in another Region.",
+      "Enable S3 server access logging to a bucket in another Region so that every object change is recorded there.",
       "Configure S3 Cross-Region Replication from the source bucket to the destination bucket.",
       "Enable S3 Versioning on the source bucket and on a destination bucket in another Region.",
-      "Enable S3 Transfer Acceleration on the source bucket.",
+      "Enable S3 Transfer Acceleration on the source bucket so that objects are copied quickly to another Region.",
       "Change the storage class of the objects to S3 One Zone-Infrequent Access."
     ],
     "answer": [
@@ -455,7 +455,7 @@
       "Use CloudFormation StackSets with self-managed permissions and add each new account as a deployment target when it is created.",
       "Use CloudFormation StackSets with service-managed permissions targeting the organization's OUs and enable automatic deployment.",
       "Run a scheduled AWS Lambda function that assumes a role in each account and creates a CloudFormation stack in each Region.",
-      "Share the CloudFormation template with all member accounts through AWS RAM so each account team deploys the stack."
+      "Share the CloudFormation template with all member accounts through AWS RAM so that each account team deploys the stack in three Regions."
     ],
     "answer": [
       1
@@ -471,10 +471,10 @@
     "difficulty": 3,
     "question": "A platform team maintains one AWS CloudFormation template that launches Amazon EC2 instances in many Regions. The template must always use the latest Amazon Linux AMI in each Region, and the team does not want to edit AMI IDs in the template when new AMIs are released. Which approach meets these requirements?",
     "options": [
-      "Add a Mappings section that lists the current Amazon Linux AMI ID for each Region and look it up with Fn::FindInMap.",
-      "Define a parameter of type AWS::SSM::Parameter::Value<AWS::EC2::Image::Id> whose default value is the public Systems Manager parameter for the latest Amazon Linux AMI.",
-      "Use the Fn::GetAZs intrinsic function in the ImageId property so CloudFormation selects the AMI for the Availability Zone.",
-      "Define a String parameter whose AllowedValues list contains the Amazon Linux AMI ID for every Region."
+      "Add a Mappings section that lists the current Amazon Linux AMI ID for each Region and look it up with Fn::FindInMap and the AWS::Region pseudo parameter.",
+      "Define a parameter of type AWS::SSM::Parameter::Value<AWS::EC2::Image::Id> whose default is the public Systems Manager parameter for the latest Amazon Linux AMI.",
+      "Use the Fn::GetAZs intrinsic function in the ImageId property so that CloudFormation selects the newest AMI for each Availability Zone.",
+      "Define a String parameter whose AllowedValues list contains the Amazon Linux AMI ID for every Region, and select the matching value at deploy time."
     ],
     "answer": [
       1
@@ -511,7 +511,7 @@
     "options": [
       "Store the password in AWS Secrets Manager and retrieve it in the template with a dynamic reference.",
       "Keep the parameter, set NoEcho to true, and continue storing the value in the deployment scripts.",
-      "Hard-code the password in the template and store the template in a private S3 bucket.",
+      "Hard-code the password in the template and store the template in a private S3 bucket with SSE-KMS encryption.",
       "Export the password as an output of a separate stack and import it with Fn::ImportValue."
     ],
     "answer": [
@@ -552,7 +552,7 @@
       "Enable detailed monitoring on the instances so that memory and disk space metrics are added.",
       "Install and configure the CloudWatch agent on the instances to publish memory and disk space metrics.",
       "Enable VPC Flow Logs and create metric filters that extract memory and disk usage.",
-      "Enable AWS CloudTrail data events for the instances to record memory and disk usage."
+      "Enable AWS CloudTrail data events for the instances so that memory and disk usage is recorded with each API call."
     ],
     "answer": [
       1
@@ -568,9 +568,9 @@
     "difficulty": 3,
     "question": "An operations team receives too many pages because separate Amazon CloudWatch alarms fire for high latency and for elevated 5xx errors on the same application, even when only one metric briefly spikes. The team wants to be paged only when latency and error rate are in the ALARM state at the same time. Which solution meets this requirement?",
     "options": [
-      "Increase the period of each alarm to 1 hour so that brief spikes no longer cause the alarms to change state.",
-      "Create a CloudWatch Logs metric filter that combines the latency and error metrics into one log stream.",
-      "Configure both alarms to treat missing data as breaching and keep notifications on each alarm.",
+      "Increase the period of each alarm to 1 hour so that brief spikes in either metric no longer cause the alarms to change state.",
+      "Create a CloudWatch Logs metric filter that combines the latency and error metrics into one metric and alarm on that combined metric.",
+      "Configure both alarms to treat missing data as breaching and keep sending notifications from each alarm to the paging topic.",
       "Create a composite alarm with an AND rule over the latency and error-rate alarms, and send notifications only from the composite alarm."
     ],
     "answer": [
@@ -587,10 +587,10 @@
     "difficulty": 3,
     "question": "A startup wants the finance team to receive an email as soon as the company's estimated AWS charges for the current month exceed USD 500. Which solutions will meet this requirement? (Select TWO.)",
     "options": [
-      "Create a CloudWatch alarm on the EstimatedCharges metric in the Region where most of the company's resources run.",
+      "Create a CloudWatch alarm on the EstimatedCharges metric in the Region where most of the company's resources run, and notify an SNS email topic.",
       "Create an AWS Budgets cost budget of USD 500 with an alert that emails the finance team when actual costs exceed the threshold.",
-      "Configure Cost Explorer to email a daily cost report and have the finance team check the total each morning.",
-      "Use AWS Trusted Advisor to send an email when the monthly spending threshold is exceeded.",
+      "Configure Cost Explorer to email a daily cost report to the finance team and have them check the month-to-date total each morning.",
+      "Use AWS Trusted Advisor cost optimization checks to send an email when the monthly spending threshold of USD 500 is exceeded.",
       "Enable billing alerts and create a CloudWatch alarm on the EstimatedCharges metric in us-east-1 that notifies an SNS topic with an email subscription."
     ],
     "answer": [
@@ -646,7 +646,7 @@
     "difficulty": 3,
     "question": "An e-commerce company requires an RPO of under 1 minute and an RTO of about 1 hour for its order platform if the primary Region fails. The company wants to minimize the cost of resources that run in the recovery Region before a disaster occurs. Which disaster recovery strategy BEST meets these requirements?",
     "options": [
-      "Pilot light: continuously replicate the database to the recovery Region and keep the application tier defined in infrastructure as code but not running until failover.",
+      "Pilot light: continuously replicate the database to the recovery Region and keep the application tier defined in infrastructure as code but not running.",
       "Backup and restore: take nightly database snapshots, copy them to the recovery Region, and rebuild the environment from templates after a disaster.",
       "Warm standby: run a scaled-down but fully functional copy of the entire stack in the recovery Region at all times and scale it out during failover.",
       "Multi-site active/active: serve production traffic from both Regions at full capacity with bidirectional data replication between them."
@@ -750,9 +750,9 @@
     "question": "A company runs its website in us-east-1 and keeps a static maintenance page in an S3 bucket configured for website hosting in us-west-2. If the primary site becomes unhealthy, users must be sent to the maintenance page automatically. Which Amazon Route 53 configuration meets this requirement?",
     "options": [
       "Weighted routing with a weight of 100 on the primary record and 0 on the S3 record, without health checks",
-      "Failover routing with a health check on the primary record and the S3 website endpoint as the secondary record",
-      "Latency-based routing records in us-east-1 and us-west-2 that point to the website and the bucket",
-      "Geolocation routing with a default location record that points to the S3 website endpoint"
+      "Failover routing with a health check on the primary record and the S3 website endpoint as secondary",
+      "Latency-based routing records in us-east-1 and us-west-2 that point to the website and the maintenance bucket",
+      "Geolocation routing with a default location record that points to the S3 website endpoint for unmatched users"
     ],
     "answer": [
       1
@@ -769,8 +769,8 @@
     "question": "A company will move its website to a new Application Load Balancer next week. The current non-alias A record for www has a TTL of 86,400 seconds. The company wants clients to start using the new endpoint as quickly as possible on migration day. What should a solutions architect do?",
     "options": [
       "Change the record to point to the new load balancer on migration day and set its TTL to 60 seconds in the same update.",
-      "Increase the record's TTL before the migration so that resolvers keep the new value cached longer after the change.",
-      "Delete the hosted zone on migration day and create a new hosted zone that contains the updated record.",
+      "Increase the record's TTL before the migration so that resolvers keep the new value cached longer and stop re-querying after the change.",
+      "Delete the hosted zone on migration day and create a new hosted zone that contains the updated record with a 60-second TTL from the start.",
       "Lower the record's TTL to a short value such as 60 seconds at least a day before the migration, then change the record on migration day."
     ],
     "answer": [
@@ -787,10 +787,10 @@
     "difficulty": 3,
     "question": "A company registered example.com through Amazon Route 53 Domains, which created a public hosted zone automatically. An administrator accidentally deleted the hosted zone and then created a new hosted zone for example.com with the same records. The domain still does not resolve. What is the MOST likely cause?",
     "options": [
-      "Records in a recreated hosted zone take up to 72 hours to become active, so the domain will resolve after that period.",
-      "Route 53 Domains supports only one hosted zone per domain registration, so the domain must be registered again.",
-      "The new hosted zone was created as a public zone and must be associated with a VPC before it can answer queries.",
-      "The new hosted zone has a different set of name servers, so the domain's registration must be updated to use the name servers in the new zone's NS record."
+      "Records in a recreated hosted zone take up to 72 hours to propagate to the Route 53 name servers, so the domain will resolve after that.",
+      "Route 53 Domains supports only one hosted zone per registered domain, so the domain must be transferred out and registered again.",
+      "The new hosted zone was created as a public zone and must be associated with a VPC before Route 53 can answer queries for it.",
+      "The new hosted zone has different name servers, so the domain registration must be updated to use the name servers in the new zone's NS record."
     ],
     "answer": [
       3
@@ -806,10 +806,10 @@
     "difficulty": 3,
     "question": "A financial services company hosts its public domain in Amazon Route 53. The security team wants resolvers to be able to verify that DNS responses for the domain are authentic and have not been spoofed or altered in transit. Which solution meets this requirement?",
     "options": [
-      "Create CAA records in the hosted zone that list the resolvers that are allowed to query the domain.",
-      "Enable Route 53 Resolver DNS Firewall for the public hosted zone to block spoofed responses.",
-      "Enable DNSSEC signing for the public hosted zone and add the delegation signer (DS) record to the parent zone to establish a chain of trust.",
-      "Convert the public hosted zone to a private hosted zone and associate it with every VPC in the company."
+      "Create CAA records in the hosted zone that list the resolvers allowed to query the domain and reject responses signed by other parties.",
+      "Enable Route 53 Resolver DNS Firewall for the public hosted zone so that it blocks spoofed or altered responses before they reach resolvers.",
+      "Enable DNSSEC signing for the public hosted zone and add the delegation signer (DS) record to the parent zone to build a chain of trust.",
+      "Convert the public hosted zone to a private hosted zone and associate it with every company VPC so responses cannot be spoofed in transit."
     ],
     "answer": [
       2
@@ -863,9 +863,9 @@
     "difficulty": 3,
     "question": "A company that creates many new AWS accounts through AWS Organizations keeps hitting default service quotas soon after the accounts go live, which causes failed deployments. The company wants to prevent these failures proactively with minimal manual effort. Which actions should a solutions architect take? (Select TWO.)",
     "options": [
-      "Use AWS Trusted Advisor to raise quotas automatically when usage reaches 80 percent of the limit.",
-      "Attach an SCP to the new accounts that removes the default service quotas for the accounts.",
-      "Deploy all workloads into the management account, which is not subject to service quotas.",
+      "Use AWS Trusted Advisor service limits checks to raise quotas automatically when usage reaches 80 percent of the limit.",
+      "Attach an SCP to the new accounts' OU that removes the default service quotas for every account created in it.",
+      "Deploy all workloads into the management account, which is not subject to service quotas, and share resources with member accounts.",
       "Configure a Service Quotas quota request template so increases are requested automatically when new accounts are created in the organization.",
       "Create CloudWatch alarms on Service Quotas usage metrics to notify the team before quotas are reached."
     ],
@@ -885,9 +885,9 @@
     "question": "A company's architecture board wants each product team to assess its workloads against AWS best practices for reliability, security, cost, and the other framework pillars, record the results at major milestones, and receive a prioritized list of issues to fix. The company wants to do this without building its own questionnaire or paying for an additional tool. Which solution meets these requirements?",
     "options": [
       "Enable AWS Trusted Advisor checks in each account and export the results to a shared spreadsheet every quarter.",
-      "Enable AWS Config conformance packs in each account and review the compliance dashboard before each release.",
+      "Enable AWS Config conformance packs for operational best practices in each account and review the compliance dashboard before each release.",
       "Define each workload in the AWS Well-Architected Tool, answer the pillar questions, and use the generated improvement plan.",
-      "Run AWS Resilience Hub assessments for every workload and use the results as the review for all six pillars."
+      "Run AWS Resilience Hub assessments for every workload and use their prioritized findings as the review for all six pillars."
     ],
     "answer": [
       2
@@ -947,8 +947,8 @@
     "question": "A company has 200 AWS accounts in AWS Organizations with all features enabled. A central operations team works from a dedicated operations member account and must see which accounts are affected by AWS operational issues and upcoming scheduled changes, without being given access to the management account. Which solution meets these requirements?",
     "options": [
       "Create an IAM role in every member account and have the operations team switch into each account to check its AWS Health Dashboard.",
-      "Create a multi-Region organization trail and have the operations team search it for AWS Health events from all accounts.",
-      "Deploy an AWS Config aggregator in the operations account and query it for operational issues affecting each account.",
+      "Create a multi-Region organization trail and have the operations team query it with CloudTrail Lake for AWS Health events from all accounts.",
+      "Deploy an AWS Config aggregator in the operations account and query it for operational issues and scheduled changes affecting each account.",
       "Enable the AWS Health organizational view from the management account and register the operations account as a delegated administrator for AWS Health."
     ],
     "answer": [
@@ -967,7 +967,7 @@
     "question": "A global payments company requires that a complete Regional outage cause near-zero downtime, and users on several continents must always be served from a nearby Region during normal operation. Cost is a secondary concern. Which disaster recovery strategy meets these requirements?",
     "options": [
       "Multi-site active/active, serving traffic from multiple Regions with data replicated between them and latency-based routing",
-      "Warm standby, with a scaled-down copy of the workload in a second Region that is scaled out after a failover decision",
+      "Warm standby, with a scaled-down copy of the workload in a second Region that is scaled out after a failover decision is made",
       "Pilot light, with replicated databases in a second Region and application servers that are started during failover",
       "Backup and restore, with cross-Region copies of snapshots and infrastructure as code to rebuild the environment"
     ],
@@ -987,7 +987,7 @@
     "question": "A company runs a warm standby environment in us-west-2 for a production workload in us-east-1. During a DR test, the Auto Scaling groups in us-west-2 fail to scale out to production size, and launch requests return errors stating that the account has exceeded its vCPU limit. Which action will prevent this problem during a real disaster?",
     "options": [
       "Move the standby environment to a different Availability Zone in us-west-2 that has its own vCPU quota.",
-      "Switch the standby Auto Scaling groups to Spot Instances, which are not subject to vCPU quotas.",
+      "Switch the standby Auto Scaling groups to Spot Instances, which are not subject to any vCPU-based service quotas.",
       "Request service quota increases in us-west-2 in advance so they are high enough to run full production capacity.",
       "Copy the service quotas from us-east-1 to us-west-2 automatically by using AWS CloudFormation StackSets."
     ],
@@ -1028,9 +1028,9 @@
     "difficulty": 2,
     "question": "An online travel agency wants to detect problems with its checkout flow before customers report them. Traffic is very low overnight, so errors often go unnoticed for hours. The company wants a scripted browser test that logs in, searches, and completes a test booking every 5 minutes, records latency and screenshots, and alarms on failures. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Enable AWS X-Ray tracing on the application and alarm when no traces are received for 5 minutes.",
+      "Enable AWS X-Ray tracing on the application and alarm when no checkout traces are received for 5 minutes.",
       "Create a CloudWatch Logs metric filter on the web server logs that counts failed checkout requests.",
-      "Run a headless browser script from cron on an EC2 instance and publish the results as custom metrics.",
+      "Run a headless browser script from cron on an EC2 instance every 5 minutes and publish the results as custom metrics.",
       "Create an Amazon CloudWatch Synthetics canary that runs the checkout script on a schedule, and alarm on its metrics."
     ],
     "answer": [
@@ -1050,8 +1050,8 @@
     "options": [
       "Create a CloudWatch alarm that uses anomaly detection on the metric so the threshold is a band of expected values.",
       "Create separate static-threshold alarms for each hour of the day and enable or disable them on a schedule.",
-      "Create a composite alarm that combines the existing static alarm with an alarm on CPU utilization.",
-      "Increase the alarm's evaluation period to 24 hours so that daily peaks are averaged out."
+      "Create a composite alarm that combines the existing static alarm with an alarm on CPU utilization to filter out the evening peaks.",
+      "Increase the alarm's evaluation period to 24 hours so that the evening and weekend peaks are averaged out."
     ],
     "answer": [
       0
@@ -1068,10 +1068,10 @@
     "difficulty": 2,
     "question": "Developers frequently forget to shut down their EBS-backed Amazon EC2 test instances, which then sit idle for days. The company wants idle instances to be shut down automatically so that they can be restarted later with the same instance ID and root volume, without writing or maintaining any code. Which solution meets these requirements?",
     "options": [
-      "Create a CloudWatch alarm on each instance's StatusCheckFailed_Instance metric with the EC2 terminate action.",
+      "Create a CloudWatch alarm on each instance's StatusCheckFailed_Instance metric with the EC2 terminate action to clean up idle instances.",
       "Create a CloudWatch alarm that triggers when average CPUUtilization stays below 10 percent for 24 hours and uses the EC2 stop action.",
       "Place each test instance in an Auto Scaling group with a scheduled action that sets the desired capacity to zero.",
-      "Enable detailed monitoring on the instances so that AWS stops them automatically when they become idle."
+      "Enable detailed monitoring on the instances so that AWS stops them automatically after they remain idle for 24 hours."
     ],
     "answer": [
       1
@@ -1089,7 +1089,7 @@
     "question": "A high-frequency trading application publishes an order-queue-depth custom metric to Amazon CloudWatch. The operations team must be alerted within about 30 seconds when the queue depth exceeds a threshold, but the current alarm takes several minutes to react. Which change meets this requirement?",
     "options": [
       "Enable detailed monitoring on the EC2 instances so that the custom metric is published every second.",
-      "Create a composite alarm that combines the queue-depth alarm with an EC2 CPUUtilization alarm.",
+      "Create a composite alarm that combines the queue-depth alarm with an EC2 CPUUtilization alarm to react faster.",
       "Publish the metric as a high-resolution custom metric and create a high-resolution alarm with a 10-second period.",
       "Publish the metric to CloudWatch Logs and create a metric filter that evaluates every log event in real time."
     ],
@@ -1108,9 +1108,9 @@
     "difficulty": 2,
     "question": "A healthcare company discovers that some of its applications write patient identifiers and credit card numbers into CloudWatch Logs. Developers still need to read the logs for troubleshooting, but only a small security team may see the sensitive values. The control must also cover log groups created in the future. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Encrypt every log group with a customer managed AWS KMS key and grant decrypt permission only to the security team.",
-      "Export the logs to Amazon S3 every hour and run Amazon Macie jobs that delete objects containing sensitive data.",
-      "Create a subscription filter that sends the logs to a Lambda function that rewrites the sensitive values in place.",
+      "Encrypt every log group with a customer managed AWS KMS key and grant kms:Decrypt only to the security team so other users cannot read sensitive values.",
+      "Export the logs to Amazon S3 every hour and run Amazon Macie sensitive data discovery jobs that delete objects containing the sensitive values.",
+      "Create a subscription filter that sends the logs to a Lambda function that rewrites the sensitive values in place in each log group.",
       "Create an account-level CloudWatch Logs data protection policy that masks the sensitive data types, and grant logs:Unmask only to the security team."
     ],
     "answer": [
@@ -1169,7 +1169,7 @@
     "question": "An AWS CloudFormation template manages an Amazon RDS DB instance. A planned template change modifies a property that requires replacement of the DB instance. The company must keep a snapshot of the old DB instance when CloudFormation replaces it during the stack update. What should the solutions architect configure?",
     "options": [
       "Set the DeletionPolicy attribute of the DB instance resource to Snapshot.",
-      "Enable termination protection on the stack before running the update.",
+      "Enable termination protection on the stack before running the replacement update.",
       "Add a CreationPolicy attribute with a timeout to the DB instance resource.",
       "Set the UpdateReplacePolicy attribute of the DB instance resource to Snapshot."
     ],
@@ -1191,7 +1191,7 @@
       "Reference the security team's template from each application template as a nested stack by using the AWS::CloudFormation::Stack resource.",
       "Copy the load balancer resources into each application template and run drift detection weekly to find differences.",
       "Store the load balancer settings in the Mappings section of each application template and update the mappings manually.",
-      "Deploy the load balancer template with StackSets and have each application stack import the load balancer ARN."
+      "Deploy the load balancer template with StackSets and have each application stack import the load balancer ARN with Fn::ImportValue."
     ],
     "answer": [
       0
@@ -1208,8 +1208,8 @@
     "difficulty": 2,
     "question": "Several engineers have permission to update a CloudFormation stack that contains both frequently changed application resources and a production Amazon RDS database. The company wants to prevent any stack update from accidentally replacing or deleting the database, while still allowing updates to the other resources in the stack. What should the solutions architect do?",
     "options": [
-      "Enable termination protection on the stack so that the database cannot be modified during updates.",
-      "Run drift detection before every update and cancel the update if the database shows as MODIFIED.",
+      "Enable termination protection on the stack so that the database cannot be replaced or deleted during stack updates.",
+      "Run drift detection before every update and cancel the update if the database resource shows as MODIFIED.",
       "Set a stack policy that allows Update:* on all resources and explicitly denies Update:* on the database's logical ID.",
       "Remove the engineers' IAM permissions for rds:DeleteDBInstance so CloudFormation cannot replace the database."
     ],
@@ -1230,7 +1230,7 @@
     "options": [
       "Add a rollback trigger that references a CloudWatch alarm on the 5xx error rate and set a monitoring time of 15 minutes.",
       "Add a CreationPolicy with a 15-minute timeout to every resource so that the update waits for success signals.",
-      "Enable drift detection on the stack and configure it to roll back the stack when any resource drifts.",
+      "Enable drift detection on the stack and configure it to roll back the stack automatically when any resource drifts during the update.",
       "Set a stack policy that denies Update:Replace actions for 15 minutes after each update completes."
     ],
     "answer": [
@@ -1268,8 +1268,8 @@
     "difficulty": 2,
     "question": "A company runs dozens of Amazon EKS clusters and currently operates its own Prometheus servers and Grafana instances on EC2. The servers struggle to scale as metric volume grows, and the team spends significant time patching them. The company wants to keep using PromQL queries and Grafana dashboards, with single sign-on through IAM Identity Center, and stop managing the underlying servers. Which services should the company use? (Select TWO.)",
     "options": [
-      "Amazon OpenSearch Service domains to store the Prometheus metrics",
-      "Amazon CloudWatch Logs Insights to run the existing PromQL queries",
+      "Amazon OpenSearch Service domains with UltraWarm storage to store and query the Prometheus metrics",
+      "Amazon CloudWatch Logs Insights to run the existing PromQL queries against Container Insights data",
       "Amazon Managed Service for Prometheus workspaces to ingest, store, and query the metrics",
       "AWS X-Ray to collect the Prometheus metrics from each cluster",
       "Amazon Managed Grafana workspaces that use the Prometheus workspaces as a data source"
@@ -1331,9 +1331,9 @@
     "question": "A company is moving a self-managed MySQL database from Amazon EC2 to Amazon RDS for MySQL. Under the AWS shared responsibility model, which tasks remain the company's responsibility after the migration? (Select TWO.)",
     "options": [
       "Configuring the security groups that control which clients can connect to the DB instance",
-      "Applying operating system patches to the hosts that run the DB instance",
+      "Applying operating system patches to the hosts that run the DB instance during the weekly maintenance window",
       "Managing database users and their privileges by using the database engine's security features",
-      "Replacing failed physical storage devices in the AWS data center",
+      "Replacing failed physical storage devices that back the DB instance's EBS volumes",
       "Maintaining physical access controls for the facilities that house the database servers"
     ],
     "answer": [
@@ -1417,9 +1417,9 @@
     "question": "A retail company's checkout API calls several microservices, an Amazon DynamoDB table, and a third-party payment API. Some requests take more than 3 seconds, and the team cannot tell which downstream call causes the delay. Which solution will help the team identify the bottleneck MOST effectively?",
     "options": [
       "Instrument the services with AWS X-Ray and use the trace map and request traces to find the slow downstream calls.",
-      "Enable VPC Flow Logs on the subnets and analyze the bytes transferred between the services.",
-      "Enable AWS CloudTrail data events for the DynamoDB table and compare the API call timestamps.",
-      "Increase the CloudWatch metric resolution of the API to 1 second and graph the average latency."
+      "Enable VPC Flow Logs on the subnets and analyze the bytes and packets transferred between each pair of services.",
+      "Enable AWS CloudTrail data events for the DynamoDB table and compare the API call timestamps with the checkout request times.",
+      "Increase the CloudWatch metric resolution of the API to 1 second and graph the p99 latency of the checkout requests."
     ],
     "answer": [
       0
@@ -1518,10 +1518,10 @@
     "difficulty": 1,
     "question": "A healthcare company in Germany must make sure that patient documents stored in Amazon S3 are kept only in the EU. Developers will upload the documents to a single general purpose bucket by using the AWS SDK. A team member worries that because S3 bucket names are global, S3 might store copies of the objects in other Regions. Which statement is correct?",
     "options": [
-      "S3 is a global service, so the company must enable S3 Object Lock in compliance mode to pin the objects to one Region.",
-      "Objects stay in the Region where the bucket was created unless the company explicitly transfers or replicates them, so the bucket must be created in an EU Region.",
+      "S3 is a global service like IAM, so the company must enable S3 Object Lock in compliance mode to pin the objects to the bucket's Region.",
+      "Objects stay in the bucket's Region unless the company explicitly transfers or replicates them, so the bucket must be created in an EU Region.",
       "S3 automatically replicates every object to a second Region for durability, so the company must disable that replication on the bucket.",
-      "S3 stores each object in the Region closest to the client that uploads it, so all uploads must come from clients located in the EU."
+      "S3 stores each object in the Region closest to the client that uploads it, so all uploads must come from clients located in EU Regions."
     ],
     "answer": [
       1
@@ -1560,10 +1560,10 @@
     "difficulty": 1,
     "question": "A solutions architect is explaining the AWS Global Infrastructure to a team that is planning a highly available deployment with synchronous database replication. Which statement about Availability Zones is correct?",
     "options": [
-      "Each Availability Zone is a single data center, so two instances in the same zone always share one building and one power feed.",
-      "Availability Zones in a Region are hundreds of kilometers apart, so replication between them must always be asynchronous.",
-      "Every AWS Region has exactly two Availability Zones, so a design that spans two zones uses all of the Region's capacity.",
-      "An Availability Zone is one or more discrete data centers with independent power, cooling, and physical security, and the zones in a Region are within about 100 km of each other."
+      "Each Availability Zone is a single data center, so two instances in the same zone always share one building, one network, and one power feed.",
+      "Availability Zones in a Region are hundreds of kilometers apart for disaster isolation, so replication between them must always be asynchronous.",
+      "Every AWS Region has exactly two Availability Zones, so a design that spans two zones already uses all of the Region's isolated capacity.",
+      "An Availability Zone is one or more discrete data centers with independent power and cooling, and the zones in a Region are within 100 km of each other."
     ],
     "answer": [
       3
@@ -1600,7 +1600,7 @@
     "difficulty": 2,
     "question": "An Auto Scaling group uses a target tracking scaling policy on average CPUUtilization. During sudden traffic spikes, the group takes several minutes longer to add instances than the team expects. The launch template uses the default monitoring settings, and the team has confirmed that the warmup settings are appropriate. Which change will let the group respond to load changes faster?",
     "options": [
-      "Change the scaling policy to evaluate CPUUtilization with a 10-second period.",
+      "Change the scaling policy to evaluate the CPUUtilization metric with a 10-second period for faster scaling.",
       "Create a CloudWatch composite alarm on CPUUtilization so that the policy is evaluated more often.",
       "Increase the health check grace period so that new instances are counted toward capacity sooner.",
       "Enable detailed monitoring in the launch template so that instance metrics are published every minute."
@@ -1663,9 +1663,9 @@
     "question": "A startup created an S3 general purpose bucket named acme-raw-data in us-east-1 and stored 40 TB of objects in it. A new regulation requires the data to be stored in eu-central-1, and the company also wants the bucket to be named acme-eu-raw-data. What must the company do?",
     "options": [
       "Edit the bucket properties to change the bucket's Region and name, and S3 moves the objects in the background.",
-      "Enable S3 Transfer Acceleration on the bucket and rename it so that it is served from eu-central-1.",
+      "Enable S3 Transfer Acceleration on the bucket and rename it so that its objects are served from eu-central-1 edge locations.",
       "Create a new bucket named acme-eu-raw-data in eu-central-1, copy the objects into it, and then delete the original bucket.",
-      "Create a Multi-Region Access Point named acme-eu-raw-data that points to the existing bucket in us-east-1."
+      "Create a Multi-Region Access Point named acme-eu-raw-data that points to the existing bucket and routes requests through eu-central-1."
     ],
     "answer": [
       2
@@ -1682,9 +1682,9 @@
     "difficulty": 1,
     "question": "A SaaS provider wants to create a separate S3 general purpose bucket for each of its 3,000 customers to simplify per-customer access policies and cost allocation. An engineer objects that an AWS account can own only 100 buckets. Which statement is correct?",
     "options": [
-      "By default an account can create up to 10,000 general purpose buckets, and the company can request a higher quota through Service Quotas if needed.",
-      "The engineer is correct; 100 buckets per account is a hard limit, so the company must spread its customers across 30 AWS accounts.",
-      "Bucket quotas apply per Region, so the company can create 100 buckets in each of 30 Regions to reach 3,000 buckets.",
+      "By default an account can create up to 10,000 general purpose buckets, and a higher quota can be requested through Service Quotas.",
+      "The engineer is correct; 100 buckets per account is a hard limit, so the company must spread its customers across at least 30 AWS accounts.",
+      "Bucket quotas apply per Region, so the company can create 100 buckets in each of 30 Regions to reach 3,000 buckets in one account.",
       "S3 does not allow more than 1,000 buckets in any account, so the company must use one shared bucket with a prefix per customer."
     ],
     "answer": [
@@ -1702,10 +1702,10 @@
     "difficulty": 2,
     "question": "An engineer is developing a large AWS CloudFormation template. Stack creation repeatedly fails near the end because of one misconfigured resource, and CloudFormation then rolls back and deletes the 40 resources that were created successfully, which takes a long time on every attempt. The engineer wants to keep the successfully created resources, fix the problem, and continue from the point of failure. What should the engineer do?",
     "options": [
-      "Add a DeletionPolicy of Retain to every resource so that the rollback leaves them in place for the next attempt.",
-      "Create the stack with the Preserve successfully provisioned resources option (--disable-rollback), fix the issue, and then retry or update the stack.",
-      "Apply a stack policy that denies Update:Delete on all resources so that the rollback cannot remove them.",
-      "Add a CreationPolicy with a longer timeout to every resource so that the stack waits instead of rolling back."
+      "Add a DeletionPolicy of Retain to every resource so that the rollback leaves them in place and the next attempt reuses them.",
+      "Create the stack with the Preserve successfully provisioned resources option (--disable-rollback), fix the issue, and retry or update the stack.",
+      "Apply a stack policy that denies Update:Delete on all resources so that the creation rollback cannot remove the successful ones.",
+      "Add a CreationPolicy with a longer timeout to every resource so that the stack waits for the failed resource instead of rolling back."
     ],
     "answer": [
       1
@@ -1764,10 +1764,10 @@
     "difficulty": 3,
     "question": "An Amazon EC2 instance with an EBS root volume is managed by AWS CloudFormation. Its UserData property contains a bash script that installs and configures an application. An engineer changes the script in the template and updates the stack. The update succeeds, but the application configuration on the instance has not changed. What explains this behavior?",
     "options": [
-      "CloudFormation ignores UserData changes on existing instances, so the update did not touch the instance at all.",
+      "CloudFormation ignores UserData changes on existing instances and only stores the new value, so the update did not touch the instance at all.",
       "Updating UserData replaced the instance, but the new instance was launched from an AMI that already contained the old configuration.",
-      "Updating UserData stops and starts the EBS-backed instance, but by default user data scripts run only during the first boot after launch, so the new script did not run.",
-      "The script ran, but CloudFormation reverted its changes because the instance did not send a cfn-signal to the stack."
+      "Updating UserData restarts the EBS-backed instance, but by default user data scripts run only on the first boot after launch, so the new script did not run.",
+      "The script ran on the restarted instance, but CloudFormation reverted its changes because the instance did not send a cfn-signal to the stack."
     ],
     "answer": [
       2
@@ -1806,7 +1806,7 @@
     "options": [
       "Write a new template, create a stack that builds replacement resources, and then delete the manually created resources.",
       "Use the CloudFormation IaC generator to scan the resources and generate a template, and then import the existing resources into a stack.",
-      "Create an empty stack and run drift detection so that CloudFormation adopts the resources that it reports as drifted.",
+      "Create an empty stack and run drift detection so that CloudFormation adopts the existing resources that it reports as drifted.",
       "Create a StackSet that targets the account so that CloudFormation discovers and manages all existing resources automatically."
     ],
     "answer": [
@@ -1844,9 +1844,9 @@
     "difficulty": 2,
     "question": "A capacity planning team needs 1-minute granularity Amazon EC2 and Application Load Balancer metrics for the previous 12 months to analyze traffic patterns. The team notices that CloudWatch returns only 5-minute or 1-hour data points for older time ranges. Which solution will meet this requirement going forward?",
     "options": [
-      "Increase the metric retention setting for the AWS/EC2 and AWS/ApplicationELB namespaces to 12 months.",
+      "Increase the metric retention setting for the AWS/EC2 and AWS/ApplicationELB namespaces to 12 months in CloudWatch settings.",
       "Enable detailed monitoring on all instances so that CloudWatch keeps 1-minute data points for 15 months.",
-      "Export the CloudWatch metrics to Amazon S3 with a CloudWatch Logs export task every day.",
+      "Export the CloudWatch metrics to Amazon S3 every day with a CloudWatch Logs export task and query them with Athena.",
       "Create a CloudWatch metric stream that delivers the metrics through Amazon Data Firehose to an S3 bucket for analysis."
     ],
     "answer": [
@@ -1864,9 +1864,9 @@
     "difficulty": 3,
     "question": "Each Amazon EC2 instance in an Auto Scaling group publishes a custom metric named QueueLag in the namespace App/Orders with a single dimension, InstanceId. The team wants one alarm on the average QueueLag across the whole group, but when they request the metric statistics without specifying any dimension, CloudWatch returns no data. What is the cause, and what should the team do?",
     "options": [
-      "Custom metrics are retained for only 3 hours, so the team must republish QueueLag as a high-resolution metric.",
-      "Custom metrics are stored in the AWS/EC2 namespace, so the team must request the statistics from that namespace instead.",
-      "CloudWatch does not aggregate custom metrics across dimensions, so the team should also publish QueueLag with only an AutoScalingGroupName dimension or use a metric math expression.",
+      "Custom metrics are retained for only 3 hours unless they are high resolution, so the team must republish QueueLag as a high-resolution metric.",
+      "Custom metrics published by EC2 instances are stored in the AWS/EC2 namespace, so the team must request the statistics from that namespace instead.",
+      "CloudWatch does not aggregate custom metrics across dimensions, so the team should also publish QueueLag with an AutoScalingGroupName dimension or use metric math.",
       "CloudWatch aggregates custom metrics only for instances that have detailed monitoring enabled, so the team must enable it in the launch template."
     ],
     "answer": [
@@ -1904,10 +1904,10 @@
     "difficulty": 2,
     "question": "A company runs its database on Amazon RDS for PostgreSQL in a Multi-AZ DB instance deployment with one standby. During an Availability Zone failure test, RDS failed over to the standby automatically, and applications reconnected after about 90 seconds without losing committed data. The CTO asks how to classify this design. Which description is MOST accurate?",
     "options": [
-      "It is fault tolerant, because the standby keeps serving requests with no interruption at all when the primary fails.",
+      "It is fault tolerant, because the synchronous standby keeps serving requests with no interruption at all when the primary fails.",
       "It is highly available, because it recovers automatically and quickly from a component failure, but clients see a brief interruption during failover.",
       "It is a disaster recovery design, because the standby is located in another AWS Region and can be promoted after a Regional disaster.",
-      "It is a read scaling design, because the standby serves read traffic and takes over writes only when the primary fails."
+      "It is a read scaling design, because the standby serves read traffic during normal operation and takes over writes only when the primary fails."
     ],
     "answer": [
       1
@@ -1968,8 +1968,8 @@
     "options": [
       "Add a separate statement that allows ec2:DescribeInstances on Resource \"*\", because that action does not support resource-level permissions.",
       "Change the Resource ARN to arn:aws:ec2:::instance/*, because EC2 instance ARNs do not include a Region or an account ID.",
-      "Add a condition that requires aws:RequestedRegion to equal us-east-1 for the ec2:DescribeInstances action.",
-      "Attach the policy to the instance profile of the instances, because describe calls are evaluated against the instance role."
+      "Add a condition that requires aws:RequestedRegion to equal us-east-1 for ec2:DescribeInstances so the action matches the Region in the ARN.",
+      "Attach the policy to the instance profile of the instances instead, because describe calls are evaluated against the role of each instance being listed."
     ],
     "answer": [
       0
@@ -2028,11 +2028,11 @@
     "difficulty": 2,
     "question": "A platform team is reviewing how AWS service quotas apply before it expands a workload into three additional Regions. Which statements about service quotas are correct? (Select TWO.)",
     "options": [
-      "Every quota can be increased on request, so an architecture never needs to change because of a quota.",
+      "Every quota can be increased on request through Service Quotas, so an architecture never needs to change because of a quota limit.",
       "Region-based quotas, such as the number of VPCs per Region, apply separately in each Region, so increases approved in one Region do not apply to the others.",
-      "Quotas are shared by all accounts in an AWS Organization, so one approved increase covers every member account.",
-      "Account-level global quotas, such as the number of IAM roles per account, apply in all Regions, and increases are requested from US East (N. Virginia).",
-      "Service Quotas raises a quota automatically when usage reaches 100 percent, so no increase request is needed."
+      "Quotas are shared by all accounts in an AWS Organization, so one approved increase in the management account covers every member account.",
+      "Account-level global quotas, such as IAM roles per account, apply in all Regions, and increases are requested from US East (N. Virginia).",
+      "Service Quotas raises a quota automatically when usage reaches 100 percent, so no increase request is needed before expanding to new Regions."
     ],
     "answer": [
       1,

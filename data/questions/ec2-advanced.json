@@ -7,10 +7,10 @@
     "difficulty": 1,
     "question": "A solutions architect adds a shell script to the user data of a Linux EC2 instance to install and start a web server. By default, when does this user data script run?",
     "options": [
-      "Only when an administrator runs it through AWS Systems Manager",
-      "Every time the instance is rebooted",
+      "Only when an administrator triggers it through AWS Systems Manager Run Command after the launch",
+      "Every time the instance is rebooted, because the cloud-init service starts on every boot",
       "Only during the first boot cycle after the instance is launched",
-      "Every time the instance is stopped and started"
+      "Every time the instance is stopped and started, because it then moves to a new underlying host"
     ],
     "answer": [
       2
@@ -27,9 +27,9 @@
     "question": "An Auto Scaling group launches instances that run a user data script to install packages, download application binaries, and compile dependencies. Each new instance takes 18 minutes to become ready, so the group cannot react quickly to traffic spikes. Which solution will MOST reduce the time for new instances to become ready?",
     "options": [
       "Create a pre-baked golden AMI that already contains the software and keep only instance-specific configuration in user data",
-      "Move the user data script into a CloudFormation cfn-init configuration",
-      "Increase the health check grace period of the Auto Scaling group",
-      "Use larger instance types so that the script runs faster"
+      "Move the user data script into an AWS::CloudFormation::Init configuration so that cfn-init installs the packages declaratively at boot",
+      "Increase the health check grace period of the Auto Scaling group so that instances are not marked unhealthy while they bootstrap",
+      "Use larger compute optimized instance types so that the compilation and package installation steps finish faster at boot"
     ],
     "answer": [
       0
@@ -45,10 +45,10 @@
     "difficulty": 2,
     "question": "A developer passes a database password to an EC2 instance in its user data so that a startup script can configure the application. A security engineer flags this as a risk. What is the risk, and what should be done instead?",
     "options": [
-      "User data is encrypted with the instance's KMS key, so the only risk is its size; compress the script instead",
-      "User data can be read by any process on the instance through the metadata service and by anyone allowed to view instance attributes; retrieve the password at runtime from AWS Secrets Manager by using the instance role",
-      "User data is published on the internet; move the instance to a private subnet",
-      "User data is deleted after boot, so the application will lose the password; store it in an environment variable baked into the AMI"
+      "User data is encrypted at rest with the instance's KMS key, so the only real risk is the 16 KB user data limit; compress the script with gzip, which cloud-init can decompress",
+      "User data can be read by any local process through the instance metadata service and by anyone allowed to view instance attributes; fetch the password at runtime from Secrets Manager by using the instance role",
+      "User data is exposed through the instance's public IP address and can be fetched from the internet; move the instance to a private subnet and administer it through Session Manager",
+      "User data is discarded after the first boot completes, so the application loses the password after a reboot; store it in an environment variable baked into the AMI instead"
     ],
     "answer": [
       1
@@ -64,9 +64,9 @@
     "difficulty": 2,
     "question": "A team manages EC2 instances with AWS CloudFormation. Their long user data scripts are difficult to maintain and do not clearly express the desired state of packages, files, and services. Which approach provides a declarative way to configure the instances from the template?",
     "options": [
-      "Use the CloudFormation DependsOn attribute to install packages in order",
-      "Store the scripts in a CloudFormation stack policy",
-      "Use CloudFormation drift detection to apply package changes",
+      "Use the CloudFormation DependsOn attribute on the instance so that packages, files, and services are installed in the declared order",
+      "Store the scripts in a CloudFormation stack policy that declares the allowed packages and services for each instance resource",
+      "Use CloudFormation drift detection so that the stack reapplies the expected package and service state to the instances",
       "Define the configuration in the AWS::CloudFormation::Init metadata of the instance resource and run cfn-init from user data"
     ],
     "answer": [
@@ -83,9 +83,9 @@
     "difficulty": 2,
     "question": "A CloudFormation stack creates an EC2 instance and then other resources that depend on it. The stack reports CREATE_COMPLETE as soon as the instance is running, even though the application installation in user data often fails. The company wants the stack to succeed only if the application is configured correctly. Which solution meets this requirement?",
     "options": [
-      "Enable termination protection on the stack",
-      "Add an UpdatePolicy with AutoScalingRollingUpdate to the instance resource",
-      "Add a DeletionPolicy of Retain to the instance resource",
+      "Enable termination protection on the stack and on the instance so that a stack whose installation failed cannot be deleted by accident",
+      "Add an UpdatePolicy with AutoScalingRollingUpdate and WaitOnResourceSignals set to true to the instance resource",
+      "Add a DeletionPolicy of Retain to the instance resource so that the instance is kept for troubleshooting if the installation fails",
       "Add a CreationPolicy to the instance and run cfn-signal at the end of the user data script with the exit status of the installation"
     ],
     "answer": [
@@ -102,10 +102,10 @@
     "difficulty": 3,
     "question": "A CloudFormation template creates an Auto Scaling group with a desired capacity of 4. The stack must not reach CREATE_COMPLETE until 4 instances have finished bootstrapping, and stack creation must fail if this does not happen within 15 minutes. Which configuration meets these requirements?",
     "options": [
-      "Add a WaitCondition with a Count of 1 and a Timeout of 15 minutes",
-      "Set the HealthCheckGracePeriod of the Auto Scaling group to 900 seconds",
+      "Add an AWS::CloudFormation::WaitCondition with a Count of 1 and a Timeout of 900 seconds that the first bootstrapped instance signals",
+      "Set the HealthCheckGracePeriod of the Auto Scaling group to 900 seconds and use ELB health checks so that unready instances are replaced",
       "Add a CreationPolicy to the Auto Scaling group with a ResourceSignal Count of 4 and a Timeout of PT15M, and run cfn-signal on each instance",
-      "Add a DependsOn attribute that references the launch template"
+      "Add a DependsOn attribute to the Auto Scaling group that references the launch template so that instances are created only after it is ready"
     ],
     "answer": [
       2
@@ -121,10 +121,10 @@
     "difficulty": 3,
     "question": "A company uses cfn-init and AWS::CloudFormation::Init metadata to configure EC2 instances. When an engineer changes a configuration file in the metadata and updates the stack, the running instances do not pick up the change. The company wants running instances to apply metadata changes automatically without being replaced. What should a solutions architect configure?",
     "options": [
-      "Run CloudFormation drift detection on a schedule",
+      "Run CloudFormation drift detection on a schedule with Amazon EventBridge so that the changed metadata is pushed to the instances",
       "Run the cfn-hup daemon on the instances with a hook that reruns cfn-init when the metadata changes",
-      "Add a CreationPolicy with a longer timeout",
-      "Configure the user data to run on every boot and reboot the instances after each update"
+      "Add a CreationPolicy with a longer timeout so that cfn-signal reports success only after cfn-init has applied the new metadata",
+      "Configure the user data to run on every boot by using a cloud-config MIME part, and reboot the instances after each stack update"
     ],
     "answer": [
       1
@@ -141,9 +141,9 @@
     "question": "A company must provide hardened, fully patched AMIs every month to development teams in multiple accounts and Regions. Each AMI must pass security tests before it is distributed. The company wants a managed solution with the LEAST operational overhead. Which solution meets these requirements?",
     "options": [
       "Create an EC2 Image Builder pipeline with build and test components, a monthly schedule, and a distribution configuration for the target Regions and accounts",
-      "Use AWS Compute Optimizer to recommend updated AMIs every month",
-      "Run a scheduled script on a build instance that patches it, creates an AMI, and copies the AMI to other Regions",
-      "Use AWS Systems Manager Patch Manager to patch the running instances in each account"
+      "Use AWS Compute Optimizer to recommend the latest hardened AMI each month and share the recommendations with the development accounts",
+      "Run a monthly scheduled script on a build instance that patches it, runs the security tests, creates an AMI, and copies the AMI to other Regions and accounts",
+      "Use AWS Systems Manager Patch Manager with a monthly maintenance window to patch the running instances in each account and Region"
     ],
     "answer": [
       0
@@ -159,10 +159,10 @@
     "difficulty": 2,
     "question": "An EC2 Image Builder pipeline produces a new AMI every week. After two years, the account holds hundreds of outdated AMIs and snapshots, which increases storage costs. The company wants to keep only the five most recent images and remove older ones automatically. Which solution requires the LEAST operational overhead?",
     "options": [
-      "Write a Lambda function that deregisters old AMIs and deletes their snapshots on a schedule",
+      "Write a Lambda function, invoked weekly by an EventBridge schedule, that keeps the five newest AMIs and deregisters older ones and their snapshots",
       "Configure an EC2 Image Builder lifecycle policy that retains the five most recent images and deletes older AMIs and their snapshots",
-      "Move all of the AMI snapshots to the EBS Snapshots Archive tier",
-      "Create a Recycle Bin retention rule for AMIs with a 7-day retention period"
+      "Move the snapshots of all but the five newest AMIs to the EBS Snapshots Archive tier, which costs up to 75% less to store",
+      "Create a Recycle Bin retention rule for AMIs and EBS snapshots with a 7-day retention period so that old images expire automatically"
     ],
     "answer": [
       1
@@ -178,9 +178,9 @@
     "difficulty": 1,
     "question": "An application on an EC2 instance needs to read objects from an Amazon S3 bucket. What is the MOST secure way to provide AWS credentials to the application?",
     "options": [
-      "Embed the root user access keys in the AMI",
-      "Pass access keys to the instance in user data",
-      "Create an IAM user, generate access keys, and store them in the application configuration file",
+      "Embed the root user access keys in the AMI so that every instance launched from it can call Amazon S3",
+      "Pass IAM user access keys in user data, which the instance can read only from the link-local metadata endpoint",
+      "Create an IAM user with least-privilege S3 permissions, generate access keys, and store them in the application configuration file",
       "Attach an IAM role with the required S3 permissions to the instance through an instance profile"
     ],
     "answer": [
@@ -198,9 +198,9 @@
     "question": "An engineer creates an IAM role for EC2 with the AWS CLI and then tries to attach it when launching an instance, but the role cannot be selected. The same process works when the role is created in the IAM console. What is the cause?",
     "options": [
       "No instance profile was created and the role was not added to one, which the console does automatically",
-      "The role's trust policy must allow lambda.amazonaws.com",
-      "Roles created with the AWS CLI can be used only by Lambda functions",
-      "The role must be tagged with the ID of the instance that will use it"
+      "The role's trust policy must list lambda.amazonaws.com as a trusted principal before the EC2 launch wizard can show it",
+      "Roles created with the AWS CLI can be assumed only by Lambda functions until they are edited in the IAM console",
+      "The role must be tagged with the ID of the instance that will use it before it appears in the EC2 launch wizard"
     ],
     "answer": [
       0
@@ -216,10 +216,10 @@
     "difficulty": 1,
     "question": "How does an application running on an EC2 instance with an attached IAM role obtain AWS credentials when it uses the AWS SDK?",
     "options": [
-      "The SDK calls AWS STS AssumeRole with access keys stored in user data",
-      "The SDK reads long-lived access keys that AWS writes to the instance's home directory",
-      "The SDK retrieves temporary security credentials from the instance metadata service, and AWS rotates them automatically before they expire",
-      "The SDK requests a password from AWS IAM Identity Center for each API call"
+      "The SDK calls AWS STS AssumeRole by using bootstrap access keys that EC2 places in the instance user data at launch",
+      "The SDK reads long-lived access keys that AWS writes to ~/.aws/credentials on the instance and rotates every 90 days",
+      "The SDK retrieves temporary credentials from the instance metadata service, and AWS rotates them automatically before they expire",
+      "The SDK requests a short-lived token from AWS IAM Identity Center for each API call by using the permission set that is assigned to the instance"
     ],
     "answer": [
       2
@@ -255,9 +255,9 @@
     "question": "An application on EC2 connects to an Amazon RDS for MySQL database. The security team requires the database password to be rotated automatically every 30 days, and the application must not need code changes after each rotation. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
       "Store the password in AWS Secrets Manager with managed rotation enabled, and have the application retrieve the secret at runtime",
-      "Store the password in an encrypted S3 object and rotate it manually",
-      "Store the password in user data and update the launch template every month",
-      "Store the password as a SecureString parameter in Parameter Store and write a cron job that changes it"
+      "Store the password in an SSE-KMS encrypted S3 object, rotate it manually every 30 days, and have the application read it at startup",
+      "Store the password in user data and publish a new launch template version with an instance refresh every 30 days",
+      "Store the password as a SecureString parameter in Parameter Store and write a cron job that changes it in RDS and in the parameter every 30 days"
     ],
     "answer": [
       0
@@ -273,10 +273,10 @@
     "difficulty": 1,
     "question": "A company needs a central place to store about 300 non-secret configuration values, such as feature flags and endpoint URLs, for applications running on EC2. Values must be versioned and accessible through IAM-controlled API calls. Which option is the MOST cost-effective?",
     "options": [
-      "An Amazon RDS table that each application queries",
+      "An Amazon RDS table that each application queries at startup",
       "AWS Systems Manager Parameter Store standard parameters",
-      "An Amazon DynamoDB table with provisioned capacity",
-      "AWS Secrets Manager secrets"
+      "An Amazon DynamoDB table in provisioned capacity mode",
+      "AWS Secrets Manager secrets with version staging labels"
     ],
     "answer": [
       1
@@ -313,10 +313,10 @@
     "difficulty": 2,
     "question": "A company runs its application in us-east-1 with a warm standby in eu-west-1. The application retrieves database credentials from AWS Secrets Manager. During a Regional failover, the standby must be able to read the same secret locally even if us-east-1 is unavailable, and the value must stay in sync after rotation. Which solution meets these requirements?",
     "options": [
-      "Configure the standby application to call the us-east-1 Secrets Manager endpoint",
-      "Store the credentials in the AMI used in eu-west-1",
+      "Configure the standby application to call the us-east-1 Secrets Manager endpoint over an inter-Region VPC peering connection",
+      "Store the credentials in the AMI used in eu-west-1 and rebuild that AMI with EC2 Image Builder after each rotation",
       "Replicate the secret to eu-west-1 with Secrets Manager multi-Region secret replication so that the replica is updated when the primary secret is rotated",
-      "Copy the secret value to Parameter Store in eu-west-1 with a scheduled Lambda function"
+      "Copy the secret value to a SecureString parameter in eu-west-1 Parameter Store with a Lambda function that runs every hour, and point the standby application at that parameter"
     ],
     "answer": [
       2
@@ -332,10 +332,10 @@
     "difficulty": 3,
     "question": "A company stores configuration in Parameter Store. One parameter must hold a 6 KB JSON document, and several temporary access tokens must be removed automatically 24 hours after they are created. The company wants to keep costs as low as possible for its many other small parameters. Which approach meets these requirements?",
     "options": [
-      "Move all of the parameters to AWS Secrets Manager",
-      "Change every parameter in the account to the advanced tier",
-      "Keep all parameters in the standard tier and delete the expired tokens manually",
-      "Use advanced-tier parameters only for the 6 KB document and for the tokens with an Expiration parameter policy, and keep the other parameters in the standard tier"
+      "Move all of the parameters to AWS Secrets Manager, which supports secret values up to 64 KB and scheduled secret deletion",
+      "Change every parameter in the account to the advanced tier, which supports 8 KB values and parameter policies such as Expiration",
+      "Keep all of the parameters in the standard tier, which has no per-parameter storage charge, and delete the expired tokens manually",
+      "Use advanced-tier parameters only for the 6 KB document and for the tokens with an Expiration policy, and keep the rest in the standard tier"
     ],
     "answer": [
       3
@@ -395,10 +395,10 @@
     "difficulty": 2,
     "question": "An operations team must restart a service and collect a diagnostic file on 400 EC2 instances tagged Role=api, without opening SSH, and must avoid affecting more than 10% of the fleet at a time. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Update the user data of each instance and reboot all of the instances",
-      "Build a new AMI with the fix and replace all of the instances at once",
+      "Update the user data of each instance to restart the service and upload the file to S3, and then reboot all of the instances",
+      "Build a new AMI that includes the fix and the diagnostic script, and replace all of the instances at once",
       "Use AWS Systems Manager Run Command to target the tag with a concurrency limit of 10% and an error threshold",
-      "Write a script that loops through the instances and connects to them with SSH in batches"
+      "Write a script that loops through the tagged instances and connects to them over SSH from a bastion host in batches of 40"
     ],
     "answer": [
       2
@@ -414,11 +414,11 @@
     "difficulty": 3,
     "question": "A company must automatically install security updates on its Amazon Linux and Windows EC2 instances every Sunday at 02:00 and must approve only critical and important security patches 7 days after their release. Which AWS Systems Manager configuration should a solutions architect use? (Select TWO.)",
     "options": [
-      "Use AWS Config to install missing patches when instances become noncompliant",
+      "Use AWS Config with the ec2-managedinstance-patch-compliance-status-check rule to install missing patches when instances become noncompliant",
       "Create a maintenance window scheduled for Sunday at 02:00 that runs the AWS-RunPatchBaseline document against the instances",
-      "Use Session Manager to connect to each instance and run the update commands manually",
+      "Use Session Manager to connect to each instance every Sunday at 02:00 and run the security update commands manually",
       "Create custom patch baselines with auto-approval rules for critical and important security patches after 7 days",
-      "Use EC2 Image Builder to patch the running instances in place"
+      "Use EC2 Image Builder with a weekly pipeline schedule to patch the running instances in place"
     ],
     "answer": [
       1,
@@ -456,10 +456,10 @@
     "difficulty": 1,
     "question": "A solutions architect wants to create an alarm when memory utilization on Linux EC2 instances exceeds 85%, but cannot find a memory utilization metric in the AWS/EC2 namespace. What is the reason?",
     "options": [
-      "EC2 does not publish operating system memory metrics by default, so the CloudWatch agent must be installed to collect them",
-      "Memory metrics are published only for instances that have instance store volumes",
-      "Memory metrics appear only after an instance has been running for 24 hours",
-      "Memory metrics are available only when detailed monitoring is enabled"
+      "EC2 does not publish operating system memory metrics by default; the CloudWatch agent must be installed to collect them",
+      "Memory metrics are published only for instances that have instance store volumes, such as the d and i instance families",
+      "Memory metrics appear only after the instance has been running for 24 hours and has passed its first status checks",
+      "Memory metrics are available only when detailed monitoring is enabled, which publishes metrics at 1-minute intervals"
     ],
     "answer": [
       0
@@ -475,10 +475,10 @@
     "difficulty": 2,
     "question": "A company must deploy the same CloudWatch agent configuration, which collects memory, disk, and application log data, to 1,500 EC2 instances and must be able to update it centrally. Which approach requires the LEAST operational overhead?",
     "options": [
-      "Bake the configuration into the AMI and replace the instances whenever it changes",
+      "Bake the agent and its configuration file into the AMI with EC2 Image Builder and replace the instances whenever the configuration changes",
       "Store the agent configuration in Systems Manager Parameter Store and use Systems Manager to install and configure the agent across the fleet",
-      "Configure the agent on each instance manually through the CloudWatch console",
-      "Copy the configuration file to each instance with SCP after every change"
+      "Configure the agent on each instance by running the amazon-cloudwatch-agent-config-wizard and saving the result locally",
+      "Copy the configuration file to each instance with SCP after every change and restart the agent with amazon-cloudwatch-agent-ctl"
     ],
     "answer": [
       1
@@ -496,9 +496,9 @@
     "options": [
       "Install the CloudWatch agent and configure it to collect the disk used_percent metric for the file system",
       "Create a CloudWatch alarm on the agent's disk used_percent metric that publishes to an Amazon SNS topic",
-      "Use the EBSWriteBytes metric to estimate the remaining free space",
-      "Enable Fast Snapshot Restore for the root volume's snapshots",
-      "Enable detailed monitoring on the instance to publish file system utilization"
+      "Use the EBSWriteBytes metric of the root volume to estimate how much free space remains on the file system",
+      "Enable Fast Snapshot Restore for the root volume's snapshots so that a full volume can be restored quickly",
+      "Enable detailed monitoring on the instance so that file system utilization is published every minute"
     ],
     "answer": [
       0,
@@ -515,10 +515,10 @@
     "difficulty": 2,
     "question": "An application on a fleet of EC2 instances writes errors to /var/log/app/error.log. When Auto Scaling terminates instances, their logs are lost. The company also wants an alarm when more than 50 errors occur within 5 minutes. Which solution meets these requirements?",
     "options": [
-      "Store the log file on an instance store volume and copy it to Amazon S3 when the instance stops",
-      "Enable VPC Flow Logs and create an alarm on rejected connections",
-      "Enable detailed monitoring and create an alarm on the StatusCheckFailed metric",
-      "Configure the CloudWatch agent to send the log file to CloudWatch Logs, create a metric filter for error entries, and create an alarm on the resulting metric"
+      "Store the log file on an instance store volume for faster writes and copy it to Amazon S3 with a shutdown script when the instance stops",
+      "Enable VPC Flow Logs on the subnets, publish them to CloudWatch Logs, and create an alarm on the number of rejected connections",
+      "Enable detailed monitoring and create an alarm on the StatusCheckFailed metric that fires when it exceeds 50 in 5 minutes",
+      "Configure the CloudWatch agent to send the log file to CloudWatch Logs, create a metric filter for error entries, and alarm on the resulting metric"
     ],
     "answer": [
       3
@@ -573,9 +573,9 @@
     "question": "A company is deploying a 90-node Apache Cassandra cluster on EC2. The database is rack-aware and needs to know which instances share underlying hardware so that replicas can be placed in different failure domains. Which placement strategy meets these requirements?",
     "options": [
       "A partition placement group, with each instance reading its partition number from instance metadata",
-      "Random placement across subnets in one Availability Zone",
-      "A cluster placement group",
-      "A spread placement group"
+      "Random placement across subnets in one Availability Zone, using the Availability Zone ID as the rack identifier",
+      "A cluster placement group so that replicas communicate with the lowest possible latency",
+      "A spread placement group, which places each instance on a distinct rack with its own power source"
     ],
     "answer": [
       0
@@ -591,10 +591,10 @@
     "difficulty": 3,
     "question": "A team launched 4 instances into a cluster placement group and later tries to add 12 more instances of a different instance type. The launch fails with an insufficient capacity error. What is the recommended way to avoid this problem?",
     "options": [
-      "Launch all of the required instances in a single launch request and use the same instance type for every instance in the placement group",
-      "Change the strategy of the existing placement group from cluster to spread",
-      "Extend the cluster placement group into a second Availability Zone",
-      "Attach smaller EBS volumes to the new instances"
+      "Launch all required instances in a single launch request and use the same instance type for every instance in the placement group",
+      "Change the strategy of the existing placement group from cluster to spread so that instances can use any available rack",
+      "Extend the cluster placement group into a second Availability Zone so that capacity from both zones can be used",
+      "Attach smaller EBS volumes to the new instances so that they need less capacity on the underlying hosts"
     ],
     "answer": [
       0
@@ -629,10 +629,10 @@
     "difficulty": 1,
     "question": "Which EC2 feature uses single root I/O virtualization (SR-IOV) to provide higher bandwidth, higher packet-per-second performance, and lower latency at no additional charge on supported instance types?",
     "options": [
-      "EC2 Instance Connect",
-      "VPC Flow Logs",
+      "EC2 Instance Connect through an EC2 Instance Connect Endpoint",
+      "VPC Flow Logs published to Amazon CloudWatch Logs",
       "Enhanced networking with the Elastic Network Adapter (ENA)",
-      "Elastic IP addresses"
+      "Elastic IP addresses attached to a secondary network interface"
     ],
     "answer": [
       2
@@ -648,9 +648,9 @@
     "difficulty": 2,
     "question": "A research institute runs a weather model that uses MPI across hundreds of nodes, and inter-node communication latency limits how far the model can scale. The team wants inter-node communication to bypass the operating system kernel on supported Linux instances. Which solution meets this requirement?",
     "options": [
-      "Enable EBS optimization on every node",
-      "Place the nodes in a spread placement group across multiple Availability Zones",
-      "Attach several ENA interfaces to each instance and bond them together",
+      "Enable EBS optimization on every node so that storage traffic and MPI traffic use separate dedicated bandwidth",
+      "Place the nodes in a spread placement group across multiple Availability Zones so that each node gets its own rack",
+      "Attach several ENA interfaces to each instance and bond them together to increase inter-node bandwidth",
       "Use an Elastic Fabric Adapter (EFA) on supported instance types with an MPI library configured to use it"
     ],
     "answer": [
@@ -688,10 +688,10 @@
     "difficulty": 2,
     "question": "On a busy database server, heavy network traffic from application clients competes with traffic to the instance's EBS volumes, which causes inconsistent storage latency. What does an EBS-optimized instance provide to address this problem?",
     "options": [
-      "Local NVMe storage that replaces the EBS volumes",
+      "Local NVMe instance store volumes that replace the EBS volumes and remove network storage traffic",
       "Dedicated bandwidth between the instance and Amazon EBS that is separate from other network traffic",
-      "Automatic conversion of gp3 volumes to io2 volumes",
-      "Fast Snapshot Restore for all attached volumes at no charge"
+      "Automatic conversion of gp3 volumes to io2 Block Express volumes when storage latency increases",
+      "Fast Snapshot Restore for all attached volumes at no additional charge, which removes first-read latency"
     ],
     "answer": [
       1
@@ -707,10 +707,10 @@
     "difficulty": 3,
     "question": "A database runs on an m6i.large instance with an io2 volume provisioned for 30,000 IOPS. During nightly loads that last several hours, the volume reaches its provisioned IOPS for roughly the first 30 minutes and then drops to a much lower level for the rest of the load, with a high queue length. Which change will MOST likely resolve this?",
     "options": [
-      "Enable Multi-Attach on the io2 volume so that it can reach its provisioned IOPS",
-      "Enable Fast Snapshot Restore on the snapshot that the volume was created from",
+      "Enable Multi-Attach on the io2 volume so that the I/O load is spread across more instance connections",
+      "Enable Fast Snapshot Restore on the snapshot that the volume was created from to remove the initialization penalty",
       "Move to a larger instance size whose baseline EBS IOPS and bandwidth meet the volume's provisioned performance",
-      "Increase the size of the io2 volume beyond 16 TiB"
+      "Increase the size of the io2 volume beyond 16 TiB and raise its provisioned IOPS to 64,000"
     ],
     "answer": [
       2
@@ -748,9 +748,9 @@
     "question": "A company runs a bastion host with an Elastic IP address in each of three Availability Zones only to give administrators SSH access to private instances. The company wants to reduce cost and operational effort while keeping access auditable. Which solution meets these requirements?",
     "options": [
       "Use AWS Systems Manager Session Manager to connect to the private instances and terminate the bastion hosts",
-      "Move the private instances to public subnets and restrict SSH by source IP address",
-      "Replace the bastion hosts with a NAT gateway in each Availability Zone",
-      "Replace the three bastion hosts with one larger bastion host in a single Availability Zone"
+      "Move the private instances to public subnets and restrict inbound SSH in the security groups to the administrators' IP addresses",
+      "Replace the bastion hosts with a NAT gateway in each Availability Zone and connect through it with SSH agent forwarding",
+      "Replace the three bastion hosts with one larger bastion host in a single Availability Zone and log its SSH sessions"
     ],
     "answer": [
       0
@@ -766,9 +766,9 @@
     "difficulty": 3,
     "question": "A company installed the CloudWatch agent on 2,000 instances in Auto Scaling groups to collect memory and disk metrics. Because each metric includes the InstanceId dimension and instances are replaced often, the number of custom metrics and the CloudWatch bill are much higher than expected. The operations team needs only fleet-level values per Auto Scaling group. Which change will reduce cost while meeting the requirement?",
     "options": [
-      "Reduce the agent's metric collection interval to 1 second",
-      "Configure the agent to send the metrics to an S3 bucket instead of CloudWatch",
-      "Enable detailed monitoring on all of the instances",
+      "Change the agent's metrics_collection_interval to 1 second to publish high-resolution metrics for each instance",
+      "Configure the agent to write the metrics to an S3 bucket instead of CloudWatch and query them with Amazon Athena",
+      "Enable detailed monitoring on all of the instances so that memory and disk metrics are aggregated per Auto Scaling group",
       "Configure the agent to publish the metrics with only the AutoScalingGroupName dimension instead of per-instance dimensions"
     ],
     "answer": [
@@ -807,8 +807,8 @@
     "options": [
       "Immutable",
       "Rolling with additional batch",
-      "Traffic splitting",
-      "Rolling"
+      "Traffic splitting with a 10% canary",
+      "Rolling with a batch size of 25 percent"
     ],
     "answer": [
       1
@@ -825,10 +825,10 @@
     "difficulty": 2,
     "question": "A company must move an AWS Elastic Beanstalk application to a new platform branch with a newer major runtime version, which is not compatible with an in-place platform update. The company wants to test the new version with production-like settings and switch users over with minimal downtime, and it must be able to switch back quickly. Which approach meets these requirements?",
     "options": [
-      "Enable managed platform updates with the minor and patch update level",
-      "Change the deployment policy to traffic splitting and update the platform version in place",
+      "Enable managed platform updates with the minor and patch update level and a weekly maintenance window",
+      "Change the deployment policy to traffic splitting so that 10% of traffic tests the new platform version before it is updated in place",
       "Clone the environment onto the new platform version, test it, and then swap the environment URLs (CNAMEs) of the two environments",
-      "Use the all at once deployment policy and redeploy the previous version if problems occur"
+      "Use the all at once deployment policy for the platform update and redeploy the previous platform version if problems occur"
     ],
     "answer": [
       2
@@ -845,9 +845,9 @@
     "difficulty": 2,
     "question": "A team deploys a new application version to an AWS Elastic Beanstalk environment that uses an Application Load Balancer. The team wants to send 10% of client traffic to the new version for 15 minutes, automatically shift all traffic to it if it stays healthy, and automatically move traffic back to the old version if it does not. Which deployment policy should the team configure?",
     "options": [
-      "Rolling with a batch size of 10%",
-      "Immutable with a health check threshold of Warning",
-      "All at once with enhanced health reporting",
+      "Rolling with a batch size of 10% and a 15-minute command timeout",
+      "Immutable with a health check success threshold of Warning and a 15-minute command timeout",
+      "All at once with enhanced health reporting enabled on the environment",
       "Traffic splitting with a 10% traffic split and a 15-minute evaluation time"
     ],
     "answer": [
@@ -885,10 +885,10 @@
     "difficulty": 2,
     "question": "A web application on AWS Elastic Beanstalk generates PDF reports and resizes uploaded images inside web requests, which makes the site slow under load. The company wants the web tier to stay responsive, the background work to scale independently, and nightly cleanup jobs to run on a schedule, with the LEAST custom infrastructure code. Which solution meets these requirements?",
     "options": [
-      "Increase the instance size of the web environment and enable sticky sessions on the load balancer",
-      "Create an Elastic Beanstalk worker environment; have the web tier send tasks to the worker environment's Amazon SQS queue and define the nightly jobs in a cron.yaml file",
-      "Run the background tasks as cron jobs on every web server instance by using .ebextensions",
-      "Add a second web server environment and use Route 53 weighted routing to send report requests to it"
+      "Increase the instance size of the web environment, enable sticky sessions on the load balancer, and raise the Auto Scaling maximum",
+      "Create an Elastic Beanstalk worker environment; have the web tier send tasks to the worker's Amazon SQS queue and define the nightly jobs in cron.yaml",
+      "Run the background tasks and the nightly jobs as cron jobs on every web server instance by using .ebextensions configuration files",
+      "Add a second web server environment for report and image requests and use Route 53 weighted routing to send that traffic to it"
     ],
     "answer": [
       1
@@ -927,10 +927,10 @@
     "difficulty": 2,
     "question": "A security policy requires that every AWS Elastic Beanstalk production environment receives operating system and runtime security patches within a week of their release, without reducing serving capacity and without engineers performing manual updates. Which solution meets these requirements?",
     "options": [
-      "Create a cron job on each instance that runs the package manager's update command every night",
-      "Use AWS Systems Manager Patch Manager to patch the Elastic Beanstalk instances in place every week",
-      "Enable managed platform updates with a weekly maintenance window, which applies patch and minor platform updates through immutable updates",
-      "Rebuild the environment from scratch every week by using a saved configuration"
+      "Create a cron job on each instance through .ebextensions that runs the package manager's security update command every night",
+      "Use AWS Systems Manager Patch Manager with a weekly maintenance window to patch the Elastic Beanstalk instances in place",
+      "Enable managed platform updates with a weekly maintenance window, which applies patch and minor updates through immutable updates",
+      "Rebuild the environment every week from a saved configuration so that it launches on the latest platform version"
     ],
     "answer": [
       2
@@ -969,9 +969,9 @@
     "difficulty": 1,
     "question": "A startup uses AWS Elastic Beanstalk for an internal tool that has a handful of users and for several developer test environments. The startup wants to minimize the monthly cost of these environments and does not need automatic scaling. Which configuration is MOST cost-effective?",
     "options": [
-      "Load-balanced environments with a minimum of two instances in different Availability Zones",
-      "Worker environments, which do not include a load balancer",
-      "Load-balanced environments that use the traffic-splitting deployment policy",
+      "Load-balanced environments with a minimum of two t4g.micro instances in different Availability Zones",
+      "Worker environments, which do not include a load balancer and read requests from an Amazon SQS queue",
+      "Load-balanced environments that use a shared Application Load Balancer and the traffic-splitting deployment policy",
       "Single-instance environments, which run one instance with an Elastic IP address and no load balancer"
     ],
     "answer": [
@@ -990,8 +990,8 @@
     "question": "A stateless API runs in a load-balanced AWS Elastic Beanstalk environment that scales between 4 and 24 instances. The company wants to cut compute costs with Spot Instances but must always keep at least 4 On-Demand Instances and wants half of any capacity above that to be On-Demand. Which configuration meets these requirements with the LEAST operational overhead?",
     "options": [
       "Enable Spot Instances in the environment's capacity settings with an On-Demand base of 4 and an On-Demand above base percentage of 50",
-      "Create a separate Spot Fleet outside Elastic Beanstalk and register its instances with the environment's load balancer",
-      "Purchase 1-year Reserved Instances to cover the maximum of 24 instances",
+      "Create a separate Spot Fleet outside Elastic Beanstalk with a capacity-optimized allocation strategy and register its instances with the environment's load balancer",
+      "Purchase 1-year Standard Reserved Instances for the maximum of 24 instances so that every instance is billed at a discount",
       "Create two Elastic Beanstalk environments, one On-Demand and one Spot, and split traffic with Route 53 weighted records"
     ],
     "answer": [
@@ -1009,10 +1009,10 @@
     "difficulty": 2,
     "question": "An EC2 Image Builder pipeline produces a new hardened AMI every week. Auto Scaling groups in two application accounts reference launch templates, and engineers currently update each launch template by hand after every build, which sometimes leaves groups launching outdated images. Which solution automates this with the LEAST operational overhead?",
     "options": [
-      "Use AWS Systems Manager Patch Manager to patch the running instances so that the AMI does not need to change",
-      "Add launch template configurations to the pipeline's distribution settings so that Image Builder creates a new launch template version with the new AMI ID and sets it as the default",
-      "Write a Lambda function that polls for new AMIs and updates the Auto Scaling groups to use the AMI ID directly",
-      "Share the AMI with the organization and ask each team to update its launch templates after receiving an email notification"
+      "Use AWS Systems Manager Patch Manager with a weekly maintenance window to patch the running instances so that the launch templates never need a new AMI",
+      "Add launch template configurations to the pipeline's distribution settings so that Image Builder creates a new launch template version with the new AMI and sets it as default",
+      "Write a Lambda function that is invoked by the pipeline's Amazon SNS notification and updates each Auto Scaling group to use the new AMI ID directly",
+      "Share the AMI with the organization through the distribution settings and have each team update its launch templates after an Amazon SNS email notification"
     ],
     "answer": [
       1
@@ -1029,10 +1029,10 @@
     "difficulty": 2,
     "question": "An Auto Scaling group was created with version 3 of a launch template selected explicitly. An engineer created version 4 with a patched AMI and set it as the template's default version, but instances launched during scale-out still use the old AMI. What should the engineer do so that the group uses the new AMI?",
     "options": [
-      "Modify version 3 of the launch template in place to reference the patched AMI",
-      "Reboot all instances in the group so that they load the new default version",
-      "Update the Auto Scaling group to use the launch template's default (or latest) version, and then replace the existing instances, for example with an instance refresh",
-      "Wait for the new default version to propagate to the Auto Scaling group, which can take up to 24 hours"
+      "Modify version 3 of the launch template in place so that it references the patched AMI, which the group then uses for every instance at the next scale-out",
+      "Reboot all instances in the group so that they reload the launch template's new default version and its patched AMI",
+      "Update the Auto Scaling group to use the launch template's default or latest version, and then replace the existing instances, for example with an instance refresh",
+      "Wait for the new default version to propagate to the Auto Scaling group, which can take up to 24 hours, and then start an instance refresh to replace the old instances"
     ],
     "answer": [
       2
@@ -1049,10 +1049,10 @@
     "difficulty": 2,
     "question": "A company requires that an endpoint protection agent be installed and running on every managed EC2 instance, including instances launched by Auto Scaling in the future. Operators sometimes stop the service while troubleshooting and forget to restart it. Which solution keeps the instances compliant with the LEAST operational overhead?",
     "options": [
-      "Install the agent in the AMI and rely on the operators to restart it after troubleshooting",
-      "Use Run Command once a month to reinstall the agent on all instances",
-      "Add the installation script to the user data of every launch template",
-      "Create an AWS Systems Manager State Manager association that targets the instances by tag and runs on a schedule to install the agent if it is missing and start the service if it is stopped"
+      "Install the agent in a golden AMI built by EC2 Image Builder, enable the service at boot, and rely on the operators to restart it after troubleshooting",
+      "Use Run Command once a month with a 10% concurrency limit to reinstall and restart the agent on all of the tagged instances",
+      "Add the installation script to the user data of every launch template so that each new Auto Scaling instance installs, enables, and starts the agent at its first boot",
+      "Create a State Manager association that targets the instances by tag and runs on a schedule to install the agent if missing and start the service if stopped"
     ],
     "answer": [
       3
@@ -1070,9 +1070,9 @@
     "question": "A company runs 15 critical instances of a quorum-based service. Each instance must run on distinct hardware so that a single rack failure affects at most one instance, and the service must also survive the loss of an Availability Zone. The Region has three Availability Zones. Which placement configuration meets these requirements?",
     "options": [
       "A single spread placement group that spans the three Availability Zones, with five instances in each Availability Zone",
-      "A single cluster placement group in one Availability Zone",
-      "A partition placement group with one partition in one Availability Zone",
-      "A single spread placement group with all 15 instances in one Availability Zone"
+      "A single cluster placement group in one Availability Zone with all 15 instances on the same high-bandwidth network segment",
+      "A partition placement group in one Availability Zone with all 15 instances placed in a single partition",
+      "A single spread placement group with all 15 instances in one Availability Zone, each on a distinct rack with its own power"
     ],
     "answer": [
       0
@@ -1131,10 +1131,10 @@
     "difficulty": 2,
     "question": "Database administrators need to connect from their laptops with a SQL client to an Amazon RDS for MySQL instance in a private subnet. The company does not allow bastion hosts with open SSH ports or public IP addresses, and every connection must be authorized through IAM. A managed EC2 instance with SSM Agent already runs in the same VPC. Which solution meets these requirements?",
     "options": [
-      "Make the RDS instance publicly accessible and restrict its security group to the administrators' IP addresses",
-      "Create a Site-to-Site VPN connection from each laptop to the VPC",
-      "Start a Session Manager port forwarding session to the remote host by using the AWS-StartPortForwardingSessionToRemoteHost document through the managed instance",
-      "Open TCP port 22 on the managed instance and use SSH tunneling with a shared key"
+      "Make the RDS instance publicly accessible and restrict its security group to the administrators' office and home IP addresses",
+      "Create a Site-to-Site VPN connection from each laptop to a virtual private gateway attached to the VPC",
+      "Start a Session Manager port forwarding session through the managed instance by using the AWS-StartPortForwardingSessionToRemoteHost document",
+      "Open TCP port 22 on the managed instance only to the administrators' IP addresses and use SSH local port forwarding to the RDS endpoint with a shared key"
     ],
     "answer": [
       2
@@ -1151,9 +1151,9 @@
     "difficulty": 2,
     "question": "Support engineers occasionally need a graphical Remote Desktop session to Windows Server EC2 instances in private subnets. The security team will not allow inbound RDP (TCP 3389) in any security group, bastion hosts, or VPN clients. Which solution meets these requirements?",
     "options": [
-      "Use EC2 Instance Connect to push a temporary RDP certificate to each instance",
-      "Associate Elastic IP addresses with the instances and allow RDP only from the support office",
-      "Deploy a Network Load Balancer that forwards TCP 3389 to the instances",
+      "Use EC2 Instance Connect to push a temporary RDP certificate to each instance for a 60-second connection window",
+      "Associate Elastic IP addresses with the instances and allow RDP only from the support office's static IP range",
+      "Deploy an internal Network Load Balancer that forwards TCP 3389 to the instances so that they keep only private IP addresses",
       "Use AWS Systems Manager Fleet Manager Remote Desktop to connect to the managed instances from the Systems Manager console"
     ],
     "answer": [
@@ -1172,10 +1172,10 @@
     "question": "After a library vulnerability is announced, a security team must identify every EC2 instance across 40 AWS accounts and several Regions that has a specific version of the library installed. The team wants to run SQL queries against a central dataset and keep it updated automatically. All instances are Systems Manager managed nodes. Which actions should a solutions architect take? (Select TWO.)",
     "options": [
       "Configure Systems Manager Inventory to collect application inventory from the managed nodes",
-      "Run a script over SSH in every account that writes package lists to a shared spreadsheet",
+      "Run a script over SSH in every account and Region that writes the installed package lists to a shared spreadsheet",
       "Create resource data syncs that send inventory data to a central Amazon S3 bucket, and query the data with Amazon Athena",
-      "Enable AWS CloudTrail data events for EC2 and search them with CloudTrail Lake",
-      "Use AWS Trusted Advisor checks to list the installed software on each instance"
+      "Enable AWS CloudTrail data events for EC2 and search them with SQL in CloudTrail Lake across the organization",
+      "Use AWS Trusted Advisor checks in every account to list the installed software and versions on each instance"
     ],
     "answer": [
       0,
@@ -1194,9 +1194,9 @@
     "question": "A company with AWS Organizations must scan all managed EC2 instances in 60 accounts and 4 Regions for missing patches every day and install approved patches every Sunday night. The company wants a single configuration to manage instead of maintenance windows in every account and Region pair. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
       "Create a Quick Setup patch policy for the organization that specifies the patch baselines, a daily scan schedule, and a weekly install schedule",
-      "Create a maintenance window and patch group in each account and Region by using CloudFormation StackSets",
-      "Use AWS Config conformance packs to install missing patches",
-      "Use EC2 Image Builder to rebuild every instance with the latest patches each week"
+      "Create a maintenance window and patch group in each account and Region by using CloudFormation StackSets with service-managed permissions",
+      "Use AWS Config conformance packs deployed to the organization to detect and install missing patches every day",
+      "Use EC2 Image Builder to rebuild every instance with the latest patches each week and scan the images with Amazon Inspector"
     ],
     "answer": [
       0
@@ -1213,10 +1213,10 @@
     "difficulty": 2,
     "question": "A company uses AWS Systems Manager Session Manager for shell access. Developers must be able to start sessions only on instances tagged Environment=dev and must be able to end only their own sessions, while production instances remain off limits. Which solution meets these requirements?",
     "options": [
-      "Create separate VPCs for development and production and block Session Manager endpoints in the production VPC",
-      "Attach an IAM policy that allows ssm:StartSession on instances with the condition ssm:resourceTag/Environment equal to dev, and allows ssm:TerminateSession only on sessions that begin with the user's ID",
-      "Change the security groups of production instances to deny inbound traffic from the developers' IP addresses",
-      "Remove the SSM Agent from production instances so that they cannot be reached"
+      "Create separate VPCs for development and production and leave out the ssm, ssmmessages, and ec2messages interface endpoints in the production VPC so that sessions cannot start there",
+      "Attach an IAM policy that allows ssm:StartSession on instances where ssm:resourceTag/Environment is dev, and ssm:TerminateSession only on sessions prefixed with the user's ID",
+      "Change the security groups of production instances so that they no longer allow inbound HTTPS from the developers' IP addresses",
+      "Remove the SSM Agent from production instances so that developers cannot start Session Manager sessions on them, and give administrators EC2 Instance Connect access instead"
     ],
     "answer": [
       1
@@ -1233,10 +1233,10 @@
     "difficulty": 3,
     "question": "Operations engineers use an AWS Systems Manager Automation runbook to stop a production database instance, create an AMI, and restart it. Change management now requires that two members of a change advisory board approve each run before the instance is stopped, and approvers must be notified automatically. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Ask the approvers to reply to an email and have the engineer start the runbook after receiving two replies",
-      "Store the approval in a Parameter Store parameter that the runbook reads before stopping the instance",
+      "Ask the approvers to reply to an email sent through Amazon SES and have the engineer start the runbook after receiving two replies",
+      "Store the approval in a Parameter Store parameter and add an aws:assertAwsResourceProperty step that checks it before stopping the instance",
       "Add an aws:approve step at the start of the runbook with the two approvers, MinRequiredApprovals set to 2, and an Amazon SNS topic for notifications",
-      "Require the engineers to run the steps manually through Session Manager while an approver watches the session"
+      "Require the engineers to run the steps manually in a logged Session Manager session while an approver watches the session"
     ],
     "answer": [
       2
@@ -1254,7 +1254,7 @@
     "question": "A company wants to add an existing EBS-backed EC2 instance to a cluster placement group with other HPC nodes. What must be done to move the instance into the placement group?",
     "options": [
       "Create an AMI and launch a new instance, because instances can never be moved into a placement group",
-      "Detach the instance's network interface and attach it to an instance in the placement group",
+      "Detach the instance's primary network interface and attach it to an instance that is already in the placement group",
       "Modify the placement of the running instance; the change applies without stopping it",
       "Stop the instance, change its placement group with the modify instance placement action, and then start it"
     ],
@@ -1274,9 +1274,9 @@
     "question": "A data replication service copies large datasets between two supported EC2 instances in different Availability Zones of the same Region over a single TCP connection. Each instance has 50 Gbps of aggregate bandwidth, but the transfer never exceeds about 5 Gbps. Which change will MOST increase the throughput of this single flow?",
     "options": [
       "Enable ENA Express on the network interface attachments of both instances so that the flow uses AWS Scalable Reliable Datagram (SRD)",
-      "Move both instances into a cluster placement group",
-      "Attach a second elastic network interface to each instance",
-      "Enable EBS optimization on both instances"
+      "Move both instances into a cluster placement group, which raises the single-flow bandwidth limit to 10 Gbps",
+      "Attach a second elastic network interface to each instance and send the transfer through both so that it can use twice the network bandwidth",
+      "Enable EBS optimization on both instances so that reads of the dataset from EBS no longer compete with the transfer"
     ],
     "answer": [
       0
@@ -1293,10 +1293,10 @@
     "difficulty": 1,
     "question": "A CloudFormation template launches Amazon Linux 2023 instances, and engineers must edit the hardcoded AMI ID in every Region whenever AWS releases a new image. The company wants the template to always use the latest Amazon Linux 2023 AMI in any Region without maintaining a mapping. What should a solutions architect do?",
     "options": [
-      "Use AWS Compute Optimizer to look up the AMI ID during stack creation",
+      "Use AWS Compute Optimizer to look up the recommended Amazon Linux 2023 AMI ID during stack creation",
       "Reference the AWS public parameter under /aws/service/ami-amazon-linux-latest/ in AWS Systems Manager Parameter Store",
-      "Copy the latest AMI into every Region each month and update a Mappings section",
-      "Store the AMI ID in the instance user data and update it after launch"
+      "Copy the latest AMI into every Region each month with an EventBridge rule and update a Mappings section in the template",
+      "Store the AMI ID in the instance user data and replace the root volume with that AMI after the instance launches"
     ],
     "answer": [
       1
@@ -1313,11 +1313,11 @@
     "difficulty": 3,
     "question": "When an Auto Scaling group launches 150 instances during a traffic spike, many instances fail to start their application because GetParameter calls to AWS Systems Manager Parameter Store return ThrottlingException errors. Each instance reads the same 12 parameters one at a time every few seconds. Which actions will resolve the issue? (Select TWO.)",
     "options": [
-      "Move all parameters to the advanced tier, which removes the throughput limit",
+      "Move all of the parameters to the advanced tier, which raises the throughput quota for each parameter",
       "Enable the Parameter Store higher throughput setting for the account and Region",
-      "Convert the parameters to SecureString parameters",
+      "Convert the parameters to SecureString parameters and grant the instance role kms:Decrypt on the key",
       "Cache parameter values in the application and retrieve the known parameters together with a single GetParameters call",
-      "Store the parameters in the user data of the launch template"
+      "Store the parameter values in the user data of the launch template and read them from the metadata service"
     ],
     "answer": [
       1,
@@ -1335,10 +1335,10 @@
     "difficulty": 2,
     "question": "A legacy application on EC2 runs a background Java process that sometimes crashes silently while the instance stays healthy, and the operations team also needs to track that process's memory usage over time. Which solution meets these requirements with the LEAST effort?",
     "options": [
-      "Enable detailed monitoring and alarm on the CPUUtilization metric",
-      "Create an EC2 status check alarm with the reboot action",
-      "Configure the procstat plugin of the CloudWatch agent to collect metrics such as pid_count and memory_rss for the process, and create an alarm when pid_count drops to zero",
-      "Enable VPC Flow Logs and alarm when traffic from the process stops"
+      "Enable detailed monitoring and create an alarm when the CPUUtilization metric drops below the level the process normally uses",
+      "Create a CloudWatch alarm on the StatusCheckFailed_Instance metric with the EC2 reboot action to restart the process",
+      "Configure the CloudWatch agent procstat plugin to collect pid_count and memory_rss for the process, and alarm when pid_count drops to zero",
+      "Enable VPC Flow Logs on the instance's network interface and alarm when traffic from the process's port stops"
     ],
     "answer": [
       2
@@ -1377,9 +1377,9 @@
     "difficulty": 2,
     "question": "A company runs thousands of short containerized data-processing jobs each day with AWS Batch on a managed EC2 compute environment. Each job needs 2 vCPUs and 4 GiB of memory, and no job needs a GPU or a custom AMI. The instances are often underutilized between job bursts, and the team spends time tuning instance types. Which change will MOST reduce cost and operational effort?",
     "options": [
-      "Switch to an unmanaged EC2 compute environment and pack jobs onto instances manually",
-      "Purchase EC2 Instance Savings Plans for the instance types used by the compute environment",
-      "Increase the minimum vCPUs of the compute environment so that instances are always warm",
+      "Switch to an unmanaged EC2 compute environment and pack the jobs onto right-sized instances that the team manages",
+      "Purchase EC2 Instance Savings Plans for the instance families that the managed compute environment launches most often",
+      "Increase the minimum vCPUs of the compute environment so that instances stay warm and jobs start without waiting for capacity",
       "Move the jobs to an AWS Batch Fargate compute environment so that capacity matches each job's requested vCPU and memory"
     ],
     "answer": [
@@ -1397,10 +1397,10 @@
     "difficulty": 3,
     "question": "To harden a new fleet, an engineer launched Amazon Linux instances with the instance metadata service turned off (HttpEndpoint set to disabled) and with a user data script that installs the application. The instances boot, but the application is not installed and SSH logins with the launch key pair fail. What is the cause?",
     "options": [
-      "User data scripts run only when IMDSv1 is allowed, so the instances must permit IMDSv1",
-      "User data and the launch public key are delivered through the instance metadata service, so turning it off at launch stops the script from running and the key from being installed",
-      "User data runs only on instances that have a public IPv4 address, because the script is downloaded from the internet",
-      "Turning off the instance metadata service also disables the primary network interface until the service is turned back on"
+      "User data scripts run only when IMDSv1 is allowed, so the instances must set HttpTokens to optional instead of turning the service off",
+      "User data and the launch public key are delivered through the instance metadata service, so turning it off at launch stops the script and the key from being applied",
+      "User data runs only on instances that have a public IPv4 address, because cloud-init downloads the script from an internet endpoint",
+      "Turning off the instance metadata service also disables the primary network interface, which blocks SSH until the service is turned back on"
     ],
     "answer": [
       1
@@ -1417,9 +1417,9 @@
     "difficulty": 2,
     "question": "An engineer needs to replace the startup script that was passed as user data to a running EBS-backed Amazon Linux instance and wants the new script to reconfigure the instance. Which statement describes how this works?",
     "options": [
-      "The user data can be edited while the instance is running, and cloud-init runs the new script within a few minutes",
-      "The user data can be edited only while the instance is stopped, and the new script runs automatically at the next start",
-      "User data is fixed at launch and can never be changed, so a new instance must be launched",
+      "The user data can be edited while the instance is running, and cloud-init detects the change and runs the new script within a few minutes",
+      "The user data can be edited only while the instance is stopped, and cloud-init runs the new script automatically at the next start",
+      "User data is fixed when the instance is launched and can never be changed, so a new instance must be launched from a launch template",
       "The user data can be edited only while the instance is stopped, and by default the new script does not run at the next start unless cloud-init is configured to run it"
     ],
     "answer": [

@@ -8,9 +8,9 @@
     "question": "A company runs a web application behind a Classic Load Balancer. The company is splitting the application into several services and needs to route requests for /api/* and /images/* to different groups of instances. Which solution will meet these requirements with the LEAST operational overhead?",
     "options": [
       "Migrate to an Application Load Balancer and create listener rules with path-based conditions that forward to separate target groups.",
-      "Create one Classic Load Balancer per service and use Route 53 weighted records to split traffic by path.",
-      "Migrate to a Network Load Balancer and configure path-based routing rules on its TCP listener.",
-      "Keep the Classic Load Balancer and add a second listener on a different port for each service path."
+      "Create a separate Classic Load Balancer for each service and use Route 53 weighted records on the shared domain name to send /api/* and /images/* requests to the matching load balancer.",
+      "Migrate to a Network Load Balancer, which handles millions of requests per second, and configure path-based routing rules on its TCP listener that forward to separate target groups.",
+      "Keep the Classic Load Balancer to avoid a migration and add a listener on a separate port for each service, mapping each listener to the instance port where that service runs."
     ],
     "answer": [
       0
@@ -85,10 +85,10 @@
     "difficulty": 3,
     "question": "A media company serves a global user base from an Application Load Balancer in us-east-1. The application uses host-based and path-based routing rules. Several enterprise customers require two fixed IP addresses to allowlist, and the company wants to reduce latency for users in Asia and Europe. Which solution will meet these requirements?",
     "options": [
-      "Allocate two Elastic IP addresses and associate them directly with the Application Load Balancer.",
+      "Allocate two Elastic IP addresses and associate one with the Application Load Balancer in each Availability Zone so that customers can allowlist two fixed addresses.",
       "Create an AWS Global Accelerator standard accelerator with the Application Load Balancer as an endpoint and give customers the accelerator's static anycast IP addresses.",
-      "Create a Route 53 alias record for the Application Load Balancer and give customers the IP addresses that the alias resolves to.",
-      "Replace the Application Load Balancer with a Network Load Balancer with Elastic IP addresses and move the routing rules to it."
+      "Create a Route 53 alias record that points to the Application Load Balancer, which Route 53 answers at no charge, and give customers the IP addresses the alias returns.",
+      "Replace the Application Load Balancer with a Network Load Balancer that has one Elastic IP address per subnet, and recreate the host-based and path-based rules on its listener."
     ],
     "answer": [
       1
@@ -123,10 +123,10 @@
     "difficulty": 2,
     "question": "A company hosts three websites with different domain names on the same fleet of EC2 instances. All traffic must use HTTPS, and the company wants to offload TLS processing from the instances and manage certificates with minimal effort. Which solution meets these requirements MOST cost-effectively?",
     "options": [
-      "Use a single Application Load Balancer with an HTTPS listener, attach three AWS Certificate Manager certificates, and rely on Server Name Indication to select the correct certificate.",
-      "Use a Network Load Balancer with a TCP listener on port 443 and install the certificates on each EC2 instance.",
-      "Create three Application Load Balancers, each with one ACM certificate, and point each domain to its own load balancer.",
-      "Use a single Classic Load Balancer with one HTTPS listener per domain on port 443."
+      "Use one Application Load Balancer with an HTTPS listener, add three AWS Certificate Manager certificates to it, and rely on Server Name Indication (SNI) to present the right one.",
+      "Use a Network Load Balancer with a TCP listener on port 443 that passes connections through, and install the three certificates in the web server configuration on each EC2 instance.",
+      "Create three Application Load Balancers, each with one ACM certificate on its HTTPS listener, and point each domain's Route 53 alias record to its own load balancer.",
+      "Use a single Classic Load Balancer and add a separate HTTPS listener on port 443 for each domain, each with its own ACM certificate, so that TLS terminates at the load balancer."
     ],
     "answer": [
       0
@@ -142,15 +142,15 @@
     "difficulty": 3,
     "question": "A healthcare company has a compliance requirement that TLS traffic must be encrypted end to end and must not be decrypted by any intermediate device, including the load balancer. The backend servers validate client certificates themselves. Which load balancer configuration meets this requirement?",
     "options": [
-      "An Application Load Balancer with an HTTPS listener that re-encrypts traffic to targets using an HTTPS target group.",
+      "An Application Load Balancer with an HTTPS listener that re-encrypts traffic to the targets through an HTTPS target group, so data is never sent in plaintext on the network.",
       "A Network Load Balancer with a TCP listener on port 443 that forwards the encrypted traffic to the instances, which terminate TLS.",
-      "A Network Load Balancer with a TLS listener that uses an AWS Certificate Manager certificate.",
-      "An Application Load Balancer with mutual TLS verification enabled on its HTTPS listener."
+      "A Network Load Balancer with a TLS listener that uses an AWS Certificate Manager certificate and forwards to a TLS target group so traffic stays encrypted to the instances.",
+      "An Application Load Balancer with mutual TLS in passthrough mode, which forwards the client certificate chain to the targets in an HTTP header for them to validate."
     ],
     "answer": [
       1
     ],
-    "explanation": "A TCP listener on a Network Load Balancer passes the encrypted bytes through without decrypting them, so TLS, including client certificate validation, is handled only by the backend servers. Any HTTPS listener on an ALB, including with mutual TLS or re-encryption, terminates TLS at the load balancer. An NLB TLS listener also terminates TLS at the load balancer, which violates the requirement.",
+    "explanation": "A TCP listener on a Network Load Balancer passes the encrypted bytes through without decrypting them, so TLS, including client certificate validation, is handled only by the backend servers. Any HTTPS listener on an ALB, including with mutual TLS (even in passthrough mode) or re-encryption, terminates TLS at the load balancer. An NLB TLS listener also terminates TLS at the load balancer, which violates the requirement.",
     "subtopic": "TLS Passthrough on NLB"
   },
   {
@@ -162,10 +162,10 @@
     "question": "An application runs on EC2 instances in an Auto Scaling group behind an Application Load Balancer. Sometimes the application process hangs while the instance itself stays running. Users receive errors, but the Auto Scaling group never replaces the broken instances. Which combination of actions will resolve this? (Select TWO.)",
     "options": [
       "Change the Auto Scaling group health check type to include Elastic Load Balancing health checks.",
-      "Configure the target group health check to call an application endpoint such as /health that verifies the application is responding.",
-      "Increase the health check grace period of the Auto Scaling group to one hour.",
-      "Enable detailed monitoring on the instances so status checks run every minute.",
-      "Create a CloudWatch alarm on the EC2 system status check that reboots the instance."
+      "Configure the target group health check to request an application path such as /health that confirms the application is responding.",
+      "Increase the health check grace period of the Auto Scaling group to one hour so that hung instances have time to recover before they are checked.",
+      "Enable detailed monitoring on the instances so that metrics are published every minute and the Auto Scaling group detects the hang sooner.",
+      "Create a CloudWatch alarm on the StatusCheckFailed_System metric that automatically reboots the instance when the check fails."
     ],
     "answer": [
       0,
@@ -182,10 +182,10 @@
     "difficulty": 2,
     "question": "A company must inspect all traffic entering and leaving several application VPCs with a fleet of third-party firewall virtual appliances. The appliances must scale horizontally and the solution must be transparent to the applications. Which solution will meet these requirements?",
     "options": [
-      "Deploy the appliances behind an Application Load Balancer and point each application's DNS records at the load balancer.",
-      "Deploy the appliances behind a Network Load Balancer with a TLS listener and enable proxy protocol on the targets.",
+      "Deploy the appliances behind an Application Load Balancer in a shared inspection VPC and point each application's DNS records at the load balancer so all requests pass through the firewalls.",
+      "Deploy the appliances behind a Network Load Balancer with a TLS listener and enable proxy protocol v2 on the target group so that the firewalls still see the original client IP addresses.",
       "Deploy the appliances behind a Gateway Load Balancer in an inspection VPC and route traffic from each application VPC through Gateway Load Balancer endpoints.",
-      "Run one appliance per VPC as a NAT instance and update the default route to point to it."
+      "Run one firewall appliance in each application VPC as a NAT instance with the source/destination check disabled, and point the subnets' default route at its network interface."
     ],
     "answer": [
       2
@@ -201,10 +201,10 @@
     "difficulty": 1,
     "question": "Which statement correctly describes how a Gateway Load Balancer works?",
     "options": [
-      "It operates at layer 7 and routes HTTP requests to firewall appliances based on URL paths.",
+      "It operates at layer 7 and routes HTTP requests to firewall appliances based on URL paths and host headers, in the same way as an Application Load Balancer.",
       "It operates at layer 3 and forwards IP packets to virtual appliances encapsulated with the GENEVE protocol on port 6081.",
-      "It terminates TLS connections and forwards decrypted traffic to intrusion detection appliances.",
-      "It provides two static anycast IP addresses that route traffic to the nearest AWS Region."
+      "It terminates TLS connections at the load balancer and forwards the decrypted traffic to intrusion detection appliances so that they can inspect the payloads.",
+      "It provides two static anycast IP addresses and routes traffic over the AWS global network to appliances in the nearest healthy AWS Region."
     ],
     "answer": [
       1
@@ -259,9 +259,9 @@
     "question": "A company wants its Auto Scaling group to automatically add and remove instances to keep the average CPU utilization of the group close to 50 percent, without managing CloudWatch alarms or step definitions. Which scaling policy should be used?",
     "options": [
       "A target tracking scaling policy using the ASGAverageCPUUtilization metric with a target value of 50.",
-      "A simple scaling policy that adds one instance when CPU exceeds 50 percent.",
-      "A step scaling policy with separate alarms for each CPU range.",
-      "A scheduled scaling action that sets desired capacity based on expected CPU."
+      "A simple scaling policy that adds one instance when average CPU exceeds 50 percent and removes one when it falls below 50 percent.",
+      "A step scaling policy with separate step adjustments for each CPU range above and below 50 percent.",
+      "A scheduled scaling action that sets the desired capacity every hour based on the expected CPU utilization."
     ],
     "answer": [
       0
@@ -278,9 +278,9 @@
     "question": "An internal reporting application is used only by office staff. Load rises sharply every weekday at 08:00 and drops to almost zero after 19:00 and on weekends. The company wants to reduce costs while keeping performance acceptable during office hours. Which solution meets these requirements with the LEAST operational effort?",
     "options": [
       "Create scheduled actions on the Auto Scaling group that increase capacity shortly before 08:00 on weekdays and reduce it after 19:00.",
-      "Purchase Reserved Instances for the peak capacity and keep all instances running continuously.",
-      "Create a step scaling policy based on network traffic with a long cooldown period.",
-      "Have an operator manually change the desired capacity at the start and end of each workday."
+      "Purchase Reserved Instances for the peak capacity and keep all instances running continuously, which gives a discount of up to 72 percent over On-Demand.",
+      "Create a step scaling policy on the group's NetworkIn metric that adds instances in larger steps as traffic grows during the morning.",
+      "Have an operator update the desired capacity of the Auto Scaling group from the console at the start and end of each workday."
     ],
     "answer": [
       0
@@ -296,10 +296,10 @@
     "difficulty": 2,
     "question": "An e-commerce application has a strong daily traffic cycle that gradually shifts over the weeks. New instances take about 10 minutes to initialize, so a target tracking policy alone adds capacity too late during the morning ramp-up. Which solution will improve performance during the ramp-up with the LEAST ongoing maintenance?",
     "options": [
-      "Lower the target value of the target tracking policy to 10 percent CPU utilization.",
-      "Add a predictive scaling policy that forecasts load from historical data and launches capacity ahead of the forecasted demand, alongside the target tracking policy.",
-      "Create scheduled actions for every hour of the day and update them each week as the pattern shifts.",
-      "Replace target tracking with a simple scaling policy that has a shorter cooldown period."
+      "Lower the target value of the target tracking policy to 10 percent CPU utilization so that capacity is added much earlier during the morning ramp-up.",
+      "Add a predictive scaling policy that forecasts load from historical data and launches capacity ahead of demand, alongside the existing target tracking policy.",
+      "Create scheduled actions for every hour of the day that set the desired capacity from last week's CloudWatch metrics, and update them every week as the daily pattern shifts.",
+      "Replace target tracking with a simple scaling policy that has a shorter cooldown period so that instances are added more often during the ramp-up."
     ],
     "answer": [
       1
@@ -315,10 +315,10 @@
     "difficulty": 2,
     "question": "A company wants an Auto Scaling group to add one instance when average CPU is between 60 and 70 percent, three instances when it is between 70 and 85 percent, and five instances when it exceeds 85 percent. Which type of scaling policy should be used?",
     "options": [
-      "A predictive scaling policy with a buffer of five instances.",
-      "A simple scaling policy with three separate cooldown periods.",
-      "A target tracking scaling policy with a target value of 60 percent CPU.",
-      "A step scaling policy with step adjustments tied to a CloudWatch alarm on CPU utilization."
+      "A predictive scaling policy that forecasts CPU utilization and launches one, three, or five instances ahead of the forecasted demand.",
+      "A single simple scaling policy on a CloudWatch alarm at 60 percent CPU, with a short cooldown so that it can add instances repeatedly as CPU rises.",
+      "A target tracking scaling policy with a target value of 60 percent CPU, which adds more instances the further CPU rises above the target.",
+      "A step scaling policy with three step adjustments tied to one CloudWatch alarm on average CPU utilization."
     ],
     "answer": [
       3
@@ -334,10 +334,10 @@
     "difficulty": 3,
     "question": "An Auto Scaling group has two target tracking policies: one keeps average CPU utilization at 60 percent and the other keeps ALBRequestCountPerTarget at 1,000. How does Amazon EC2 Auto Scaling behave when the two policies disagree?",
     "options": [
-      "It scales in if either policy indicates that capacity can be removed, to minimize cost.",
-      "It always follows the policy that was created first and ignores the second policy.",
+      "It scales in as soon as either policy indicates that capacity can be removed, which keeps the group as small as possible to minimize cost.",
+      "It follows the policy that was created first and ignores the second policy until the first one is deleted or disabled.",
       "It scales out if either policy calls for more capacity and scales in only when both policies indicate that capacity can be removed.",
-      "It averages the capacity recommended by both policies and sets the desired capacity to that value."
+      "It averages the capacity recommended by both policies and sets the desired capacity to that value, rounded up to a whole instance."
     ],
     "answer": [
       2
@@ -353,10 +353,10 @@
     "difficulty": 3,
     "question": "An Auto Scaling group uses a target tracking policy on CPU utilization. Newly launched instances run CPU-intensive bootstrap tasks for several minutes before serving traffic. The group often launches far more instances than needed because these new instances report high CPU. Which change will prevent this over-scaling?",
     "options": [
-      "Switch the group to use EC2 health checks instead of ELB health checks.",
-      "Increase the deregistration delay on the target group to cover the bootstrap time.",
-      "Enable default instance warmup on the Auto Scaling group with a value that covers the bootstrap time.",
-      "Increase the health check grace period so the instances are not checked during bootstrap."
+      "Switch the group to use EC2 health checks instead of ELB health checks so that new instances are not marked unhealthy while they bootstrap.",
+      "Increase the deregistration delay on the target group to cover the bootstrap time so that new instances receive no traffic until they are ready.",
+      "Enable default instance warmup on the Auto Scaling group, set to a value that covers the bootstrap time of new instances.",
+      "Increase the health check grace period to cover the bootstrap time so that new instances are not evaluated until they are ready."
     ],
     "answer": [
       2
@@ -414,10 +414,10 @@
     "difficulty": 2,
     "question": "An application takes 12 minutes to start because it loads a large dataset into memory at boot. Traffic spikes are unpredictable, and the Auto Scaling group cannot add capacity fast enough. The company wants faster scale-out without paying for extra running instances most of the time. Which solution meets these requirements MOST cost-effectively?",
     "options": [
-      "Add scheduled scaling actions that add capacity every hour.",
+      "Add scheduled scaling actions that raise the desired capacity every hour so that spare instances are already running when a spike arrives.",
       "Configure a warm pool for the Auto Scaling group with instances kept in the Stopped state after initialization.",
-      "Increase the minimum capacity of the Auto Scaling group to the expected peak.",
-      "Switch to a larger instance type so that each instance boots faster."
+      "Increase the minimum capacity of the Auto Scaling group to the expected peak so that no scale-out is needed during a spike.",
+      "Switch to a larger, memory-optimized instance type so that each instance boots and loads the dataset faster."
     ],
     "answer": [
       1
@@ -511,10 +511,10 @@
     "difficulty": 2,
     "question": "A stateless web application runs in an Auto Scaling group. The company always needs at least 4 On-Demand Instances for baseline traffic and wants the cheapest possible capacity above that baseline while minimizing Spot interruptions. Which combination of settings will meet these requirements? (Select TWO.)",
     "options": [
-      "Purchase Dedicated Hosts for the baseline and run all additional capacity on Spot Instances.",
-      "Use the lowest-price Spot allocation strategy with only one Spot capacity pool.",
+      "Purchase Dedicated Hosts for the 4-instance baseline and run all capacity above the baseline on Spot Instances in the same group.",
+      "Use the lowest-price Spot allocation strategy with a single Spot capacity pool so that every instance launches at the cheapest price.",
       "Specify several suitable instance types and use the price-capacity-optimized Spot allocation strategy.",
-      "Use a single instance type for Spot capacity so that all instances perform identically.",
+      "Use a single instance type for all Spot capacity so that every instance performs identically and the load balancer spreads traffic evenly.",
       "Use a mixed instances policy with an On-Demand base capacity of 4 and 0 percent On-Demand above the base."
     ],
     "answer": [
@@ -532,10 +532,10 @@
     "difficulty": 3,
     "question": "An Auto Scaling group runs most of its capacity on Spot Instances. When Spot Instances are interrupted, the group temporarily drops below its desired capacity until replacements launch, causing elevated latency. Which feature should be enabled to reduce this impact?",
     "options": [
-      "A longer default cooldown, so the group waits before replacing interrupted instances.",
+      "A longer default cooldown, so the group pauses before replacing interrupted instances and avoids launching back into the same Spot pool.",
       "Capacity Rebalancing, so the group launches replacement instances when it receives an EC2 rebalance recommendation.",
-      "Termination lifecycle hooks with a heartbeat timeout of 48 hours to delay interruptions.",
-      "Instance scale-in protection, so Spot Instances cannot be interrupted."
+      "Termination lifecycle hooks with a long heartbeat timeout, so interrupted Spot Instances keep running until their replacements are in service.",
+      "Instance scale-in protection on the Spot Instances, so that EC2 cannot reclaim them while the group is below its desired capacity."
     ],
     "answer": [
       1
@@ -653,9 +653,9 @@
     "question": "A company already has an Application Load Balancer for its main website. It needs to add a small internal HTTP endpoint, /status-report, that receives only a few hundred requests per day. The company wants to avoid paying for idle compute. Which solution meets these requirements MOST cost-effectively?",
     "options": [
       "Implement the endpoint as an AWS Lambda function and register it in a target group used by a path-based rule on the existing Application Load Balancer.",
-      "Create a new Network Load Balancer with the Lambda function as its target.",
+      "Create a new Network Load Balancer for the endpoint and register the Lambda function in its target group so that no instances are needed.",
       "Launch a t3.micro instance in its own Auto Scaling group and add a path-based rule for it on the existing Application Load Balancer.",
-      "Run the endpoint on an Amazon ECS service on Fargate with a minimum of two tasks behind a new load balancer."
+      "Run the endpoint as an Amazon ECS service on Fargate with a minimum of two tasks behind a new load balancer, so that there are no EC2 instances to patch or manage."
     ],
     "answer": [
       0
@@ -690,15 +690,15 @@
     "difficulty": 2,
     "question": "An Auto Scaling group uses ELB health checks. New instances run a bootstrap script that takes about 8 minutes, and the group is terminating them before they finish because the load balancer health checks fail. What is the MOST appropriate fix?",
     "options": [
-      "Switch the Auto Scaling group to EC2 health checks only.",
-      "Increase the health check grace period of the Auto Scaling group so it exceeds the bootstrap time.",
-      "Increase the deregistration delay of the target group to 10 minutes.",
-      "Increase the unhealthy threshold of the target group to 100 consecutive failures."
+      "Switch the Auto Scaling group to EC2 health checks only so that load balancer health check failures no longer cause new instances to be terminated.",
+      "Increase the health check grace period of the Auto Scaling group so that it exceeds the bootstrap time.",
+      "Increase the deregistration delay of the target group to 10 minutes so that new instances have time to finish bootstrapping.",
+      "Raise the unhealthy threshold of the target group to its maximum of 10 consecutive failures so that bootstrapping instances are not marked unhealthy."
     ],
     "answer": [
       1
     ],
-    "explanation": "The health check grace period tells Auto Scaling to wait before acting on health check results for a new instance, giving the bootstrap time to complete. Switching to EC2 health checks would stop detecting application failures entirely. Setting an extreme unhealthy threshold slows failure detection for every instance, and deregistration delay applies to instances leaving the target group, not to new ones.",
+    "explanation": "The health check grace period tells Auto Scaling to wait before acting on health check results for a new instance, giving the bootstrap time to complete. Switching to EC2 health checks would stop detecting application failures entirely. The unhealthy threshold can be at most 10, which at the default 30-second interval still covers only 5 minutes, and raising it slows failure detection for every instance, and deregistration delay applies to instances leaving the target group, not to new ones.",
     "subtopic": "Health Check Grace Period"
   },
   {
@@ -709,10 +709,10 @@
     "difficulty": 2,
     "question": "Users of an online banking application occasionally receive errors when the Auto Scaling group scales in. Investigation shows that requests in progress on terminating instances are cut off. Most requests complete within 30 seconds. What should a solutions architect configure?",
     "options": [
-      "Enable cross-zone load balancing on the Application Load Balancer.",
-      "Reduce the health check interval of the target group to 5 seconds.",
+      "Enable cross-zone load balancing on the Application Load Balancer so that new requests are spread evenly across the remaining instances in every zone during scale-in.",
+      "Reduce the health check interval of the target group to 5 seconds so that terminating instances are detected and removed from rotation faster.",
       "Set the target group deregistration delay to a value that covers in-flight requests, such as 60 seconds.",
-      "Enable sticky sessions so users stay on instances that are not being terminated."
+      "Enable sticky sessions with a short duration so that users stay on instances that are not being terminated."
     ],
     "answer": [
       2
@@ -728,9 +728,9 @@
     "difficulty": 3,
     "question": "A video transcoding service runs on an Auto Scaling group that scales based on the backlog in an Amazon SQS queue. Each job can take up to 2 hours. When the backlog drops, scale-in sometimes terminates instances that are in the middle of a job. Which solution prevents this while still allowing idle instances to be removed?",
     "options": [
-      "Change the termination policy to OldestInstance.",
-      "Increase the target group deregistration delay to 2 hours.",
-      "Add a scheduled action that prevents scale-in during business hours.",
+      "Change the termination policy to NewestInstance so that recently launched instances, which are the least likely to be in the middle of a job, are removed first.",
+      "Increase the target group deregistration delay to 2 hours so that running jobs can finish before the instance is terminated.",
+      "Add a scheduled action that raises the minimum capacity during business hours so that busy instances are not removed by scale-in.",
       "Have the worker enable instance scale-in protection when it starts a job and remove the protection when the job completes."
     ],
     "answer": [
@@ -747,10 +747,10 @@
     "difficulty": 3,
     "question": "Worker instances in an Auto Scaling group process messages from an Amazon SQS queue. Each instance can process about 50 messages per minute, and the company wants messages to wait no longer than about 2 minutes. CPU utilization is not a reliable indicator of load. Which scaling approach is MOST appropriate?",
     "options": [
-      "Publish a custom metric for backlog per instance, calculated from ApproximateNumberOfMessagesVisible divided by the number of InService instances, and use target tracking with a target of 100.",
-      "Use target tracking on average CPU utilization with a target of 40 percent.",
-      "Use a simple scaling policy that adds one instance whenever the queue contains any messages.",
-      "Use scheduled scaling based on the average number of messages received per hour last week."
+      "Publish a custom backlog-per-instance metric (ApproximateNumberOfMessagesVisible divided by the number of InService instances) and use target tracking with a target of 100.",
+      "Use target tracking on average CPU utilization with a target of 40 percent, which leaves headroom so that instances can absorb bursts of messages.",
+      "Use a simple scaling policy with a CloudWatch alarm on ApproximateNumberOfMessagesVisible that adds one instance whenever the queue contains any messages at all.",
+      "Use scheduled scaling actions that set the desired capacity from the average number of messages received per hour during the previous week."
     ],
     "answer": [
       0
@@ -766,10 +766,10 @@
     "difficulty": 2,
     "question": "A web application spends most of its time waiting on downstream API calls, so CPU utilization stays below 20 percent even when response times degrade under heavy traffic. Load testing shows each instance handles about 800 requests per minute before latency increases. Which scaling policy is MOST suitable?",
     "options": [
-      "A simple scaling policy based on the HealthyHostCount metric of the target group.",
+      "A simple scaling policy based on the target group's HealthyHostCount metric that adds instances when fewer healthy hosts are available.",
       "A target tracking policy using the ALBRequestCountPerTarget metric with a target value of about 800.",
-      "A step scaling policy based on the NetworkIn metric of the instances.",
-      "A target tracking policy using ASGAverageCPUUtilization with a target value of 20 percent."
+      "A step scaling policy based on the instances' NetworkIn metric, because downstream API calls drive network traffic rather than CPU.",
+      "A target tracking policy using ASGAverageCPUUtilization with a target value of 20 percent, just below the level observed under heavy traffic."
     ],
     "answer": [
       1
@@ -785,10 +785,10 @@
     "difficulty": 1,
     "question": "A company runs a fixed fleet of 20 EC2 instances for a web application. Monitoring shows that 20 instances are needed only for two hours each day, and 4 instances are enough the rest of the time. Traffic patterns vary from day to day. Which solution will reduce costs while maintaining performance?",
     "options": [
-      "Stop 16 instances manually every evening and start them every morning.",
+      "Have an operator stop 16 of the instances each evening and start them again each morning before the daily peak begins.",
       "Place the instances in an Auto Scaling group with a minimum of 4 and a maximum of 20 and a target tracking scaling policy.",
-      "Purchase a Compute Savings Plan that covers all 20 instances.",
-      "Change all 20 instances to a smaller instance type."
+      "Purchase a 3-year Compute Savings Plan that covers all 20 instances, which lowers their hourly rate by up to 66 percent.",
+      "Change all 20 instances to a smaller instance type in the same family to cut the hourly cost of the fleet roughly in half."
     ],
     "answer": [
       1
@@ -804,11 +804,11 @@
     "difficulty": 3,
     "question": "A solutions architect is reviewing data transfer costs and traffic distribution for several load balancers. Which statements about cross-zone load balancing are correct? (Select TWO.)",
     "options": [
-      "Network Load Balancers do not support cross-zone load balancing.",
+      "Network Load Balancers do not support cross-zone load balancing, so each load balancer node routes only to targets in its own Availability Zone.",
       "For Application Load Balancers, cross-zone load balancing is on by default and there is no inter-AZ data transfer charge for it.",
       "Enabling cross-zone load balancing on an Application Load Balancer lets it send traffic to targets in other AWS Regions.",
       "For Network Load Balancers, cross-zone load balancing is off by default and inter-AZ data transfer charges apply when it is turned on.",
-      "For Gateway Load Balancers, cross-zone load balancing is on by default and cannot be turned off."
+      "For Gateway Load Balancers, cross-zone load balancing is on by default and cannot be turned off, so appliances in every zone share the traffic."
     ],
     "answer": [
       1,
@@ -844,9 +844,9 @@
     "difficulty": 2,
     "question": "A company wants users to sign in with the corporate OpenID Connect identity provider before accessing an internal web application behind an Application Load Balancer. The development team does not want to add authentication code to the application. Which solution meets these requirements?",
     "options": [
-      "Place a Network Load Balancer in front of the ALB and enable OIDC authentication on its TLS listener.",
-      "Configure the target group health check to validate OIDC tokens on each request.",
-      "Attach an IAM role to the target group that requires users to present OIDC tokens.",
+      "Place a Network Load Balancer in front of the ALB and enable OIDC authentication on its TLS listener so that users sign in before reaching the application.",
+      "Configure the target group health check to call the identity provider's token endpoint so that only authenticated requests reach the targets.",
+      "Attach an IAM role to the target group that requires users to present OIDC tokens issued by the corporate identity provider.",
       "Configure an authenticate-oidc action in the HTTPS listener rule before the forward action to the target group."
     ],
     "answer": [
@@ -883,9 +883,9 @@
     "question": "An engineer needs to troubleshoot an EC2 instance in an Auto Scaling group. The instance must stop receiving traffic from the load balancer, must not be terminated, and must return to service afterward without the group launching a replacement. What should the engineer do?",
     "options": [
       "Put the instance into the Standby state with the option to decrement the desired capacity, and exit Standby when finished.",
-      "Detach the instance from the target group and leave it in the Auto Scaling group.",
-      "Stop the instance from the EC2 console and start it again after troubleshooting.",
-      "Set the instance to unhealthy so the Auto Scaling group moves it out of service."
+      "Deregister the instance from the target group but leave it in the Auto Scaling group so that it stops receiving traffic and is not terminated.",
+      "Stop the instance from the EC2 console so that it stops receiving traffic, and start it again after troubleshooting is complete.",
+      "Set the instance health status to Unhealthy so that the Auto Scaling group takes it out of service while troubleshooting happens."
     ],
     "answer": [
       0
@@ -922,9 +922,9 @@
     "difficulty": 2,
     "question": "An Auto Scaling group with the default termination policy has 3 instances in AZ-a, 3 in AZ-b, and 4 in AZ-c. A scale-in event removes one instance. Which instance will Auto Scaling select first?",
     "options": [
-      "The newest instance in AZ-a, because instances in the first Availability Zone are always removed first.",
-      "A random instance in any Availability Zone.",
-      "The oldest instance in the group, regardless of its Availability Zone.",
+      "The newest instance in AZ-a, because the default policy removes the most recently launched instance from the first Availability Zone.",
+      "A random instance in any Availability Zone, because the default policy treats all InService instances equally.",
+      "The oldest instance in the group, regardless of its Availability Zone, because the default policy terminates by launch time first.",
       "An instance in AZ-c, because the default policy first selects the Availability Zone with the most instances."
     ],
     "answer": [
@@ -941,10 +941,10 @@
     "difficulty": 3,
     "question": "A company wants to try predictive scaling for a production Auto Scaling group but is concerned that inaccurate forecasts could launch unnecessary instances and increase costs. The company wants to evaluate forecast accuracy first. What should a solutions architect recommend?",
     "options": [
-      "Replace the target tracking policy with predictive scaling and set the maximum capacity equal to the minimum.",
+      "Replace the target tracking policy with predictive scaling and set the maximum capacity equal to the minimum so that forecasts cannot add instances.",
       "Create a predictive scaling policy in forecast only mode and compare the forecasts with actual load before switching to forecast and scale mode.",
-      "Enable predictive scaling on a copy of the Auto Scaling group in a test account with no traffic.",
-      "Create a predictive scaling policy in forecast and scale mode with a maximum capacity buffer of 0 percent."
+      "Enable predictive scaling on a copy of the Auto Scaling group in a separate test account with no production traffic and review its forecasts there.",
+      "Create a predictive scaling policy in forecast and scale mode with a maximum capacity buffer of 0 percent so that it never exceeds the forecast."
     ],
     "answer": [
       1
@@ -960,10 +960,10 @@
     "difficulty": 1,
     "question": "A startup runs its web application and a MySQL database on the same single EC2 instance. The company wants to place the web tier in an Auto Scaling group across multiple Availability Zones. What should be done with the database?",
     "options": [
-      "Bake the database into the AMI so that every web instance has its own copy of the data.",
-      "Store the database files on instance store volumes and replicate them between instances with cron jobs.",
+      "Bake the database into the AMI so that every web instance launches with its own copy of the data and the database scales with the web tier.",
+      "Store the database files on instance store volumes for the best I/O performance and replicate them between instances with cron jobs.",
       "Migrate the database to Amazon Aurora MySQL or Amazon RDS for MySQL with a Multi-AZ deployment that all web instances connect to.",
-      "Keep the database on the original instance and add that instance to the Auto Scaling group."
+      "Keep the database on the original instance and attach that instance to the new Auto Scaling group so that all web instances connect to it."
     ],
     "answer": [
       2
@@ -1000,9 +1000,9 @@
     "difficulty": 3,
     "question": "A company is building microservices that communicate using gRPC over HTTP/2. The company needs a managed load balancer that can route each gRPC call to a different set of containers based on the service and method name and perform gRPC health checks. Which solution meets these requirements?",
     "options": [
-      "A Gateway Load Balancer that forwards gRPC traffic to containers using GENEVE encapsulation.",
-      "A Network Load Balancer with a TLS listener and path-based listener rules for each gRPC service.",
-      "A Classic Load Balancer with HTTP/2 enabled and one listener per gRPC service.",
+      "A Gateway Load Balancer that forwards the gRPC traffic to the containers over GENEVE and keeps each flow on the same target.",
+      "A Network Load Balancer with a TLS listener that uses an ALPN policy for HTTP/2, plus path-based listener rules for each gRPC service.",
+      "A Classic Load Balancer with an SSL listener on port 443 and a separate listener port for each gRPC service.",
       "An Application Load Balancer with target groups configured with the gRPC protocol version and path-based listener rules."
     ],
     "answer": [
@@ -1019,10 +1019,10 @@
     "difficulty": 3,
     "question": "An application behind an Application Load Balancer issues its own session cookie named APPSESSION. The company wants requests to stay on the same target only while that application session is valid, and the stickiness should follow the lifetime the application sets on the cookie. Which configuration meets this requirement?",
     "options": [
-      "Enable duration-based stickiness on the target group with a fixed duration of 7 days.",
-      "Enable cross-zone load balancing and set the routing algorithm to round robin.",
+      "Enable duration-based stickiness on the target group with a duration of 7 days, the maximum allowed, so that sessions never end early.",
+      "Keep cross-zone load balancing enabled and set the target group's routing algorithm to round robin with slow start for new targets.",
       "Enable application-based cookie stickiness on the target group and specify APPSESSION as the application cookie name.",
-      "Enable source IP affinity on the Application Load Balancer listener."
+      "Enable source IP affinity on the Application Load Balancer listener so that each client IP address stays on the same target."
     ],
     "answer": [
       2
@@ -1057,10 +1057,10 @@
     "difficulty": 2,
     "question": "A company runs a fault-tolerant, stateless batch-processing web service in an Auto Scaling group. The service is busy during business hours and nearly idle at night. Which combination of actions will reduce cost the MOST without affecting availability during business hours? (Select TWO.)",
     "options": [
-      "Disable cross-zone load balancing on the Application Load Balancer to avoid data transfer charges.",
-      "Increase the scaling cooldown period so that the group launches instances less often.",
+      "Disable cross-zone load balancing on the Application Load Balancer to avoid inter-AZ data transfer charges at night.",
+      "Increase the scaling cooldown period so that the group launches new instances less often and avoids paying for short-lived capacity.",
       "Add scheduled actions that lower the minimum and desired capacity at night and raise them before business hours.",
-      "Launch the instances on Dedicated Hosts to improve utilization.",
+      "Launch the instances on Dedicated Hosts so that more instances can be packed onto each host to improve utilization.",
       "Use a mixed instances policy that runs a portion of capacity on Spot Instances across multiple instance types."
     ],
     "answer": [
@@ -1100,10 +1100,10 @@
     "difficulty": 1,
     "question": "A company's website runs behind an Application Load Balancer that has an HTTPS listener on port 443. Some users still type http:// URLs and reach the site over plain HTTP on port 80. The company wants every request to use HTTPS with the LEAST operational overhead. What should a solutions architect do?",
     "options": [
-      "Remove the port 80 listener and add a security group rule that answers port 80 requests with a redirect message.",
+      "Remove the port 80 listener from the load balancer and add a security group rule that answers port 80 requests with a redirect to the HTTPS URL.",
       "Configure the port 80 listener with a redirect action that returns HTTP 301 to HTTPS on port 443 and keeps the original host, path, and query.",
-      "Add code to every web server that detects plain HTTP requests and returns a redirect to the HTTPS URL.",
-      "Configure the port 80 listener with a fixed-response action that returns HTTP 200 and a link to the HTTPS site."
+      "Add a rewrite rule on every web server that checks the X-Forwarded-Proto header and returns a redirect to the HTTPS URL for plain HTTP requests.",
+      "Configure the port 80 listener with a fixed-response action that returns HTTP 200 and an HTML page linking to the HTTPS version of the site."
     ],
     "answer": [
       1
@@ -1120,10 +1120,10 @@
     "difficulty": 2,
     "question": "A retailer serves its website and its native mobile app from the same domain through one Application Load Balancer. The mobile app sends a custom header, X-Client-Type: mobile, with every request. The company wants mobile requests to go to a separate fleet that is optimized for the mobile API, without changing any URLs or adding another load balancer. Which solution meets these requirements?",
     "options": [
-      "Add a listener rule with a path-pattern condition of /mobile/* that forwards to the mobile target group.",
-      "Enable sticky sessions on the target group so that mobile clients stay on the mobile fleet.",
+      "Add a listener rule with a path-pattern condition of /mobile/* that forwards to the mobile target group ahead of the default rule.",
+      "Enable sticky sessions on the target group so that once mobile clients reach the mobile fleet they stay on it for the rest of the session.",
       "Add a listener rule with an http-header condition that matches X-Client-Type set to mobile and forwards to the mobile target group.",
-      "Create a Route 53 geolocation record that sends mobile users to a second Application Load Balancer."
+      "Create a Route 53 geolocation record that sends mobile users to a second Application Load Balancer in front of the mobile fleet."
     ],
     "answer": [
       2
@@ -1160,10 +1160,10 @@
     "difficulty": 2,
     "question": "A company exposes a web application through an internet-facing Application Load Balancer. The /admin/* pages must be reachable only from the corporate office range 203.0.113.0/24, while the rest of the site stays public. The company wants to enforce this at the load balancer without changing the application. Which configuration meets these requirements?",
     "options": [
-      "Add a rule with priority 10 that matches path /admin/* and source IP 203.0.113.0/24 and forwards to the application, and a rule with priority 20 that matches path /admin/* and returns a fixed 403 response.",
-      "Restrict the load balancer's security group so that it accepts inbound HTTPS only from 203.0.113.0/24.",
-      "Add a rule that matches path /admin/* and redirects every request to the corporate VPN portal.",
-      "Add network ACL rules to the load balancer subnets that deny requests for /admin/* from other IP addresses."
+      "Add a priority 10 rule that matches path /admin/* and source IP 203.0.113.0/24 and forwards to the application, plus a priority 20 rule for /admin/* that returns a fixed 403 response.",
+      "Restrict the load balancer's security group so that it accepts inbound HTTPS only from 203.0.113.0/24, which blocks other clients before any listener rule is evaluated.",
+      "Add a listener rule that matches path /admin/* and redirects every request with HTTP 302 to the corporate VPN portal so that only office users can sign in.",
+      "Add network ACL rules to the load balancer subnets that deny requests for /admin/* from source addresses outside 203.0.113.0/24 while allowing all other traffic."
     ],
     "answer": [
       0
@@ -1180,10 +1180,10 @@
     "difficulty": 1,
     "question": "A startup runs a customer portal on EC2 instances behind an Application Load Balancer. Customers must sign in with their Google or Facebook accounts before they reach the portal, and the developers do not want to write any authentication code. Which solution meets these requirements?",
     "options": [
-      "Attach an IAM policy to the target group that allows access only to Google and Facebook principals.",
+      "Attach an IAM policy to the target group that allows access only to principals federated through Google and Facebook, so that unauthenticated users are rejected.",
       "Add an authenticate-cognito action to the HTTPS listener rule that uses an Amazon Cognito user pool federated with Google and Facebook, followed by a forward action.",
-      "Associate an AWS WAF web ACL with the load balancer that checks for Google and Facebook session cookies.",
-      "Configure the HTTP listener on port 80 with an authenticate-oidc action that points directly to Google."
+      "Associate an AWS WAF web ACL with the load balancer whose rules block any request that does not carry a valid Google or Facebook session cookie.",
+      "Configure the HTTP listener on port 80 with an authenticate-oidc action that points directly to Google as the identity provider, followed by a forward action."
     ],
     "answer": [
       1
@@ -1241,9 +1241,9 @@
     "question": "A company is creating a new internet-facing Network Load Balancer for a TCP service on EC2 instances. Only a list of partner CIDR ranges may reach the service, and the instances must accept traffic only when it comes through the load balancer, even though client IP preservation is enabled. Which actions should a solutions architect take? (Select TWO.)",
     "options": [
       "Associate a security group with the Network Load Balancer when it is created, allowing the listener port only from the partner CIDR ranges.",
-      "Create the Network Load Balancer without security groups and associate one later, after testing is complete.",
+      "Create the Network Load Balancer without security groups to simplify testing, and associate a security group with it later before going live.",
       "In the instance security group, allow the service port and the health check port from the Network Load Balancer's security group.",
-      "In the instance security group, allow the service port only from the Elastic IP addresses of the Network Load Balancer.",
+      "In the instance security group, allow the service port only from the Elastic IP addresses of the Network Load Balancer so that direct client access is blocked.",
       "Add network ACL rules to the instance subnets that allow traffic only from the Network Load Balancer's private IP addresses."
     ],
     "answer": [
@@ -1263,9 +1263,9 @@
     "question": "A company runs a TCP-based licensing service on EC2 instances in a shared services VPC. A Network Load Balancer in a separate ingress VPC forwards traffic to the instances, which are registered as IP targets and reached through a transit gateway. The service must log each client's original IP address. Which solution meets this requirement?",
     "options": [
       "Enable proxy protocol version 2 on the target group and update the service to read the client address from the proxy protocol header.",
-      "Enable client IP preservation on the target group so the instances see the client source IP addresses.",
-      "Configure the service to log the X-Forwarded-For header that the Network Load Balancer adds to each connection.",
-      "Enable cross-zone load balancing so that the client IP address is carried through to the targets."
+      "Enable client IP preservation on the target group so that the instances see the original client source IP addresses in each packet.",
+      "Configure the service to log the X-Forwarded-For header that the Network Load Balancer inserts into each connection it forwards to the targets.",
+      "Enable cross-zone load balancing on the Network Load Balancer so that the client IP address is carried through to the targets in the other VPC."
     ],
     "answer": [
       0
@@ -1282,10 +1282,10 @@
     "difficulty": 3,
     "question": "A SaaS provider runs a multi-tenant HTTP API behind an internal Application Load Balancer that uses path-based rules to route requests to several microservices. Customers in other AWS accounts must reach the API privately through AWS PrivateLink, and the provider wants to keep its existing path-based routing. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Replace the Application Load Balancer with a Network Load Balancer and recreate the path-based rules on its TCP listener.",
-      "Create a Network Load Balancer with a TCP listener that forwards to an alb-type target group containing the existing Application Load Balancer, and create a VPC endpoint service from the Network Load Balancer.",
-      "Create VPC peering connections to every customer VPC and share the Application Load Balancer's DNS name.",
-      "Place a Gateway Load Balancer in front of the Application Load Balancer and share the Gateway Load Balancer endpoint service with customers."
+      "Replace the Application Load Balancer with a Network Load Balancer, recreate the path-based rules on its TCP listener, and publish it as a VPC endpoint service.",
+      "Create a Network Load Balancer whose TCP listener forwards to an alb-type target group containing the existing Application Load Balancer, and create a VPC endpoint service for the NLB.",
+      "Create VPC peering connections to every customer VPC and share the Application Load Balancer's DNS name so that customers reach the API over private IP addresses.",
+      "Place a Gateway Load Balancer in front of the Application Load Balancer and share the Gateway Load Balancer endpoint service with customers so that they connect through PrivateLink."
     ],
     "answer": [
       1
@@ -1302,10 +1302,10 @@
     "difficulty": 3,
     "question": "A company must inspect all inbound internet traffic to web servers in a VPC by using third-party firewall appliances that sit behind a Gateway Load Balancer in a security VPC. A Gateway Load Balancer endpoint has been created in its own subnet in the application VPC. How should routing be configured so that traffic from the internet is inspected before it reaches the web servers and responses are inspected before they leave?",
     "options": [
-      "In the web subnet route table, route 0.0.0.0/0 to the internet gateway, and add a route for the security VPC CIDR that targets the Gateway Load Balancer.",
-      "In the endpoint subnet route table, route 0.0.0.0/0 to the web servers, and attach the internet gateway directly to the Gateway Load Balancer.",
+      "In the web subnet route table, route 0.0.0.0/0 to the internet gateway, and add a route for the security VPC CIDR that targets the Gateway Load Balancer so that inspected traffic returns through the security VPC.",
+      "In the endpoint subnet route table, route 0.0.0.0/0 to the web servers, and attach the internet gateway directly to the Gateway Load Balancer so that all inbound traffic passes through the appliances first.",
       "In the route table associated with the internet gateway, route the web subnet CIDR to the endpoint; in the web subnet route table, route 0.0.0.0/0 to the endpoint; in the endpoint subnet route table, route 0.0.0.0/0 to the internet gateway.",
-      "Place a NAT gateway in front of the web servers and route its traffic to the Gateway Load Balancer endpoint by using a managed prefix list as the destination."
+      "Place a NAT gateway in front of the web servers and route its traffic to the Gateway Load Balancer endpoint by using a managed prefix list as the destination, so that the appliances see every flow."
     ],
     "answer": [
       2
@@ -1322,9 +1322,9 @@
     "difficulty": 2,
     "question": "A company is migrating a web application from its data center to Amazon EC2. The data center is connected to the VPC by AWS Direct Connect. During the migration, the company wants a single Application Load Balancer to send 80 percent of requests to the existing on-premises servers and 20 percent to the new EC2 instances, and then shift traffic gradually. Which solution meets these requirements?",
     "options": [
-      "Register the on-premises servers by instance ID in the same target group as the EC2 instances.",
-      "Create a lambda target group whose function proxies each request to the data center.",
-      "Register the on-premises servers' public IP addresses in an ip target group and use path-based rules to split traffic.",
+      "Register the on-premises servers by instance ID in the same target group as the EC2 instances, and change the number of registered servers to shift traffic over time.",
+      "Create a lambda target group whose function runs in the VPC and proxies each request to the on-premises servers over the Direct Connect connection.",
+      "Register the on-premises servers' public IP addresses in an ip target group, keep the EC2 instances in a second target group, and use path-based rules to split traffic between them.",
       "Create an ip target group with the on-premises servers' private IP addresses and a second target group for the EC2 instances, and use a forward action with weighted target groups."
     ],
     "answer": [
@@ -1342,11 +1342,11 @@
     "difficulty": 2,
     "question": "A company runs 12 small containerized web services on Amazon ECS with the EC2 launch type and bridge network mode. Each service has its own Application Load Balancer, and the company wants several tasks of the same service to run on one container instance. The company needs to reduce costs. Which combination of actions will meet these requirements? (Select TWO.)",
     "options": [
-      "Create one Network Load Balancer per service to reduce per-request charges.",
+      "Replace each Application Load Balancer with a Network Load Balancer, which is billed in NLCUs, to reduce the per-request charges for the small services.",
       "Use a single Application Load Balancer with path-based listener rules that forward to a separate target group for each service.",
-      "Assign a fixed host port of 80 to every task so the load balancer can always reach it.",
+      "Assign a fixed host port of 80 to every task in the task definitions so that the load balancer health checks can always reach the containers.",
       "Set the host port to 0 in the task definitions so that ECS uses dynamic host port mapping and registers each task's port with the target group.",
-      "Run one container instance per task so that every task has its own IP address."
+      "Run one container instance per task so that every task gets its own IP address and can be registered in the target group directly."
     ],
     "answer": [
       1,
@@ -1387,9 +1387,9 @@
     "question": "A company runs an API on an Auto Scaling group that has only four instances, and it starts an instance refresh every week to apply patched AMIs. During each refresh, Auto Scaling terminates an instance before its replacement is ready, and the other three instances are briefly overloaded. The company wants capacity never to drop below four in-service instances during replacements, without permanently running extra instances. What should a solutions architect configure?",
     "options": [
       "An instance maintenance policy that uses launch before terminating, with a minimum healthy percentage of 100 percent and a maximum healthy percentage above 100 percent.",
-      "A permanent increase of the group's minimum and desired capacity to five instances.",
-      "A longer health check grace period so that instances are replaced more slowly.",
-      "Scale-in protection on all instances in the group during the refresh."
+      "Permanently increase the group's minimum and desired capacity to five instances so that one spare instance absorbs the load during each refresh.",
+      "Configure a longer health check grace period so that the refresh replaces instances more slowly and the remaining instances are not overloaded.",
+      "Enable scale-in protection on all instances in the group during the refresh so that Auto Scaling cannot terminate them before replacements are ready."
     ],
     "answer": [
       0
@@ -1406,15 +1406,15 @@
     "difficulty": 1,
     "question": "An application in an Auto Scaling group has an internal watchdog that detects when a background worker thread stalls, even though the instance and its load balancer health check endpoint still respond normally. The company wants Auto Scaling to replace such instances automatically. What is the simplest solution?",
     "options": [
-      "Have the watchdog reboot the instance by calling the EC2 RebootInstances API.",
-      "Have the watchdog move the instance into the Standby state.",
+      "Have the watchdog call the EC2 RebootInstances API so that the instance restarts the application and the stalled worker thread.",
+      "Have the watchdog move the instance into the Standby state so that it stops receiving traffic until someone investigates it.",
       "Have the watchdog call the Auto Scaling SetInstanceHealth API to mark the instance as Unhealthy.",
-      "Have the watchdog deregister the instance from the load balancer's target group."
+      "Have the watchdog deregister the instance from the load balancer's target group so that the load balancer stops routing requests to it."
     ],
     "answer": [
       2
     ],
-    "explanation": "Custom health checks let an application report its own status: marking an instance Unhealthy with SetInstanceHealth (set-instance-health) causes Amazon EC2 Auto Scaling to replace it. Rebooting keeps the same possibly broken instance, Standby removes the instance from service without replacing it, and deregistering it from the target group only stops traffic while the instance keeps running in the group.",
+    "explanation": "Custom health checks let an application report its own status: marking an instance Unhealthy with SetInstanceHealth (set-instance-health) causes Amazon EC2 Auto Scaling to replace it. Rebooting keeps the same possibly broken instance, Standby only takes the faulty instance out of service for troubleshooting instead of terminating and replacing it, and deregistering it from the target group only stops traffic while the instance keeps running in the group.",
     "subtopic": "Custom Health Checks",
     "source": "https://docs.aws.amazon.com/autoscaling/ec2/userguide/set-up-a-custom-health-check.html"
   },
@@ -1489,9 +1489,9 @@
     "question": "A company runs a fault-tolerant CI build fleet in an Auto Scaling group that uses Spot Instances. The group lists three specific instance types and often reports insufficient capacity. The company wants the group to consider every current and future instance type with 4 to 8 vCPUs and at least 16 GiB of memory without maintaining a list, while avoiding unusually expensive types. Which solution meets these requirements?",
     "options": [
       "Use attribute-based instance type selection in a mixed instances policy with vCPU and memory ranges, and keep price protection enabled.",
-      "Add every matching instance type to the mixed instances policy by hand and review the list each quarter.",
-      "Switch to one larger instance type and set a Spot maximum price equal to the On-Demand price.",
-      "Keep the three instance types and change the Spot allocation strategy to lowest-price."
+      "Add every instance type that has 4 to 8 vCPUs and at least 16 GiB of memory to the mixed instances policy by hand, and review the list each quarter.",
+      "Switch to one larger instance type and set the Spot maximum price equal to the On-Demand price so that the group is never outbid.",
+      "Keep the three instance types and change the Spot allocation strategy to lowest-price so that the group launches from the cheapest available pools."
     ],
     "answer": [
       0
@@ -1508,10 +1508,10 @@
     "difficulty": 3,
     "question": "A rendering company runs an Auto Scaling group with a mixed instances policy that includes c6i.2xlarge (8 vCPUs), c6i.4xlarge (16 vCPUs), and c6i.8xlarge (32 vCPUs). Its job scheduler needs about 256 vCPUs at peak. Desired capacity is set to 32 instances, so the group sometimes launches far more vCPUs than needed when it picks the larger types. How should the company configure the group so that it pays only for the compute it needs?",
     "options": [
-      "Set an On-Demand base capacity of 32 instances.",
-      "Use the NewestInstance termination policy so that larger instances are removed first.",
+      "Set an On-Demand base capacity of 32 instances so that the group launches a fixed number of instances regardless of their size.",
+      "Use the NewestInstance termination policy so that the larger instances, which are usually launched last, are removed first during scale in.",
       "Assign instance weights proportional to vCPU count, such as 8, 16, and 32, and set the desired capacity in the same units, such as 256.",
-      "Enable Capacity Rebalancing so that smaller instances replace larger ones."
+      "Enable Capacity Rebalancing so that the group replaces larger instances with smaller ones when Spot capacity becomes available."
     ],
     "answer": [
       2
@@ -1528,10 +1528,10 @@
     "difficulty": 3,
     "question": "An Auto Scaling group uses a warm pool of stopped instances because each instance needs 15 minutes to initialize. Traffic rises and falls several times a day. Every time the group scales in, Auto Scaling terminates the instances and then launches and fully initializes new instances to refill the warm pool, which wastes compute time and slows the next scale-out. Which change addresses this?",
     "options": [
-      "Change the warm pool instance state from Stopped to Running.",
+      "Change the warm pool instance state from Stopped to Running so that the instances stay initialized and are ready immediately for scale-out.",
       "Configure an instance reuse policy so that instances return to the warm pool on scale in instead of being terminated.",
-      "Increase the scaling cooldown of the group to 30 minutes.",
-      "Set the minimum size of the warm pool to zero."
+      "Increase the scaling cooldown of the group to 30 minutes so that it scales in less often during the daily traffic fluctuations.",
+      "Set the minimum size of the warm pool to zero so that Auto Scaling no longer has to refill it after every scale-in event."
     ],
     "answer": [
       1
@@ -1568,10 +1568,10 @@
     "difficulty": 2,
     "question": "An Auto Scaling group uses a simple scaling policy that adds two instances when average CPU utilization exceeds 70 percent, with the default cooldown. During sudden traffic surges, CPU stays above 90 percent for several minutes after the first scale-out because the group waits before adding more capacity. Which change will make the group respond faster?",
     "options": [
-      "Replace the simple scaling policy with a target tracking or step scaling policy.",
-      "Increase the default cooldown to 600 seconds.",
-      "Set the health check grace period to 0 seconds.",
-      "Add a scheduled action that adds one instance every 5 minutes."
+      "Replace the simple scaling policy with a target tracking or step scaling policy, neither of which waits for the cooldown.",
+      "Increase the default cooldown to 600 seconds so that new instances have time to absorb load before the next scaling decision.",
+      "Set the health check grace period to 0 seconds so that new instances are counted as in service immediately.",
+      "Add a scheduled action that adds one instance every 5 minutes during the hours when surges usually occur."
     ],
     "answer": [
       0
@@ -1608,10 +1608,10 @@
     "difficulty": 2,
     "question": "A compliance audit requires that a public Application Load Balancer accept only TLS 1.2 and TLS 1.3 connections from clients. TLS is terminated at the load balancer. Which action meets this requirement with the LEAST effort?",
     "options": [
-      "Create a custom security policy on the load balancer that removes the TLS 1.0 and TLS 1.1 protocols.",
+      "Create a custom security policy on the HTTPS listener that removes the TLS 1.0 and TLS 1.1 protocols and keeps the strongest cipher suites.",
       "Select a predefined security policy that supports only TLS 1.2 and TLS 1.3, such as ELBSecurityPolicy-TLS13-1-2-2021-06, on the HTTPS listener.",
-      "Add security group rules to the load balancer that block TLS 1.0 and TLS 1.1 handshakes.",
-      "Configure the target instances to reject TLS 1.0 and TLS 1.1 connections."
+      "Add rules to the load balancer's security group that block TLS 1.0 and TLS 1.1 handshakes while allowing all other HTTPS traffic on port 443.",
+      "Configure the web servers on the target instances to reject TLS 1.0 and TLS 1.1 connections by updating their TLS configuration."
     ],
     "answer": [
       1
@@ -1628,9 +1628,9 @@
     "difficulty": 1,
     "question": "A security team needs detailed records of the requests sent to an internet-facing Application Load Balancer, including client IP addresses, request paths, latencies, and response codes, and wants to query the records with SQL. Which solution meets these requirements?",
     "options": [
-      "Enable VPC Flow Logs on the load balancer subnets and query them with Amazon Athena.",
-      "Enable AWS CloudTrail data events for Elastic Load Balancing.",
-      "Enable detailed CloudWatch metrics for the load balancer and target groups.",
+      "Enable VPC Flow Logs on the load balancer's network interfaces, deliver them to Amazon S3, and query them with Amazon Athena.",
+      "Enable an AWS CloudTrail trail for Elastic Load Balancing events and query the events with SQL in AWS CloudTrail Lake.",
+      "Use the load balancer and target group metrics in Amazon CloudWatch and query them with SQL by using CloudWatch Metrics Insights.",
       "Enable access logs for the load balancer to an Amazon S3 bucket and query them with Amazon Athena."
     ],
     "answer": [

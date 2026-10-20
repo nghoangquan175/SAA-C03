@@ -8,9 +8,9 @@
     "question": "A ride-sharing company stores trip events in an Amazon DynamoDB table using the city name as the partition key. Most traffic comes from three large cities, and the table experiences throttling even though total consumed capacity is well below the table limit. Which change will MOST effectively resolve the throttling?",
     "options": [
       "Redesign the table to use a high-cardinality partition key, such as the trip ID, so requests spread evenly across partitions.",
-      "Use a sort key based on the city name in addition to the partition key.",
-      "Enable DynamoDB Streams so writes are buffered before reaching the table.",
-      "Add a local secondary index on the city attribute to absorb the extra traffic."
+      "Add a sort key based on the city name and event timestamp in addition to the city partition key.",
+      "Enable DynamoDB Streams so that bursts of writes are buffered before they reach the hot partitions.",
+      "Add a local secondary index on the city attribute so that the index absorbs part of the read and write traffic for the busy cities."
     ],
     "answer": [
       0
@@ -127,8 +127,8 @@
     "options": [
       "Add a global secondary index with the alternate sort key and request strongly consistent reads.",
       "Create a new table that defines a local secondary index with the alternate sort key, then migrate the data.",
-      "Enable DAX in front of the table and request strongly consistent reads.",
-      "Add a local secondary index to the existing table with an UpdateTable call."
+      "Enable DAX in front of the table and request strongly consistent reads so that the sorted results are cached.",
+      "Add a local secondary index to the existing table with an UpdateTable call and query it with ConsistentRead set to true."
     ],
     "answer": [
       1
@@ -165,10 +165,10 @@
     "difficulty": 1,
     "question": "An e-commerce company stores orders in an Amazon DynamoDB table. Whenever a new order item is inserted, a confirmation email must be sent and a loyalty points service must be updated, without changing the code that writes the orders. Which solution will meet these requirements?",
     "options": [
-      "Enable Time to Live on the table so new items trigger notifications.",
-      "Schedule a Lambda function every minute to scan the table for new orders.",
+      "Enable Time to Live on the table so that each newly inserted item triggers a notification.",
+      "Schedule a Lambda function every minute with EventBridge to scan the table for new orders.",
       "Enable DynamoDB Streams on the table and configure an AWS Lambda function as a stream trigger.",
-      "Create a global secondary index that sends events to Amazon SNS."
+      "Create a global secondary index on the order date that publishes new items to an Amazon SNS topic."
     ],
     "answer": [
       2
@@ -185,9 +185,9 @@
     "question": "A web application stores session records in Amazon DynamoDB. Sessions are useless after 24 hours, and the table keeps growing. The company wants expired sessions removed automatically at no additional write cost. Which solution will meet these requirements?",
     "options": [
       "Enable Time to Live on the table using an attribute that stores each session's expiration timestamp.",
-      "Switch the table to the Standard-Infrequent Access table class.",
-      "Run a nightly Lambda function that scans the table and deletes old sessions.",
-      "Enable point-in-time recovery so old items are purged automatically."
+      "Switch the table to the Standard-Infrequent Access table class to lower the cost of the old sessions.",
+      "Run a nightly Lambda function that scans the table and deletes sessions older than 24 hours with BatchWriteItem.",
+      "Enable point-in-time recovery with a 1-day recovery period so that older items are purged automatically."
     ],
     "answer": [
       0
@@ -203,10 +203,10 @@
     "difficulty": 3,
     "question": "A gaming company uses DynamoDB TTL to remove player match records after 90 days. Regulators now require the expired records to be retained in low-cost storage for 5 years. Which solution will meet these requirements with the LEAST operational overhead?",
     "options": [
-      "Take daily on-demand backups and keep each backup for 5 years.",
-      "Create a global table replica in another Region and disable TTL on the replica.",
-      "Disable TTL and keep all records in the table using the Standard-Infrequent Access table class.",
-      "Enable DynamoDB Streams and use a Lambda function to write records deleted by TTL to an Amazon S3 bucket with a lifecycle policy to an archival storage class."
+      "Take daily on-demand backups of the table with AWS Backup and transition each backup to cold storage, keeping it for 5 years.",
+      "Create a global table replica in another Region, disable TTL on the replica only, and keep that replica as the long-term archive.",
+      "Disable TTL and keep all records in the table by using the Standard-Infrequent Access table class, which lowers storage cost by up to 60%.",
+      "Enable DynamoDB Streams and have a Lambda function write the items that TTL deletes to an S3 bucket with a lifecycle rule to an archival storage class."
     ],
     "answer": [
       3
@@ -241,10 +241,10 @@
     "difficulty": 1,
     "question": "A bug in a deployment overwrote attributes in thousands of items in an Amazon DynamoDB table 2 hours ago. Point-in-time recovery is enabled. How can the company recover the data?",
     "options": [
-      "Roll back the existing table in place to a point in time before the deployment.",
-      "Restore the table to a point in time before the deployment, which creates a new table, and then use it to repair or replace the original.",
-      "Recover the previous item versions from the TTL attribute history.",
-      "Query DynamoDB Streams from 2 hours ago to rebuild the original items with Backtrack."
+      "Roll back the existing table in place to a point in time before the deployment, which PITR supports for any second in the last 35 days.",
+      "Restore the table to a point in time before the deployment into a new table, and then use it to repair or replace the original.",
+      "Recover the previous item versions from the TTL attribute history that DynamoDB keeps for each item.",
+      "Read the DynamoDB Streams records from 2 hours ago and rebuild the original items by using Backtrack on the table."
     ],
     "answer": [
       1
@@ -260,10 +260,10 @@
     "difficulty": 2,
     "question": "A financial company must keep monthly backups of its Amazon DynamoDB tables for 3 years and store a copy of each backup in a second AWS Region for disaster recovery, managed centrally with other services. Which solution will meet these requirements with the LEAST operational overhead?",
     "options": [
-      "Enable point-in-time recovery and set the recovery window to 3 years.",
-      "Create global tables and rely on the replica Region as the backup copy.",
+      "Enable point-in-time recovery, set the recovery period to 3 years, and copy the table to a second Region.",
+      "Create global tables and rely on the replica in the second Region as the monthly backup copy.",
       "Use AWS Backup with a backup plan that includes a monthly rule, 3-year retention, and a cross-Region copy action.",
-      "Write a Lambda function that exports each table to S3 monthly and replicates the bucket."
+      "Write a Lambda function that exports each table to S3 monthly and replicates the bucket to a second Region with CRR."
     ],
     "answer": [
       2
@@ -279,9 +279,9 @@
     "difficulty": 2,
     "question": "A digital wallet application stores balances in an Amazon DynamoDB table. A transfer must debit one account and credit another, and both updates must succeed or fail together, including a check that the sender has sufficient funds. Which solution will meet these requirements?",
     "options": [
-      "Use a BatchWriteItem call that contains both updates.",
+      "Use a BatchWriteItem call that contains both updates so that they are applied in one request.",
       "Enable DynamoDB Streams and apply the credit when the debit appears in the stream.",
-      "Perform two UpdateItem calls and retry the second one if it fails.",
+      "Perform two UpdateItem calls with condition expressions and retry the second one if it fails.",
       "Use a TransactWriteItems call with condition expressions for the debit and credit updates."
     ],
     "answer": [
@@ -318,9 +318,9 @@
     "question": "A team placed DynamoDB Accelerator (DAX) in front of a table, but the latency of one critical read path did not improve at all. That code path uses GetItem with ConsistentRead set to true. What explains this behavior?",
     "options": [
       "DAX passes strongly consistent read requests through to DynamoDB instead of serving them from its cache.",
-      "DAX requires the table to use on-demand capacity before it will cache items.",
-      "DAX only caches Scan results, and GetItem requests are always forwarded to the table.",
-      "DAX caches items only after they are written through a TransactWriteItems call."
+      "DAX requires the table to use on-demand capacity mode before it will cache any items from it.",
+      "DAX caches only Query and Scan results, so GetItem requests are always forwarded to the table.",
+      "DAX caches items only after they are written through the DAX client, and these items were written with TransactWriteItems directly to DynamoDB."
     ],
     "answer": [
       0
@@ -336,9 +336,9 @@
     "difficulty": 2,
     "question": "An analytics team wants to run complex SQL queries with Amazon Athena on a full copy of a 2 TB production Amazon DynamoDB table every week. The queries must not consume the table's read capacity or affect production performance. Which solution is the MOST cost-effective?",
     "options": [
-      "Add a DAX cluster and point Athena at the DAX endpoint for the weekly queries.",
-      "Run a parallel Scan from an EC2 instance every week and write the results to S3.",
-      "Create a global secondary index that projects all attributes and query it from Athena.",
+      "Add a DAX cluster and point Athena at the DAX endpoint so that the weekly queries are served from cache.",
+      "Run a parallel Scan from an EC2 instance every week with a small page size and rate limiting, and write the results to Amazon S3 for Athena.",
+      "Create a global secondary index that projects all attributes and query that index from Athena with its own capacity.",
       "Enable point-in-time recovery and use the DynamoDB export to Amazon S3 feature, then query the exported data with Athena."
     ],
     "answer": [
@@ -375,9 +375,9 @@
     "question": "A mobile app authenticates users with Amazon Cognito and lets them read and write directly to an Amazon DynamoDB table whose partition key is the user's Cognito identity ID. Each user must be able to access only their own items. Which solution will meet this requirement?",
     "options": [
       "Attach an IAM policy to the authenticated role that uses the dynamodb:LeadingKeys condition key matched to the user's identity ID.",
-      "Create a separate DynamoDB table for each user and grant access by table name.",
-      "Encrypt each user's items with a different AWS KMS key and share keys per user.",
-      "Use a security group that allows each user's IP address to reach the table."
+      "Create a separate DynamoDB table for each user and grant access by table name in the authenticated role's policy.",
+      "Encrypt each user's items with a different AWS KMS key and allow each user to use only their own key.",
+      "Use a VPC endpoint policy and security group rules that allow only each user's device IP address to reach the table through the endpoint."
     ],
     "answer": [
       0
@@ -412,11 +412,11 @@
     "difficulty": 3,
     "question": "A company requires that its Amazon DynamoDB table can be accessed only from workloads inside a specific VPC and never over the public internet. Which actions should the solutions architect take? (Select TWO.)",
     "options": [
-      "Place the DynamoDB table in a private subnet of the VPC.",
+      "Place the DynamoDB table in a private subnet of the VPC with no route to an internet gateway.",
       "Add a resource-based policy on the table that denies requests unless aws:SourceVpce matches the VPC endpoint ID.",
-      "Enable DynamoDB global tables with the VPC as the only replica.",
+      "Enable DynamoDB global tables with the VPC configured as the only replica location for the table.",
       "Create a gateway VPC endpoint for DynamoDB in the VPC and associate it with the private route tables.",
-      "Attach a security group to the DynamoDB table that allows only the VPC CIDR range."
+      "Attach a security group to the DynamoDB table that allows inbound HTTPS only from the VPC CIDR range."
     ],
     "answer": [
       1,
@@ -454,9 +454,9 @@
     "options": [
       "Compress large text attributes before storing them in DynamoDB to reduce item size.",
       "Store the scanned images in Amazon S3 and keep the S3 object key in the DynamoDB item.",
-      "Split each image across a local secondary index and the base table.",
-      "Increase the item size limit by switching the table to on-demand mode.",
-      "Store the images in DAX, which supports larger items than DynamoDB."
+      "Split each image into chunks stored across a local secondary index and the base table.",
+      "Raise the 400 KB item size limit by switching the table from provisioned to on-demand capacity mode.",
+      "Store the images in DAX, which supports larger items than DynamoDB and caches them in memory."
     ],
     "answer": [
       0,
@@ -530,10 +530,10 @@
     "difficulty": 1,
     "question": "A web application runs on EC2 instances in an Auto Scaling group behind an Application Load Balancer. Users are logged out whenever an instance is terminated during scale-in because sessions are stored in local memory. Which solution will make the application tier stateless while keeping session access fast?",
     "options": [
-      "Store session data on each instance's EBS volume and take hourly snapshots.",
-      "Increase the Auto Scaling group minimum size so instances are never terminated.",
+      "Store session data on each instance's EBS volume and take hourly snapshots for recovery after scale-in.",
+      "Increase the Auto Scaling group minimum size and enable scale-in protection so that instances are never terminated.",
       "Store session data in Amazon ElastiCache for Valkey and have all instances read and write sessions there.",
-      "Enable sticky sessions on the ALB so users always return to the same instance."
+      "Enable sticky sessions on the ALB with application-based cookies so that users always return to the same instance."
     ],
     "answer": [
       2
@@ -549,9 +549,9 @@
     "difficulty": 2,
     "question": "A product catalog application reads prices from Amazon RDS through an ElastiCache cache. Price changes must be visible to users immediately, and stale prices in the cache are not acceptable. Which caching strategy should be used?",
     "options": [
-      "Set a 24-hour TTL on every cached price and accept the delay.",
-      "Lazy loading: populate the cache only when a read results in a cache miss.",
-      "Cache only the prices that are read most often and never update them.",
+      "Set a 24-hour TTL on every cached price and accept the delay before changes appear.",
+      "Lazy loading: populate the cache only when a read results in a cache miss, with a short TTL.",
+      "Cache only the prices that are read most often and never update them after they are loaded.",
       "Write-through: update the cache whenever the application writes a price to the database."
     ],
     "answer": [
@@ -590,9 +590,9 @@
     "question": "An application uses a write-through strategy with Amazon ElastiCache. Over time the cache fills with millions of records that were written once and never read, causing evictions of frequently used items. Which change will BEST address this while keeping cached data fresh?",
     "options": [
       "Add a TTL to cached items and combine write-through with lazy loading so unread data expires and is reloaded on demand.",
-      "Replace the cache with read replicas of the database to store the unused records.",
-      "Switch to ElastiCache for Memcached so that unused keys are never evicted.",
-      "Disable the cache eviction policy so that frequently used items are never removed."
+      "Replace the cache with read replicas of the database so that the rarely read records no longer use cache memory.",
+      "Switch to ElastiCache for Memcached, which uses a slab allocator so that unused keys are never evicted.",
+      "Set the maxmemory-policy parameter to noeviction so that frequently used items are never removed from the cache."
     ],
     "answer": [
       0
@@ -608,9 +608,9 @@
     "difficulty": 2,
     "question": "An application uses Amazon ElastiCache for Valkey with cluster mode disabled. The dataset is approaching the memory of the largest node type, and write throughput is limited by the single primary. Which solution will allow the cache to scale both memory and write capacity?",
     "options": [
-      "Enable Multi-AZ with automatic failover on the replication group.",
-      "Turn on data tiering for the existing single-shard replication group.",
-      "Add more read replicas to the existing cluster mode disabled replication group.",
+      "Enable Multi-AZ with automatic failover on the replication group so that a replica can also accept writes.",
+      "Turn on data tiering for the existing single-shard replication group so that local SSDs extend its memory.",
+      "Add more read replicas to the existing cluster mode disabled replication group, up to the limit of five.",
       "Use cluster mode enabled to partition data across multiple shards, each with its own primary."
     ],
     "answer": [
@@ -669,10 +669,10 @@
     "difficulty": 3,
     "question": "A company runs several node-based Amazon ElastiCache for Redis OSS clusters. The applications use only standard open-source commands. The company wants to lower caching costs without rewriting application code. Which solution will meet these requirements?",
     "options": [
-      "Replace the clusters with DynamoDB Accelerator clusters of the same size.",
-      "Upgrade the clusters in place to ElastiCache for Valkey, which has lower pricing and is compatible with Redis OSS clients.",
-      "Migrate the clusters to Amazon MemoryDB to take advantage of durable storage.",
-      "Add more read replicas so that each node can be a smaller size."
+      "Replace the clusters with DynamoDB Accelerator (DAX) clusters of the same node size and count.",
+      "Upgrade the clusters in place to ElastiCache for Valkey, which is priced lower and is compatible with Redis OSS clients.",
+      "Migrate the clusters to Amazon MemoryDB, which is Redis OSS-compatible and adds durable Multi-AZ storage.",
+      "Add more read replicas so that each node can be a smaller size, and enable auto scaling for the replicas."
     ],
     "answer": [
       1
@@ -726,10 +726,10 @@
     "difficulty": 1,
     "question": "A company runs a self-managed MongoDB cluster for a content management application that stores flexible JSON documents. The company wants a managed, MongoDB-compatible database on AWS to reduce operational effort. Which service should be used?",
     "options": [
-      "Amazon Timestream",
+      "Amazon Timestream for LiveAnalytics",
       "Amazon DocumentDB (with MongoDB compatibility)",
       "Amazon Keyspaces (for Apache Cassandra)",
-      "Amazon Neptune"
+      "Amazon Neptune Analytics with openCypher queries"
     ],
     "answer": [
       1
@@ -803,10 +803,10 @@
     "difficulty": 3,
     "question": "A company needs a transactional relational database for vehicle title records and an immutable, write-once history of every change that auditors can review for 10 years. Amazon QLDB has reached end of support, so the company needs an alternative. Which solution will meet these requirements?",
     "options": [
-      "Use Amazon DynamoDB with TTL set to 10 years so old record versions remain immutable.",
-      "Use Amazon Neptune with each change stored as an edge that administrators can delete.",
-      "Use Amazon ElastiCache for Valkey with snapshots retained for 10 years.",
-      "Use Amazon Aurora PostgreSQL for the records and an AWS DMS change data capture task that writes every change to an S3 bucket with S3 Object Lock in compliance mode."
+      "Use Amazon DynamoDB with TTL set to 10 years and DynamoDB Streams so that every old record version stays immutable for the auditors.",
+      "Use Amazon Neptune with each change stored as a new edge in the graph, which administrators can delete when needed.",
+      "Use Amazon ElastiCache for Valkey with Multi-AZ replicas and daily snapshots exported to Amazon S3 and retained for 10 years for auditors.",
+      "Use Aurora PostgreSQL for the records and an AWS DMS CDC task that writes every change to an S3 bucket with Object Lock in compliance mode."
     ],
     "answer": [
       3
@@ -863,9 +863,9 @@
     "question": "An online marketplace stores product listings in Amazon DynamoDB. The company now needs full-text search with fuzzy matching and relevance ranking on listing descriptions, kept in sync with the table, without building custom replication code. Which solution will meet these requirements?",
     "options": [
       "Use the DynamoDB zero-ETL integration with Amazon OpenSearch Service to sync the table into an OpenSearch index.",
-      "Enable DAX and run text searches against the cached items.",
-      "Use a Scan operation with a contains filter expression for each search request.",
-      "Create a global secondary index on the description attribute and use Query with begins_with."
+      "Enable DAX and run text searches with contains filters against the cached items for low latency.",
+      "Use a Scan operation with a contains filter expression on the description attribute and sort the matches in the application for each search request.",
+      "Create a global secondary index on the description attribute and use Query with begins_with on the sort key."
     ],
     "answer": [
       0
@@ -902,10 +902,10 @@
     "question": "A gaming company uses an Amazon DynamoDB global table in the default multi-Region eventual consistency (MREC) mode with replicas in us-east-1 and eu-west-1. Which statements describe how this global table behaves? (Select TWO.)",
     "options": [
       "If the same item is updated in both Regions at the same time, DynamoDB keeps the write with the latest internal timestamp (last writer wins).",
-      "Each write is synchronously replicated to the other Region before the write call returns.",
+      "Each write is synchronously replicated to the other Region before the write call returns, so both replicas always match.",
       "A strongly consistent read in eu-west-1 can return stale data if the item was last updated in us-east-1.",
-      "A TransactWriteItems call is replicated to the other Region as a single atomic unit.",
-      "The table can be switched to multi-Region strong consistency later without re-creating it."
+      "A TransactWriteItems call is replicated to the other Region as a single atomic unit, preserving the transaction's isolation.",
+      "The table can be switched to multi-Region strong consistency later with an UpdateTable call, without re-creating it."
     ],
     "answer": [
       0,
@@ -983,10 +983,10 @@
     "difficulty": 2,
     "question": "A product catalog on a provisioned-mode Amazon DynamoDB table performs 20,000 strongly consistent reads per second of 3 KB items. The business confirms that the catalog can tolerate data that is up to a second old. Which change will reduce the required read capacity the MOST without adding new services?",
     "options": [
-      "Enable DynamoDB Streams so that stream consumers serve part of the read traffic.",
-      "Change the table class to DynamoDB Standard-Infrequent Access.",
+      "Enable DynamoDB Streams so that stream consumers can serve part of the read traffic from the change records of each item.",
+      "Change the table class to DynamoDB Standard-Infrequent Access, which has a lower price for stored data.",
       "Switch the reads to eventually consistent reads, which use half the read capacity of strongly consistent reads.",
-      "Add a local secondary index and send the reads to the index instead."
+      "Add a local secondary index with the same key and send half of the reads to the index instead."
     ],
     "answer": [
       2
@@ -1003,10 +1003,10 @@
     "difficulty": 3,
     "question": "A logistics company captures item-level changes from an Amazon DynamoDB table. Five independent consumer applications must read the change records, one consumer must deliver them to Amazon S3 through Amazon Data Firehose, and the records must be kept for 7 days so they can be reprocessed. Which solution will meet these requirements?",
     "options": [
-      "Enable DynamoDB Streams and increase the stream retention period to 7 days.",
+      "Enable DynamoDB Streams with five Lambda consumers and increase the stream retention period to 7 days.",
       "Use Amazon Kinesis Data Streams for DynamoDB to send the changes to a Kinesis data stream with 7-day retention.",
-      "Enable Time to Live on the table so that changed items are copied to Amazon S3.",
-      "Run an incremental export to Amazon S3 every hour and have the consumers read the exported files."
+      "Enable Time to Live on the table so that changed items are copied to Amazon S3 and kept for 7 days.",
+      "Run an incremental export to Amazon S3 every hour and have the five consumers and Firehose read the exported files from S3."
     ],
     "answer": [
       1
@@ -1065,10 +1065,10 @@
     "difficulty": 3,
     "question": "An Amazon DynamoDB table stores 200 million orders, but at any time only about 10,000 are waiting to ship. A warehouse dashboard must list the waiting orders for each warehouse, sorted by order date, every few seconds without scanning the table. Which design is the MOST efficient?",
     "options": [
-      "Run a parallel Scan with a filter expression on the order status attribute every few seconds.",
-      "Create a local secondary index on the order status attribute of the existing table.",
-      "Add a PendingSince attribute only to waiting orders, remove it when they ship, and create a GSI with warehouse ID as the partition key and PendingSince as the sort key.",
-      "Put a DAX cluster in front of the table and cache all 200 million orders."
+      "Run a parallel Scan with a filter expression on the order status attribute every few seconds and sort the results in the application.",
+      "Create a local secondary index on the order status attribute of the existing table with order date as the sort key.",
+      "Add a PendingSince attribute only to waiting orders, remove it at shipment, and create a GSI keyed on warehouse ID and PendingSince.",
+      "Put a DAX cluster in front of the table and cache all 200 million orders so that the dashboard queries hit memory."
     ],
     "answer": [
       2
@@ -1085,10 +1085,10 @@
     "difficulty": 3,
     "question": "A provisioned-mode Amazon DynamoDB table has 5,000 WCUs and consumes only about 2,000 WCUs, yet writes to the table are being throttled. The table has one global secondary index that projects all attributes and is provisioned with 500 WCUs. What is the MOST likely cause and fix?",
     "options": [
-      "The GSI does not have enough write capacity, which throttles writes to the base table; raise the GSI's write capacity to at least match the table.",
-      "The partition key values are too evenly distributed; add a random suffix to concentrate writes.",
-      "DynamoDB Streams is consuming the table's write capacity; turn off the stream.",
-      "Eventually consistent reads on the GSI are blocking writes; switch the GSI to strongly consistent reads."
+      "The GSI lacks write capacity, which throttles writes to the base table; raise the GSI's write capacity to at least the table's.",
+      "The partition key values are too evenly distributed across partitions; add a random suffix to the key to concentrate writes.",
+      "DynamoDB Streams is consuming part of the table's write capacity for each change record; turn off the stream.",
+      "Eventually consistent reads on the GSI are blocking the asynchronous propagation of writes; switch the GSI to strongly consistent reads instead."
     ],
     "answer": [
       0
@@ -1105,10 +1105,10 @@
     "difficulty": 2,
     "question": "A data science team in account B needs read-only access to a single Amazon DynamoDB table in account A. The table owner wants to grant the access on the table itself and see it reported by IAM Access Analyzer, without creating roles in account A for the team to assume. Which actions are required? (Select TWO.)",
     "options": [
-      "Share the table with account B by using AWS Resource Access Manager.",
-      "Create an IAM user in account A and give its access keys to the data science team.",
+      "Share the table with account B by using AWS Resource Access Manager and accept the share in account B.",
+      "Create an IAM user in account A with read-only DynamoDB permissions and give its access keys to the data science team.",
       "Attach a resource-based policy to the table that allows read actions for the data science role in account B.",
-      "Add a VPC endpoint policy in account B that allows dynamodb:GetItem on the table.",
+      "Add a VPC endpoint policy in account B that allows dynamodb:GetItem and dynamodb:Query on the table ARN in account A.",
       "Attach an identity-based policy to the data science role in account B that allows the same read actions on the table ARN."
     ],
     "answer": [
@@ -1211,10 +1211,10 @@
     "difficulty": 3,
     "question": "A company runs a 3 TB Amazon ElastiCache for Valkey cluster on memory-optimized r6g nodes. Monitoring shows that only about 15% of the data is accessed regularly, and the application can tolerate a few hundred microseconds of extra latency for rarely accessed items. The company wants to reduce costs without changing application code. What should the solutions architect do?",
     "options": [
-      "Switch the engine to Memcached, which keeps rarely used items on disk.",
+      "Switch the engine to Memcached, which keeps rarely used items on disk and frees memory for hot keys.",
       "Move the data to a cluster of r6gd nodes with data tiering so that infrequently accessed values move to local SSD.",
-      "Reduce the number of shards and let eviction drop most of the data.",
-      "Store the rarely used items in a DynamoDB Accelerator (DAX) cluster."
+      "Reduce the number of shards and let the allkeys-lru eviction policy drop the rarely accessed data.",
+      "Store the rarely used items in a DynamoDB Accelerator (DAX) cluster and keep only the frequently accessed items in the Valkey cluster."
     ],
     "answer": [
       1
@@ -1232,7 +1232,7 @@
     "question": "EC2 instances in private subnets access Amazon DynamoDB through a gateway VPC endpoint. The security team wants to make sure that workloads in this VPC can use only the Orders table through the endpoint, even if an instance role is accidentally granted broader DynamoDB permissions. What should the solutions architect do?",
     "options": [
       "Attach a custom endpoint policy to the gateway endpoint that allows actions only on the Orders table ARN.",
-      "Attach a security group to the gateway endpoint that allows traffic only for the Orders table.",
+      "Attach a security group to the gateway endpoint that allows outbound traffic only for requests to the Orders table.",
       "Encrypt every other table with a customer managed key that the VPC cannot use.",
       "Add network ACL rules that block every DynamoDB IP address except those used by the Orders table."
     ],
@@ -1331,10 +1331,10 @@
     "difficulty": 3,
     "question": "A company uses an Amazon DynamoDB global table in multi-Region eventual consistency mode with replicas in us-east-1 and ap-southeast-1. In each Region the application reads through a local DAX cluster. Users in ap-southeast-1 sometimes see product prices that were changed in us-east-1 several minutes earlier, although the ReplicationLatency metric stays under 1 second. What is the cause, and how can the staleness be reduced?",
     "options": [
-      "Global table replication pauses while DAX is enabled; remove the DAX cluster in us-east-1.",
-      "MREC replication takes several minutes by design; switch the table to on-demand capacity mode.",
-      "The ap-southeast-1 replica serves reads from an eventually consistent GSI; add an LSI on the price attribute.",
-      "Replicated writes update the replica table directly and bypass the local DAX cache, so cached items stay stale until their TTL expires; lower the DAX item TTL or read prices directly from the table."
+      "Global table replication pauses while a DAX cluster is attached to a replica; remove the DAX cluster in us-east-1 to resume it.",
+      "MREC replication to distant Regions takes several minutes by design; switch the table to on-demand capacity mode to speed it up.",
+      "The ap-southeast-1 replica serves reads from an eventually consistent GSI; add an LSI on the price attribute for strongly consistent reads.",
+      "Replicated writes bypass the local DAX cache, so cached items stay stale until their TTL expires; lower the DAX item TTL or read prices directly from the table."
     ],
     "answer": [
       3
@@ -1352,9 +1352,9 @@
     "question": "An Amazon DynamoDB table receives millions of updates per hour, and an AWS Lambda function attached to its stream only needs to act when an order's status changes to CANCELLED. Most invocations exit immediately without doing any work, which drives up Lambda costs. What should the solutions architect do?",
     "options": [
       "Add filter criteria to the Lambda event source mapping so that only stream records with the CANCELLED status invoke the function.",
-      "Increase the batch size to 10,000 records and let the function discard the records it does not need.",
-      "Replace the stream with a scheduled Scan for cancelled orders every minute.",
-      "Change the stream view type to KEYS_ONLY to reduce the number of invocations."
+      "Increase the batch size to 10,000 records and the batching window so that the function discards unneeded records in bulk.",
+      "Replace the stream with a scheduled Scan for cancelled orders every minute by using an EventBridge rule.",
+      "Change the stream view type to KEYS_ONLY so that fewer records are sent to the function on each invocation."
     ],
     "answer": [
       0
@@ -1411,10 +1411,10 @@
     "difficulty": 3,
     "question": "A session table in Amazon DynamoDB uses Time to Live with an attribute that holds each session's expiration time in Unix epoch seconds. Developers notice that some queries still return sessions that expired several hours ago. What should the developers do?",
     "options": [
-      "Store the TTL attribute as an ISO 8601 String so that DynamoDB deletes items immediately.",
+      "Store the TTL attribute as an ISO 8601 String so that DynamoDB deletes items at the exact expiration time.",
       "Add a filter expression that excludes items whose TTL attribute is earlier than the current time.",
-      "Use strongly consistent reads so that expired items are hidden from results.",
-      "Disable and re-enable TTL on the table to force immediate deletion."
+      "Use strongly consistent reads, which do not return items whose TTL timestamp has already passed.",
+      "Disable and re-enable TTL on the table to force DynamoDB to delete all of the expired items at once."
     ],
     "answer": [
       1
@@ -1431,10 +1431,10 @@
     "difficulty": 2,
     "question": "A retailer expects request rates on an Amazon DynamoDB on-demand table to jump to about 50 times the normal rate the moment a flash sale starts next week. The company wants the table to handle that traffic from the first second without changing the capacity mode. What should the solutions architect do before the sale?",
     "options": [
-      "Switch the table to provisioned mode with auto scaling at a 70% target utilization.",
+      "Switch the table to provisioned mode with auto scaling at a 70% target utilization and a high maximum.",
       "Increase (pre-warm) the table's warm throughput values to the expected peak read and write rates.",
-      "Enable point-in-time recovery so that DynamoDB reserves extra partitions.",
-      "Add a global table replica in another Region to absorb the extra writes."
+      "Enable point-in-time recovery so that DynamoDB reserves extra partitions ahead of the sale.",
+      "Add a global table replica in another Region so that the replica absorbs part of the extra writes."
     ],
     "answer": [
       1
@@ -1451,10 +1451,10 @@
     "difficulty": 3,
     "question": "A customer support application reads items from an Amazon DynamoDB table named CustomerData. Support agents may read profile attributes but must never retrieve the SSN and CreditCardNumber attributes stored in the same items. Which solution will enforce this requirement?",
     "options": [
-      "Encrypt the table with a customer managed KMS key and deny kms:Decrypt to the agents' role.",
-      "Create a GSI that leaves out the sensitive attributes and instruct agents to query only the index.",
-      "Use an IAM policy with the dynamodb:Attributes condition key and require dynamodb:Select to be SPECIFIC_ATTRIBUTES so only allowed attributes can be requested.",
-      "Use the dynamodb:LeadingKeys condition key to hide the sensitive attributes from the agents."
+      "Encrypt the table with a customer managed KMS key and deny kms:Decrypt on that key to the support agents' IAM role.",
+      "Create a GSI that projects only the profile attributes, and instruct the agents' application to query only the index instead of the base table.",
+      "Use an IAM policy with the dynamodb:Attributes condition key and require dynamodb:Select to be SPECIFIC_ATTRIBUTES so only allowed attributes are returned.",
+      "Use the dynamodb:LeadingKeys condition key in the agents' IAM policy to hide the SSN and CreditCardNumber attributes."
     ],
     "answer": [
       2

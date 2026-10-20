@@ -7,10 +7,10 @@
     "difficulty": 1,
     "question": "A travel company stores three years of booking logs in Amazon S3 and queries them with Amazon Athena. Almost every query filters on a single day or week, yet each query scans the entire dataset and costs are rising. Which change will reduce query cost the MOST?",
     "options": [
-      "Move the data to S3 Standard-Infrequent Access",
-      "Increase the number of Athena workgroups",
+      "Move the data to S3 Standard-Infrequent Access, which charges less per GB for data that is read rarely",
+      "Increase the number of Athena workgroups so that each team's queries run in parallel",
       "Store the data in date-based partitions such as year, month, and day, and filter on the partition columns",
-      "Enable S3 Transfer Acceleration on the bucket"
+      "Enable S3 Transfer Acceleration on the bucket so that Athena reads the files through edge locations"
     ],
     "answer": [
       2
@@ -27,9 +27,9 @@
     "question": "A marketing team queries 40 TB of CSV files in Amazon S3 with Amazon Athena. Most queries select only 5 of the 120 columns. The team wants faster queries and lower cost without changing tools. What should a solutions architect recommend?",
     "options": [
       "Convert the data to a compressed columnar format such as Apache Parquet",
-      "Combine all CSV files into a single very large file",
-      "Load the data into Amazon DynamoDB and query it with PartiQL",
-      "Turn on S3 Versioning so Athena reads only the latest data"
+      "Combine all CSV files into a single very large file to reduce the number of S3 requests",
+      "Load the data into Amazon DynamoDB and query only the needed attributes with PartiQL",
+      "Turn on S3 Versioning so that Athena reads only the latest version of each file"
     ],
     "answer": [
       0
@@ -64,10 +64,10 @@
     "difficulty": 3,
     "question": "An IoT company partitions sensor data in Amazon S3 by device ID and hour, creating hundreds of thousands of partitions. Athena queries spend much of their time on query planning, and running MSCK REPAIR TABLE after each load is slow. Which solution improves performance with the LEAST operational overhead?",
     "options": [
-      "Run an AWS Glue crawler every five minutes to add partitions",
+      "Run an AWS Glue crawler every five minutes to add the new partitions to the Data Catalog",
       "Configure Athena partition projection on the table so partition values are computed from configured rules",
-      "Remove all partitions and rely on Parquet statistics",
-      "Move the data into a single Amazon RDS table indexed by hour"
+      "Remove all partitions and rely on Parquet min/max statistics to skip row groups",
+      "Move the data into a single Amazon RDS table with an index on the device ID and hour columns"
     ],
     "answer": [
       1
@@ -104,10 +104,10 @@
     "difficulty": 2,
     "question": "A company's Amazon Redshift data warehouse grows by 10 TB each month, but its compute needs are stable. The company keeps adding nodes only to get more storage. Which solution is MOST cost-effective?",
     "options": [
-      "Add more nodes of the current type each quarter",
-      "Move the warehouse to Amazon RDS for PostgreSQL",
+      "Add more nodes of the current dense compute type each quarter to keep pace with storage growth",
+      "Move the warehouse to Amazon RDS for PostgreSQL with storage autoscaling enabled",
       "Use Amazon Redshift RA3 nodes with Redshift Managed Storage so storage scales separately from compute",
-      "Unload all data to Amazon EFS and query it from EC2"
+      "Unload all data to Amazon EFS and query it from EC2 instances that scale independently"
     ],
     "answer": [
       2
@@ -240,10 +240,10 @@
     "difficulty": 3,
     "question": "A company runs a long-lived Amazon EMR cluster for nightly batch processing. It wants to cut costs, and jobs can tolerate some lost task capacity but not loss of HDFS data or the cluster itself. Which purchasing strategy is MOST cost-effective?",
     "options": [
-      "Use Spot Instances for the primary, core, and task nodes",
+      "Use Spot Instances for the primary, core, and task nodes with the capacity-optimized allocation strategy",
       "Use On-Demand or Reserved capacity for primary and core nodes and Spot Instances for task nodes",
-      "Use Dedicated Hosts for all nodes",
-      "Use Spot Instances for the primary node and On-Demand for task nodes"
+      "Use Dedicated Hosts for all nodes so that the cluster always has guaranteed capacity",
+      "Use Spot Instances for the primary node and On-Demand Instances for the core and task nodes"
     ],
     "answer": [
       1
@@ -299,10 +299,10 @@
     "difficulty": 1,
     "question": "A company lands new JSON datasets in Amazon S3 from several partners, and each dataset has a different schema. Analysts want to query new datasets in Amazon Athena without writing table definitions by hand. What should a solutions architect do?",
     "options": [
-      "Create an Amazon RDS database to store the schemas",
-      "Use Amazon Macie to classify the datasets",
+      "Create an Amazon RDS database to store the schemas and connect Athena to it as an external Hive metastore",
+      "Use Amazon Macie to discover and classify the new datasets as they arrive in Amazon S3",
       "Run an AWS Glue crawler that infers schemas and creates tables in the AWS Glue Data Catalog",
-      "Convert each file to CSV with an AWS Lambda function"
+      "Convert each file to CSV with an AWS Lambda function triggered by S3 event notifications"
     ],
     "answer": [
       2
@@ -356,10 +356,10 @@
     "difficulty": 2,
     "question": "A company's Amazon Athena query results contain customer data and are written to an S3 bucket. Security requires that all query results be encrypted with an AWS KMS key, even if an analyst's client is misconfigured. What should a solutions architect do?",
     "options": [
-      "Ask analysts to select SSE-KMS in their SQL client settings",
+      "Ask analysts to select SSE-KMS with the required key in their JDBC or ODBC client settings",
       "Configure the Athena workgroup to encrypt query results with SSE-KMS and override client-side settings",
-      "Enable Amazon Macie on the results bucket",
-      "Enable S3 Versioning on the results bucket"
+      "Enable Amazon Macie on the results bucket to detect objects that contain customer data",
+      "Enable S3 Versioning and S3 Object Lock on the results bucket so that results cannot be altered"
     ],
     "answer": [
       1
@@ -435,8 +435,8 @@
     "question": "An e-commerce site needs a product search feature with full-text search, relevance ranking, typo tolerance, and faceted filters by brand and price. Which AWS service is the best fit?",
     "options": [
       "Amazon Redshift",
-      "Amazon Athena",
-      "Amazon DynamoDB",
+      "Amazon Athena with partition projection",
+      "Amazon DynamoDB with global secondary indexes",
       "Amazon OpenSearch Service"
     ],
     "answer": [
@@ -454,9 +454,9 @@
     "question": "An operations team wants to search and visualize application logs from hundreds of services in near real time, with interactive dashboards and alerting on error spikes. Logs are already streamed through Amazon Data Firehose. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
       "Deliver logs with Firehose to Amazon OpenSearch Service and use OpenSearch Dashboards",
-      "Deliver logs to Amazon S3 and run a nightly Amazon EMR job",
-      "Load logs into Amazon RDS for MySQL and build reports with SQL",
-      "Store logs in Amazon DynamoDB and scan the table for errors"
+      "Deliver logs to Amazon S3 with Firehose and run a nightly Amazon EMR job to build reports",
+      "Load logs into Amazon RDS for MySQL with full-text indexes and build reports with SQL",
+      "Store logs in Amazon DynamoDB with a TTL attribute and scan the table for errors"
     ],
     "answer": [
       0
@@ -491,9 +491,9 @@
     "difficulty": 2,
     "question": "A company's customer-facing search runs on an Amazon OpenSearch Service domain in a single Availability Zone, and an AZ issue caused an outage. Which configuration will improve availability for production workloads?",
     "options": [
-      "Increase the instance size of the data nodes",
-      "Take hourly manual snapshots to Amazon S3",
-      "Enable OpenSearch Dashboards authentication",
+      "Increase the instance size of the data nodes and switch them to storage optimized instances",
+      "Take hourly manual snapshots to Amazon S3 so that the domain can be restored in another Availability Zone",
+      "Enable OpenSearch Dashboards authentication with Amazon Cognito for the customer-facing users",
       "Deploy the domain across three Availability Zones with replica shards and dedicated master nodes"
     ],
     "answer": [
@@ -551,10 +551,10 @@
     "difficulty": 2,
     "question": "A franchise company publishes one Amazon Quick Sight sales dashboard to all regional managers. Each manager must see only data for their own region in the same dashboard. Which solution meets this requirement with the LEAST effort?",
     "options": [
-      "Create a separate dataset and dashboard for each region",
-      "Use S3 bucket policies to restrict which rows each manager can read",
+      "Create a separate dataset and dashboard for each region and share each one with its manager",
+      "Use S3 bucket policies on the source data to restrict which rows each manager can read",
       "Apply Quick Sight row-level security to the dataset by using a permissions dataset that maps users to regions",
-      "Ask managers to apply a region filter when they open the dashboard"
+      "Add a region filter control to the dashboard and ask managers to select their region when they open it"
     ],
     "answer": [
       2
@@ -611,9 +611,9 @@
     "question": "A company runs self-managed Apache Kafka on EC2 and struggles with broker failures and patching. It wants a highly available managed service that works with its existing Kafka producers and consumers without code changes. Which service should it use?",
     "options": [
       "Amazon Managed Streaming for Apache Kafka (Amazon MSK)",
-      "Amazon Kinesis Data Streams",
-      "Amazon SQS FIFO queues",
-      "Amazon MQ for RabbitMQ"
+      "Amazon Kinesis Data Streams in on-demand mode",
+      "Amazon SQS FIFO queues with message groups",
+      "Amazon MQ for RabbitMQ with a cluster deployment"
     ],
     "answer": [
       0
@@ -650,8 +650,8 @@
     "options": [
       "Redshift concurrency scaling",
       "Redshift enhanced VPC routing",
-      "Redshift Spectrum",
-      "S3 Transfer Acceleration"
+      "Redshift Spectrum with external tables",
+      "S3 Transfer Acceleration on the source bucket"
     ],
     "answer": [
       1
@@ -688,9 +688,9 @@
     "difficulty": 1,
     "question": "A social media startup must automatically flag user-uploaded images that contain explicit or violent content before they are published. The team has no machine learning experience. Which service should it use?",
     "options": [
-      "Amazon Textract",
-      "Amazon Comprehend",
-      "Amazon Polly",
+      "Amazon Textract document analysis with queries",
+      "Amazon Comprehend toxicity detection",
+      "Amazon Polly neural voices",
       "Amazon Rekognition content moderation"
     ],
     "answer": [
@@ -707,10 +707,10 @@
     "difficulty": 2,
     "question": "An accounts payable team receives thousands of scanned invoices and forms each day. It needs to extract vendor names, totals, line items, and table data automatically, not just raw text. Which solution meets these requirements with the LEAST development effort?",
     "options": [
-      "Amazon Rekognition text detection",
-      "Amazon Comprehend custom entity recognition on the images",
+      "Amazon Rekognition text detection on each scanned invoice image",
+      "Amazon Comprehend custom entity recognition run on the scanned invoices",
       "Amazon Textract with its form, table, and expense analysis features",
-      "A custom OCR model trained in Amazon SageMaker AI"
+      "A custom OCR model trained and hosted in Amazon SageMaker AI"
     ],
     "answer": [
       2
@@ -727,9 +727,9 @@
     "question": "A hospital wants to extract medical conditions, medications, and dosages from unstructured clinical notes and identify protected health information in the text. It wants a managed NLP service built for medical language. Which service should it use?",
     "options": [
       "Amazon Comprehend Medical",
-      "Amazon Transcribe",
+      "Amazon Transcribe Medical",
       "Amazon Kendra",
-      "Amazon Translate"
+      "Amazon Translate with custom terminology"
     ],
     "answer": [
       0
@@ -745,10 +745,10 @@
     "difficulty": 2,
     "question": "A global call center records customer calls in Spanish, Portuguese, and French. Managers want English text versions of every call so they can analyze them. Which AWS services should be combined? (Select TWO.)",
     "options": [
-      "Amazon Polly to convert the recordings into text",
+      "Amazon Polly to convert the call recordings into text transcripts",
       "Amazon Transcribe to convert the audio recordings into text",
       "Amazon Translate to convert the transcripts into English",
-      "Amazon Lex to build a bot that reads the recordings",
+      "Amazon Lex to build a bot that reads and summarizes the recordings",
       "Amazon Rekognition to analyze the audio files"
     ],
     "answer": [
@@ -844,8 +844,8 @@
     "options": [
       "Use Amazon Bedrock Knowledge Bases to retrieve relevant passages from the S3 documents for the model",
       "Train a new foundation model from scratch on SageMaker AI with the policy documents",
-      "Use Amazon Rekognition to filter harmful text in model responses",
-      "Use Amazon Polly to redact personal data from the responses",
+      "Use Amazon Rekognition content moderation to filter harmful text in the model responses",
+      "Use Amazon Polly with lexicons to redact personal data from the responses before display",
       "Apply Amazon Bedrock Guardrails with content filters and sensitive information filters"
     ],
     "answer": [
@@ -904,9 +904,9 @@
     "difficulty": 1,
     "question": "A bank stores millions of English customer emails as text files in Amazon S3. Before data scientists can use the emails, personally identifiable information such as names, addresses, and bank account numbers must be redacted. The bank has no machine learning expertise. Which solution meets these requirements?",
     "options": [
-      "Use Amazon Rekognition text detection to find and blur the PII",
-      "Use Amazon Macie to remove the PII from the objects",
-      "Use Amazon Translate with custom terminology to replace the PII",
+      "Use Amazon Rekognition text detection to find the PII in each document and blur it",
+      "Use Amazon Macie sensitive data discovery jobs to find and remove the PII from the objects",
+      "Use Amazon Translate with custom terminology to replace the PII terms with placeholders",
       "Use an Amazon Comprehend asynchronous PII detection job that redacts the PII entities"
     ],
     "answer": [
@@ -944,10 +944,10 @@
     "difficulty": 2,
     "question": "A company runs an Amazon MSK provisioned cluster. Producer and consumer applications run on AWS with IAM roles. The security team wants to authenticate clients and authorize actions on specific topics by using IAM policies, without maintaining a separate set of Apache Kafka ACLs or user passwords. What should a solutions architect configure?",
     "options": [
-      "SASL/SCRAM authentication with credentials stored in AWS Secrets Manager",
-      "Mutual TLS authentication with certificates from AWS Private CA and Kafka ACLs",
+      "SASL/SCRAM authentication with user credentials stored in AWS Secrets Manager and associated with the cluster",
+      "Mutual TLS authentication with client certificates from AWS Private CA and Kafka ACLs on each topic",
       "IAM access control for the MSK cluster, with IAM policies that allow the required cluster and topic actions",
-      "Security group rules that allow only the application subnets to reach the brokers"
+      "Security group rules that allow only the application subnets to reach the brokers on the IAM port 9098"
     ],
     "answer": [
       2
@@ -965,10 +965,10 @@
     "question": "A healthcare company processes patient data with Apache Spark on Amazon EMR on EC2 clusters that read from and write to Amazon S3 through EMRFS. Compliance requires encryption of the data in S3, on the cluster's local disks, and while it moves between cluster nodes. The company wants the settings applied consistently to every new cluster. Which actions meet these requirements? (Select TWO.)",
     "options": [
       "Create an Amazon EMR security configuration that enables at-rest encryption for EMRFS data in S3 and local disk encryption",
-      "Enable S3 Versioning on the input and output buckets",
-      "Place the cluster in a public subnet with an internet gateway for faster access to S3",
+      "Enable S3 Versioning and S3 Object Lock on the input and output buckets for every cluster",
+      "Place the cluster in a public subnet with an internet gateway and use HTTPS endpoints so that traffic to Amazon S3 is encrypted",
       "Enable in-transit encryption in the same security configuration and specify the TLS certificates to use",
-      "Use SSE-C with customer-provided keys for the EMRFS data"
+      "Use SSE-C with customer-provided keys for the EMRFS data and EBS encryption for the local disks"
     ],
     "answer": [
       0,
@@ -986,10 +986,10 @@
     "difficulty": 3,
     "question": "A fintech company trains models in Amazon SageMaker AI by using third-party open source libraries. The security team is worried that malicious code in a library could send training data to a remote host. Training data and model artifacts must still be read from and written to Amazon S3. Which solution meets these requirements with the LEAST network configuration?",
     "options": [
-      "Run the training jobs in a VPC with a NAT gateway and an outbound security group that allows only HTTPS",
-      "Enable network isolation on the training jobs so the containers cannot make outbound network calls while SageMaker AI handles the S3 transfers",
-      "Encrypt the training data with SSE-KMS so that exfiltrated data cannot be read",
-      "Scan the libraries with Amazon Inspector before each training job"
+      "Run the training jobs in a VPC with a NAT gateway and an outbound security group rule that allows only HTTPS on port 443",
+      "Enable network isolation on the training jobs so that containers cannot make outbound calls while SageMaker AI handles the S3 transfers",
+      "Encrypt the training data with SSE-KMS and restrict the key policy so that exfiltrated data cannot be decrypted",
+      "Scan the libraries with Amazon Inspector before each training job and block images that have critical findings"
     ],
     "answer": [
       1
@@ -1006,9 +1006,9 @@
     "difficulty": 3,
     "question": "An insurance company stores customer records in Amazon Redshift. Claims analysts must see only the last four digits of social security numbers, fraud investigators must see full values, and all other users must see a hashed value that still supports joins. The company does not want to create copies of the tables or change existing SQL queries. Which solution meets these requirements?",
     "options": [
-      "Create separate tables for each group with the transformed column values",
-      "Use Redshift Spectrum to query a masked copy of the data in Amazon S3",
-      "Enable column-level encryption with a different AWS KMS key for each group",
+      "Create separate tables for each group with the transformed column values and grant each role its own table",
+      "Use Redshift Spectrum to query a masked copy of the data in Amazon S3 that an AWS Glue job maintains",
+      "Enable column-level encryption with a different AWS KMS key for each group and grant kms:Decrypt per role",
       "Attach Redshift dynamic data masking policies to the column for different roles with role-based access control"
     ],
     "answer": [
@@ -1130,10 +1130,10 @@
     "difficulty": 2,
     "question": "An Amazon Data Firehose stream delivers application logs to an Amazon OpenSearch Service domain. During a domain maintenance event, some documents could not be indexed. The company must not lose these records and wants to be able to backfill them later. How does Firehose handle this situation?",
     "options": [
-      "Firehose keeps the failed documents in the stream for 365 days until the domain becomes available",
-      "Firehose drops the failed documents and writes only an error metric to Amazon CloudWatch",
-      "Firehose sends the failed documents to an Amazon SQS dead-letter queue that the company must create",
-      "Firehose retries for the configured retry duration and then writes the skipped documents to the configured S3 bucket for manual backfill"
+      "Firehose keeps the failed documents in its buffer for up to 365 days and delivers them when the domain becomes available",
+      "Firehose drops the failed documents and publishes only the DeliveryToAmazonOpenSearchService.Success metric to CloudWatch",
+      "Firehose sends the failed documents to an Amazon SQS dead-letter queue that the company must create and associate with the stream",
+      "Firehose retries for the configured retry duration and then writes the skipped documents to the S3 backup bucket for manual backfill"
     ],
     "answer": [
       3
@@ -1151,10 +1151,10 @@
     "question": "An operations dashboard runs the same set of Amazon Athena queries every 5 minutes against JSON logs in Amazon S3. The underlying data is updated only once per hour. Queries are slow and Athena costs are rising. Which actions will improve performance and reduce cost? (Select TWO.)",
     "options": [
       "Enable query result reuse for the dashboard queries with a maximum age of 60 minutes",
-      "Enable S3 Transfer Acceleration on the log bucket",
+      "Enable S3 Transfer Acceleration on the log bucket so that Athena reads the objects faster",
       "Use a CTAS query to convert the logs into a partitioned table in Apache Parquet format",
-      "Increase the per-query data usage control limit in the workgroup",
-      "Move the queries to Athena federated queries against the S3 bucket"
+      "Increase the per-query data usage control limit in the workgroup so that queries are not cancelled",
+      "Move the queries to Athena federated queries against the S3 bucket by using a Lambda connector"
     ],
     "answer": [
       0,
@@ -1173,9 +1173,9 @@
     "question": "A retailer loads data into a central Amazon Redshift provisioned cluster with ETL jobs. Marketing and finance teams each need to query the same, always up-to-date data, but their heavy reports slow down the ETL cluster. The teams have their own Redshift Serverless workgroups. Which solution provides workload isolation without copying data?",
     "options": [
       "Use Redshift data sharing to share the data from the ETL cluster with the teams' workgroups",
-      "Unload the tables to Amazon S3 every hour and load them into each workgroup with COPY",
+      "Unload the tables to Amazon S3 every hour and load them into each team's workgroup with the COPY command",
       "Enable concurrency scaling on the ETL cluster and give the teams direct access to it",
-      "Restore a snapshot of the ETL cluster into each team's account every night"
+      "Restore a snapshot of the ETL cluster into each team's account every night for their reports"
     ],
     "answer": [
       0
@@ -1212,10 +1212,10 @@
     "difficulty": 3,
     "question": "An IoT company writes device telemetry to Amazon Kinesis Data Streams. Analysts need the data available in Amazon Redshift within seconds for SQL analysis. Today, Amazon Data Firehose buffers the data in Amazon S3 and loads it with COPY, which adds minutes of delay and extra S3 storage. Which solution provides the LOWEST latency?",
     "options": [
-      "Lower the Firehose buffer size and buffer interval to their minimum values",
+      "Lower the Firehose buffer size and buffer interval to their minimum values so that COPY runs more often",
       "Use Redshift streaming ingestion with a materialized view that reads directly from the Kinesis data stream",
-      "Write the data to Amazon S3 and query it with Redshift Spectrum external tables",
-      "Run an AWS Glue streaming job that writes micro-batches to Amazon S3 for COPY"
+      "Write the data to Amazon S3 and query it in place with Redshift Spectrum external tables",
+      "Run an AWS Glue streaming job that writes micro-batches to Amazon S3 and loads them into Redshift with COPY every minute"
     ],
     "answer": [
       1
@@ -1232,9 +1232,9 @@
     "difficulty": 2,
     "question": "A company uses Amazon MSK as its event backbone. It needs to continuously write events from several topics to Amazon S3 and stream change data from a PostgreSQL database into Kafka by using an open source Debezium connector. The team does not want to operate Kafka Connect worker clusters. Which solution meets these requirements?",
     "options": [
-      "Run Kafka Connect on a self-managed EC2 Auto Scaling group",
-      "Use AWS Lambda functions to poll each topic and write objects to S3",
-      "Use Amazon Data Firehose to read from PostgreSQL and write to Kafka",
+      "Run Kafka Connect with the S3 sink and Debezium connectors on a self-managed EC2 Auto Scaling group",
+      "Use AWS Lambda functions with MSK event source mappings to read each topic and write objects to S3",
+      "Use Amazon Data Firehose to read change data from PostgreSQL and write it to the Kafka topics",
       "Use Amazon MSK Connect with a sink connector for S3 and a Debezium source connector"
     ],
     "answer": [
@@ -1253,9 +1253,9 @@
     "question": "A company runs Spark jobs on transient Amazon EMR clusters that terminate after each job. Table definitions are stored in a Hive metastore on the cluster, so they are lost when the cluster terminates. The same tables must also be queryable from Amazon Athena. What should a solutions architect do?",
     "options": [
       "Configure Spark on EMR to use the AWS Glue Data Catalog as its Apache Hive metastore",
-      "Keep one EMR cluster running permanently to host the Hive metastore",
-      "Store the table definitions in HDFS on the core nodes",
-      "Recreate the tables with a bootstrap action each time a cluster starts"
+      "Keep one small EMR cluster running permanently to host the shared Hive metastore for all jobs",
+      "Store the table definitions in HDFS on the core nodes so that every Spark job can read them",
+      "Recreate the tables with a bootstrap action each time a transient cluster starts"
     ],
     "answer": [
       0
@@ -1273,7 +1273,7 @@
     "question": "A medical imaging company hosts a computer vision model on Amazon SageMaker AI. Each request contains an image of up to 500 MB, inference takes up to 20 minutes, and requests arrive in unpredictable bursts with long idle periods. Clients can poll for results. Which inference option is the BEST fit?",
     "options": [
       "A real-time inference endpoint with provisioned instances sized for peak traffic",
-      "SageMaker AI Serverless Inference with maximum memory configured",
+      "SageMaker AI Serverless Inference with the maximum memory size of 6 GB configured",
       "SageMaker AI Asynchronous Inference with auto scaling that can scale to zero instances",
       "A batch transform job started each time a single request arrives"
     ],
@@ -1355,9 +1355,9 @@
     "question": "Analysts query a 20 TB Amazon Athena table of raw CSV files in Amazon S3, and most queries filter by date. The team wants a one-time conversion of the existing data into a cheaper-to-query layout by using only SQL in Athena, without provisioning any ETL infrastructure. What should a solutions architect recommend?",
     "options": [
       "Run a CREATE TABLE AS SELECT (CTAS) query that writes the data in Parquet format partitioned by date",
-      "Create an Amazon EMR cluster to rewrite the files with Spark",
-      "Copy the files to S3 Glacier Instant Retrieval to lower storage cost",
-      "Create a view over the CSV table that selects only recent dates"
+      "Create an Amazon EMR cluster to rewrite the files as partitioned Parquet with a Spark job",
+      "Copy the files to S3 Glacier Instant Retrieval to lower the storage cost of the table",
+      "Create a view over the CSV table that selects only recent dates for the analysts' queries"
     ],
     "answer": [
       0
@@ -1436,9 +1436,9 @@
     "difficulty": 3,
     "question": "A SaaS company streams events for thousands of tenants through Amazon Data Firehose into one Amazon S3 prefix. Each tenant's analysts query only their own data with Amazon Athena, but every query scans all tenants' data. The company wants Firehose to write each tenant's events to its own S3 prefix as data arrives, without running a separate partitioning application. What should a solutions architect do?",
     "options": [
-      "Create one Firehose stream per tenant and route events with Amazon EventBridge",
-      "Run a nightly AWS Glue job that moves objects into per-tenant prefixes",
-      "Enable S3 Intelligent-Tiering on the destination bucket",
+      "Create one Firehose stream per tenant and route each tenant's events to its stream with Amazon EventBridge rules",
+      "Run a nightly AWS Glue job that moves the new objects into per-tenant prefixes and updates the partitions",
+      "Enable S3 Intelligent-Tiering on the destination bucket so that each tenant's older data costs less",
       "Enable Firehose dynamic partitioning with the tenant_id field in each record as a partitioning key"
     ],
     "answer": [
@@ -1458,8 +1458,8 @@
     "options": [
       "Use a SageMaker AI batch transform job each week to get inferences for the whole dataset",
       "Keep the real-time endpoint and switch it to a larger instance type to finish faster",
-      "Deploy the model to an endpoint in a second Region for redundancy",
-      "Run the model on an EC2 instance that is reserved for one year"
+      "Deploy the model to a second endpoint in another Region and route requests between the two",
+      "Run the model on an EC2 instance that is reserved for one year to get a lower hourly rate"
     ],
     "answer": [
       0

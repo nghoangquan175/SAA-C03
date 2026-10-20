@@ -66,8 +66,8 @@
     "difficulty": 2,
     "question": "A company's application VPC uses 10.20.0.0/22 and is running out of private IP addresses as its Auto Scaling groups grow. The company wants to add capacity without migrating existing workloads or disrupting running instances. Which solution will meet these requirements with the LEAST operational overhead?",
     "options": [
-      "Change the primary CIDR block of the VPC to 10.20.0.0/16 and update the route tables.",
-      "Modify the existing subnets to use larger CIDR blocks so that more addresses become available.",
+      "Edit the VPC's primary IPv4 CIDR block from 10.20.0.0/22 to 10.20.0.0/16, which keeps the existing subnets because they still fall inside the new range.",
+      "Resize the existing subnets in place to larger CIDR blocks, such as /24 to /23, so the Auto Scaling groups keep their current subnet IDs.",
       "Associate a secondary IPv4 CIDR block with the VPC and create new subnets from it for the Auto Scaling groups.",
       "Create a second VPC with a larger CIDR block, peer it with the existing VPC, and migrate the workloads."
     ],
@@ -86,9 +86,9 @@
     "question": "A company is deploying a three-tier web application with web servers, application servers, and a PostgreSQL database. The application must remain available if an Availability Zone fails, and only the load balancer may be reachable from the internet. Which architecture will meet these requirements?",
     "options": [
       "Place an internet-facing Application Load Balancer in public subnets in two AZs, run the web and application tiers in private subnets in both AZs, and deploy Amazon RDS Multi-AZ in private database subnets.",
-      "Place the web servers in a public subnet that spans two AZs, run the application tier in one private subnet, and deploy Amazon RDS Single-AZ with automated backups.",
-      "Place the Application Load Balancer and all EC2 instances in public subnets in two AZs, and restrict access to the instances by using network ACLs.",
-      "Place an internet-facing Application Load Balancer in one public subnet, run all tiers in private subnets in one AZ, and copy snapshots to a second AZ."
+      "Place the web servers in a public subnet that spans two AZs behind the load balancer, run the application tier in one private subnet, and deploy Amazon RDS Single-AZ with automated backups for point-in-time recovery.",
+      "Place the Application Load Balancer and all EC2 instances, each with a public IP address, in public subnets in two AZs, and rely on network ACLs to filter which internet clients can reach the instances.",
+      "Place an internet-facing Application Load Balancer in one public subnet, run all tiers in private subnets in a single AZ, and copy RDS snapshots to a second AZ for recovery after an AZ outage."
     ],
     "answer": [
       0
@@ -104,10 +104,10 @@
     "difficulty": 1,
     "question": "A developer launches an EC2 instance in a subnet whose route table contains a 0.0.0.0/0 route to an internet gateway. The instance's security group allows inbound HTTPS from 0.0.0.0/0, and the network ACL allows all traffic. Users on the internet cannot reach the instance. What is the MOST likely cause?",
     "options": [
-      "The security group must include an outbound rule for the ephemeral port range.",
+      "The security group must also include an outbound rule that allows the ephemeral port range 1024-65535 for the return traffic.",
       "The instance does not have a public IPv4 address or an Elastic IP address associated with it.",
-      "The internet gateway must be attached directly to the subnet instead of to the VPC.",
-      "The route table also requires a 0.0.0.0/0 route to a NAT gateway for inbound traffic."
+      "The internet gateway must be attached directly to the instance's subnet instead of to the VPC.",
+      "The route table also requires a 0.0.0.0/0 route to a NAT gateway so that inbound connections from the internet can be translated to the instance."
     ],
     "answer": [
       1
@@ -142,10 +142,10 @@
     "difficulty": 1,
     "question": "During an architecture review, a team member is concerned that the single internet gateway attached to a production VPC is a single point of failure and a bandwidth bottleneck. What should the solutions architect tell the team?",
     "options": [
-      "Attach a second internet gateway to the VPC and split the default routes between both gateways.",
-      "Deploy the internet gateway in a second Availability Zone and configure a health check for failover.",
+      "Attach a second internet gateway to the VPC and split the 0.0.0.0/0 routes between both gateways across the subnets' route tables.",
+      "Deploy a standby internet gateway in a second Availability Zone and configure a Route 53 health check so that traffic fails over to it automatically.",
       "An internet gateway is a horizontally scaled, redundant, and highly available VPC component, so no additional action is required.",
-      "Replace the internet gateway with a NAT gateway in each Availability Zone for higher availability."
+      "Replace the internet gateway with a NAT gateway in each Availability Zone, because NAT gateways are zonal and scale up to 100 Gbps."
     ],
     "answer": [
       2
@@ -161,10 +161,10 @@
     "difficulty": 2,
     "question": "A financial services company must give administrators shell access to Linux EC2 instances in private subnets. Security policy prohibits opening inbound ports on the instances, prohibits SSH keys, and requires every session to be logged to Amazon S3. The instances already run the SSM Agent. Which solution meets these requirements?",
     "options": [
-      "Assign Elastic IP addresses to the instances and allow SSH only from the administrators' home IP addresses.",
+      "Assign Elastic IP addresses to the instances, allow SSH only from the administrators' home IP addresses, and send VPC Flow Logs to Amazon S3.",
       "Use AWS Systems Manager Session Manager with an IAM instance profile on the instances and configure session logging to an S3 bucket.",
-      "Configure a Site-to-Site VPN and allow SSH on port 22 from the corporate network to the instances.",
-      "Deploy a bastion host in a public subnet with an SSH security group rule restricted to the corporate IP range."
+      "Configure a Site-to-Site VPN, allow SSH on port 22 only from the corporate network, and ship the SSH session logs to Amazon S3 with the CloudWatch agent.",
+      "Deploy a bastion host in a public subnet with an SSH security group rule restricted to the corporate IP range and use SSH agent forwarding."
     ],
     "answer": [
       1
@@ -201,10 +201,10 @@
     "difficulty": 2,
     "question": "A company runs EC2 instances from a hardened custom Linux AMI in private subnets with no public IP addresses. Security policy forbids installing additional agents on the instances and forbids maintaining bastion hosts. Administrators need SSH access controlled by IAM policies. Which solution will meet these requirements?",
     "options": [
-      "Install the SSM Agent on the instances and connect by using AWS Systems Manager Session Manager.",
-      "Attach an internet gateway to the VPC and assign Elastic IP addresses to the instances for SSH access.",
+      "Install the SSM Agent on the instances and connect through AWS Systems Manager Session Manager with IAM-controlled SSH sessions.",
+      "Attach an internet gateway to the VPC and assign Elastic IP addresses to the instances, allowing SSH only from the administrators' IP ranges.",
       "Create an EC2 Instance Connect Endpoint in the VPC and allow SSH on the instances' security group from the endpoint's security group.",
-      "Deploy a NAT gateway in a public subnet and connect to the instances through it by using SSH."
+      "Deploy a NAT gateway in a public subnet and connect to the instances' private IP addresses through it by using SSH."
     ],
     "answer": [
       2
@@ -220,9 +220,9 @@
     "difficulty": 3,
     "question": "A company runs EC2 instances with the SSM Agent installed in a VPC that has no internet gateway and no NAT gateway. The company wants administrators to use AWS Systems Manager Session Manager to connect to the instances. Which actions must the solutions architect take? (Select TWO.)",
     "options": [
-      "Allow inbound TCP port 22 from the Systems Manager service prefix list in the instances' security group.",
-      "Assign an Elastic IP address to each instance so that the SSM Agent can register with the service.",
-      "Create a gateway VPC endpoint for Systems Manager and add it to the private subnets' route tables.",
+      "Allow inbound TCP port 22 in the instances' security group from the Systems Manager service prefix list so that sessions can be established.",
+      "Assign an Elastic IP address to each instance so that the SSM Agent can register with the Systems Manager service over its public endpoint.",
+      "Create a gateway VPC endpoint for Systems Manager and add it to the private subnets' route tables, as is done for Amazon S3.",
       "Create interface VPC endpoints for the Systems Manager services, such as ssm and ssmmessages, in the VPC.",
       "Attach an IAM instance profile that grants the permissions in the AmazonSSMManagedInstanceCore managed policy."
     ],
@@ -260,10 +260,10 @@
     "difficulty": 1,
     "question": "A security team detects repeated attack traffic from a single IP address against EC2 instances in one subnet. The team wants to block all traffic from that address to the subnet immediately while allowing all other traffic. Which solution meets this requirement?",
     "options": [
-      "Add an inbound deny rule for the IP address to the security group attached to the instances.",
+      "Add an inbound deny rule for the IP address to the security group attached to the instances, which takes effect immediately for new connections.",
       "Remove the IP address from the instances' security group allow rules and keep the other rules.",
       "Add an inbound deny rule for the IP address to the subnet's network ACL with a lower rule number than the allow rules.",
-      "Add a blackhole route for the IP address in the subnet's route table pointing to the internet gateway."
+      "Add a /32 route for the IP address in the subnet's route table that points to the internet gateway, overriding the 0.0.0.0/0 route for that source."
     ],
     "answer": [
       2
@@ -279,9 +279,9 @@
     "difficulty": 2,
     "question": "A subnet's network ACL has inbound rule 100 that allows TCP port 22 from 0.0.0.0/0 and inbound rule 200 that denies all traffic from 203.0.113.0/24. The security team notices that SSH attempts from 203.0.113.45 still reach instances in the subnet. What is the reason, and how should it be fixed?",
     "options": [
-      "Deny rules are evaluated after all allow rules, so the allow rule for port 22 must be removed.",
-      "Network ACLs are stateful, so the existing session must be terminated before the deny rule applies.",
-      "Network ACLs apply only to outbound traffic, so the deny rule must be moved to the security group.",
+      "Deny rules are evaluated only after every allow rule, so the allow rule for port 22 must be removed for the deny rule to take effect.",
+      "Network ACLs are stateful, so the existing SSH sessions must be terminated before the deny rule applies to new connections.",
+      "Network ACLs filter only outbound traffic from the subnet, so the deny rule must be moved to the instances' security group instead.",
       "Rules are evaluated in ascending order and the first match applies, so the deny rule must use a number lower than 100."
     ],
     "answer": [
@@ -359,10 +359,10 @@
     "difficulty": 3,
     "question": "A platform team manages many VPCs, each with a zonal NAT gateway and a dedicated private route table in every Availability Zone. The team wants to keep outbound IPv4 internet access resilient to an AZ failure while reducing the number of NAT gateways and per-AZ route tables it must manage. Which solution will meet these requirements with the LEAST operational overhead?",
     "options": [
-      "Replace the zonal NAT gateways with NAT instances in an Auto Scaling group that spans all Availability Zones.",
-      "Replace the zonal NAT gateways with an egress-only internet gateway attached to each VPC.",
-      "Replace the zonal NAT gateways with a single zonal NAT gateway per VPC and route all private subnets to it.",
-      "Replace the zonal NAT gateways in each VPC with a regional NAT gateway that automatically operates across the Availability Zones where workloads run."
+      "Replace the zonal NAT gateways with NAT instances in an Auto Scaling group that spans all Availability Zones and updates the route tables on failover.",
+      "Replace the zonal NAT gateways with an egress-only internet gateway attached to each VPC and a single shared route table for all private subnets.",
+      "Replace the zonal NAT gateways with a single zonal NAT gateway per VPC and route every private subnet to it through the main route table.",
+      "Replace the zonal NAT gateways with one regional NAT gateway per VPC that automatically spans the Availability Zones where workloads run."
     ],
     "answer": [
       3
@@ -378,10 +378,10 @@
     "difficulty": 2,
     "question": "A startup runs a small development VPC whose private instances need outbound internet access only a few times each week to download packages. Occasional downtime of the outbound path is acceptable. The startup wants to minimize cost. Which solution is MOST cost-effective?",
     "options": [
-      "Deploy a NAT gateway in one public subnet and route all private subnets to it.",
+      "Deploy a single NAT gateway in one public subnet and route all private subnets to it, accepting the AZ-level risk.",
       "Deploy a NAT gateway in a public subnet in each Availability Zone that hosts private instances.",
       "Run a NAT instance on a small burstable EC2 instance in a public subnet with source/destination checking disabled.",
-      "Attach an egress-only internet gateway and route 0.0.0.0/0 from the private subnets to it."
+      "Attach an egress-only internet gateway, which has no hourly charge, and route 0.0.0.0/0 from the private subnets to it."
     ],
     "answer": [
       2
@@ -458,10 +458,10 @@
     "difficulty": 1,
     "question": "A team assigns Amazon-provided IPv6 addresses to EC2 instances in a dual-stack VPC. A developer asks whether these IPv6 addresses are private like the instances' 10.x.x.x IPv4 addresses. How should the solutions architect respond?",
     "options": [
-      "The IPv6 addresses are link-local and can be used only for traffic within the same subnet.",
-      "The IPv6 addresses are private and require a NAT gateway to translate them before reaching the internet.",
-      "The IPv6 addresses are private until an Elastic IP address is associated with each instance.",
-      "The IPv6 addresses are globally unique and publicly routable, so reachability is controlled by routes, security groups, and network ACLs."
+      "The IPv6 addresses are link-local fe80::/10 addresses and can be used only for traffic between instances within the same subnet.",
+      "The IPv6 addresses are private and require a NAT gateway to translate them to public addresses before they can reach the internet.",
+      "The IPv6 addresses stay private until an Elastic IP address is associated with each instance, as with IPv4 public addressing.",
+      "They are globally unique, publicly routable addresses, so reachability is controlled by routes, security groups, and network ACLs."
     ],
     "answer": [
       3
@@ -477,9 +477,9 @@
     "difficulty": 2,
     "question": "A company's monthly bill shows growing charges for public IPv4 addresses. The company runs 120 web servers in public subnets, each with an auto-assigned public IPv4 address, behind an internet-facing Application Load Balancer. Users access the application only through the load balancer. Which change will reduce these charges without affecting users?",
     "options": [
-      "Disable the load balancer's cross-zone load balancing so that fewer public addresses are required.",
-      "Replace each auto-assigned public IPv4 address with an Elastic IP address from the same Region.",
-      "Add network ACL rules that block all inbound traffic to the web servers' public IP addresses.",
+      "Disable cross-zone load balancing on the load balancer so that each Availability Zone needs fewer public addresses for the web servers.",
+      "Replace each auto-assigned public IPv4 address with an Elastic IP address, which historically had no charge while associated with a running instance.",
+      "Add network ACL rules that block all inbound traffic to the web servers' public IP addresses so that the addresses are no longer billed as in use.",
       "Move the web servers into private subnets without public IPv4 addresses and keep the load balancer in the public subnets."
     ],
     "answer": [
@@ -498,7 +498,7 @@
     "options": [
       "Create custom VPCs with private subnets that do not auto-assign public IP addresses, and launch workloads there.",
       "Continue using the default VPC and attach a network ACL that blocks outbound traffic to the internet.",
-      "Continue using the default VPC, because its subnets are private and have no internet gateway attached.",
+      "Continue using the default VPC, because its default subnets are private and instances receive public IP addresses only when an Elastic IP address is attached.",
       "Create a security group in the default VPC that denies inbound traffic from public IP addresses."
     ],
     "answer": [
@@ -515,7 +515,7 @@
     "difficulty": 1,
     "question": "A solutions architect wants an Auto Scaling group to continue running if one Availability Zone becomes unavailable. A colleague suggests creating one large subnet that spans two AZs. What is the correct approach?",
     "options": [
-      "Create one subnet that spans both AZs and enable AZ rebalancing on the Auto Scaling group.",
+      "Create one subnet that spans both AZs and enable AZ rebalancing on the Auto Scaling group so instances are spread evenly.",
       "Create one subnet in one AZ and enable automatic failover of the subnet to the second AZ.",
       "Create a subnet in each AZ and configure the Auto Scaling group to launch instances across those subnets.",
       "Create two VPCs, one per AZ, and configure the Auto Scaling group to span both VPCs."
@@ -556,9 +556,9 @@
     "question": "A healthcare company requires a subnet-level control, in addition to security groups, that explicitly denies any traffic from its public web subnets to its database subnets. Application subnets must still reach the databases. Which solution meets this requirement?",
     "options": [
       "Associate a custom network ACL with the database subnets that denies traffic from the web subnet CIDRs and allows traffic from the application subnet CIDRs.",
-      "Create a separate route table for the web subnets that has no route to the database subnets.",
-      "Remove the local route from the database subnets' route table so that web subnets cannot reach them.",
-      "Add a deny rule for the web subnet CIDRs to the database instances' security group."
+      "Create a separate route table for the web subnets that has no route to the database subnet CIDRs, so packets from the web tier cannot be delivered.",
+      "Remove the local route from the database subnets' route table and add specific routes only for the application subnet CIDRs.",
+      "Add a deny rule for the web subnet CIDRs to the database instances' security group, and keep the existing allow rule for the application tier."
     ],
     "answer": [
       0
@@ -595,10 +595,10 @@
     "difficulty": 2,
     "question": "A company launches EC2 instances with public IPv4 addresses into a custom VPC, but the instances do not receive public DNS hostnames. Which VPC configuration should the solutions architect change?",
     "options": [
-      "Create a Route 53 public hosted zone and associate it with the VPC.",
-      "Attach a DHCP options set that points to a third-party DNS server.",
+      "Create a Route 53 public hosted zone for the company domain and associate it with the VPC so that instances get public names.",
+      "Attach a DHCP options set whose domain-name-servers value points to a third-party DNS server that registers instance hostnames.",
       "Enable both the DNS resolution (enableDnsSupport) and DNS hostnames (enableDnsHostnames) attributes on the VPC.",
-      "Associate an Elastic IP address with the VPC's internet gateway."
+      "Associate an Elastic IP address with the VPC's internet gateway so that public DNS names can be mapped to the instances."
     ],
     "answer": [
       2
@@ -614,10 +614,10 @@
     "difficulty": 2,
     "question": "A company uses a single bastion host in one public subnet to administer private instances. The bastion host must recover automatically if its instance or Availability Zone fails, and administrators must keep connecting to the same IP address. Which solution meets these requirements?",
     "options": [
-      "Enable termination protection and detailed monitoring on the existing bastion host.",
+      "Enable termination protection and detailed one-minute monitoring on the existing bastion host so that failures are detected and the instance cannot be deleted.",
       "Run the bastion in an Auto Scaling group with a desired capacity of one across public subnets in two AZs, and reassociate an Elastic IP address at launch.",
-      "Launch a second bastion host in the same public subnet and use a DNS round-robin record for both.",
-      "Create an AMI of the bastion host and manually launch a new instance from it when the bastion fails."
+      "Launch a second bastion host in the same public subnet and publish a DNS round-robin record that contains both instances' Elastic IP addresses.",
+      "Create an AMI of the bastion host and, when the bastion fails, manually launch a replacement from it in another AZ and move the Elastic IP address."
     ],
     "answer": [
       1
@@ -636,7 +636,7 @@
       "Every default VPC uses the 172.31.0.0/16 CIDR block, so the two VPCs have overlapping CIDR blocks.",
       "VPC peering is not supported between VPCs that are owned by different AWS accounts.",
       "VPC peering requires both VPCs to have an IPv6 CIDR block associated with them.",
-      "Default VPCs cannot participate in VPC peering until their internet gateways are detached."
+      "Default VPCs cannot participate in VPC peering until their internet gateways are detached, because peering does not allow edge-to-edge routing."
     ],
     "answer": [
       0
@@ -652,10 +652,10 @@
     "difficulty": 2,
     "question": "A partner's API accepts requests only from source IP addresses on an allow list. A company calls the API from EC2 instances in private subnets in two Availability Zones and needs the outbound path to remain available if one AZ fails. Which solution meets these requirements?",
     "options": [
-      "Use an egress-only internet gateway and give the VPC's IPv4 CIDR block to the partner.",
-      "Assign an Elastic IP address to each private instance and give all of the addresses to the partner.",
-      "Deploy one NAT gateway with an Elastic IP address in the first AZ and give that address to the partner.",
-      "Deploy a NAT gateway with an Elastic IP address in each AZ, route each AZ to its local NAT gateway, and give both Elastic IP addresses to the partner."
+      "Use an egress-only internet gateway for the private subnets and give the VPC's IPv4 CIDR block to the partner for its allow list.",
+      "Assign an Elastic IP address to each private instance and give all of the addresses to the partner, so that each AZ fails independently.",
+      "Deploy one NAT gateway with an Elastic IP address in the first AZ, route both AZs to it, and give that single address to the partner.",
+      "Deploy a NAT gateway with an Elastic IP address in each AZ, route each AZ to its own NAT gateway, and give both addresses to the partner."
     ],
     "answer": [
       3
@@ -709,10 +709,10 @@
     "difficulty": 3,
     "question": "A VPC's main route table contains a 0.0.0.0/0 route to the internet gateway. Engineers often create new subnets without explicitly associating a route table, and some database instances have accidentally ended up in subnets with internet routes. Which change will MOST effectively prevent this?",
     "options": [
-      "Add a network ACL to each new subnet that denies outbound traffic to 0.0.0.0/0.",
-      "Add a deny rule for 0.0.0.0/0 to the default security group of the VPC.",
-      "Detach the internet gateway and reattach it only when public subnets are needed.",
-      "Remove the internet gateway route from the main route table and explicitly associate public subnets with a custom route table that has the route."
+      "Attach a custom network ACL to each new subnet that denies outbound traffic to 0.0.0.0/0, so database subnets cannot reach the internet.",
+      "Add a deny rule for 0.0.0.0/0 to the VPC's default security group, which every new instance uses unless another group is selected.",
+      "Detach the internet gateway from the VPC and reattach it only when a public subnet is needed for a new workload.",
+      "Remove the internet gateway route from the main route table and explicitly associate public subnets with a custom route table that has it."
     ],
     "answer": [
       3
@@ -749,10 +749,10 @@
     "difficulty": 3,
     "question": "A workload in private subnets opens many concurrent connections to a single external IP address and port through a NAT gateway. CloudWatch shows a rising ErrorPortAllocation metric for the NAT gateway, and some connections fail. Which solution will resolve the issue with the LEAST operational overhead?",
     "options": [
-      "Replace the NAT gateway with a larger NAT gateway instance type.",
-      "Increase the MTU of the private subnets so that fewer connections are needed.",
+      "Replace the NAT gateway with a larger NAT gateway size, because NAT gateway port capacity scales with the selected bandwidth tier.",
+      "Increase the MTU of the private subnets to 9001 bytes so that fewer concurrent connections are needed for the same throughput.",
       "Associate additional secondary public IPv4 addresses with the NAT gateway to increase the available source ports.",
-      "Enable enhanced networking on the EC2 instances in the private subnets."
+      "Enable enhanced networking with ENA on the EC2 instances so that the NAT gateway can track more concurrent connections."
     ],
     "answer": [
       2
@@ -770,8 +770,8 @@
     "options": [
       "Release the unassociated Elastic IP addresses, because AWS charges for public IPv4 addresses that are allocated.",
       "Keep the Elastic IP addresses, because AWS charges only for addresses associated with running instances.",
-      "Move the Elastic IP addresses to a different Region where they are not charged.",
-      "Associate the Elastic IP addresses with stopped instances to avoid charges."
+      "Move the Elastic IP addresses to a different Region that does not charge for idle public IPv4 addresses until they are needed.",
+      "Associate the Elastic IP addresses with stopped instances, because AWS charges only for addresses that are not attached to any instance."
     ],
     "answer": [
       0
@@ -787,15 +787,15 @@
     "difficulty": 2,
     "question": "A company runs a bastion host on an EC2 instance with an Elastic IP address 24 hours a day so that administrators can reach private instances. The private instances already have outbound internet access through a NAT gateway and run the SSM Agent. The company wants to reduce cost and remove the bastion. Which solution is MOST cost-effective?",
     "options": [
-      "Move the bastion host to a larger instance and stop it outside business hours.",
+      "Move the bastion host to a smaller burstable instance type and stop it outside business hours with an EventBridge Scheduler rule.",
       "Use AWS Systems Manager Session Manager with IAM instance profiles on the instances and terminate the bastion host.",
       "Replace the bastion host with an AWS Site-to-Site VPN connection to each administrator's location.",
-      "Replace the bastion host with an AWS Client VPN endpoint associated with the private subnets."
+      "Replace the bastion host with an AWS Client VPN endpoint associated with the private subnets and federated with the corporate IdP."
     ],
     "answer": [
       1
     ],
-    "explanation": "Session Manager has no additional charge for interactive sessions and the instances can already reach the Systems Manager endpoints through the NAT gateway, so terminating the bastion removes its instance and public IPv4 costs. Client VPN and Site-to-Site VPN add hourly connection charges. Stopping a larger bastion still incurs costs and keeps the bastion to manage.",
+    "explanation": "Session Manager has no additional charge for interactive sessions and the instances can already reach the Systems Manager endpoints through the NAT gateway, so terminating the bastion removes its instance and public IPv4 costs. Client VPN and Site-to-Site VPN add hourly connection charges. A smaller bastion that is stopped outside business hours still incurs costs, including its Elastic IP address, and keeps the bastion to manage.",
     "subtopic": "SSM Session Manager"
   },
   {
@@ -806,9 +806,9 @@
     "difficulty": 3,
     "question": "A company administers Windows EC2 instances over RDP through a bastion host. The instances are in private subnets with no NAT gateway or internet access, and the company does not want to pay for additional VPC endpoints or NAT gateways. Which solution provides RDP access MOST cost-effectively?",
     "options": [
-      "Deploy a NAT gateway so that the instances can reach Systems Manager, and use Fleet Manager for RDP.",
-      "Create interface VPC endpoints for Systems Manager and use Session Manager port forwarding for RDP.",
-      "Assign public IPv4 addresses to the instances and restrict RDP to the corporate IP range.",
+      "Deploy a NAT gateway so that the instances can reach the Systems Manager endpoints, and use Fleet Manager Remote Desktop for RDP.",
+      "Create interface VPC endpoints for Systems Manager and use Session Manager port forwarding to reach RDP on port 3389.",
+      "Assign public IPv4 addresses to the instances and restrict inbound RDP on port 3389 to the corporate IP range in the security group.",
       "Create an EC2 Instance Connect Endpoint in the VPC and tunnel RDP connections through it to the instances' private IP addresses."
     ],
     "answer": [
@@ -825,7 +825,7 @@
     "difficulty": 2,
     "question": "Two fleets of EC2 instances in the same Availability Zone and the same VPC exchange several terabytes of data each month. The application is configured to connect using each instance's Elastic IP address. How can the company reduce data transfer costs?",
     "options": [
-      "Create a VPC peering connection between the two fleets' subnets.",
+      "Create a VPC peering connection between the two fleets' subnets to keep the traffic on the AWS network.",
       "Route the traffic through a NAT gateway in the same Availability Zone.",
       "Configure the application to connect using the instances' private IP addresses.",
       "Move one fleet to a second Availability Zone to distribute the traffic."
@@ -863,10 +863,10 @@
     "difficulty": 3,
     "question": "A research company runs a fleet of stateless EC2 instances in private subnets that download about 200 TB of public datasets from internet websites each month through a NAT gateway. The instances never accept inbound connections. NAT gateway data processing charges have become the largest line item on the bill. Which solution is MOST cost-effective while keeping the instances protected from unsolicited inbound traffic?",
     "options": [
-      "Route the download traffic through a centralized egress VPC by using AWS Transit Gateway.",
+      "Route the download traffic through a centralized egress VPC that uses AWS Transit Gateway and shared NAT gateways.",
       "Route the download traffic over a Site-to-Site VPN to the corporate data center and download from there.",
       "Launch the instances in public subnets with public IPv4 addresses and use a security group that has no inbound rules.",
-      "Deploy an additional NAT gateway in each Availability Zone and spread the download traffic across them."
+      "Deploy an additional NAT gateway in each Availability Zone and spread the download traffic across them to lower per-gateway costs."
     ],
     "answer": [
       2
@@ -882,10 +882,10 @@
     "difficulty": 2,
     "question": "A company runs a licensed analytics server on a single EC2 instance. The software license is bound to the MAC address of the network interface that the application uses. The company needs to recover quickly from an instance failure without buying a second license or changing DNS records or routes. Which solution is the MOST cost-effective?",
     "options": [
-      "Place the instance behind an Application Load Balancer and run a second licensed instance in another Availability Zone.",
+      "Place the instance behind an Application Load Balancer and run a second licensed instance in another Availability Zone as a warm standby.",
       "Associate an Elastic IP address with the instance and remap it to a replacement instance launched from an AMI when the instance fails.",
       "Attach a secondary network interface for the application and, on failure, move that interface to a preconfigured standby instance in the same Availability Zone.",
-      "Create a launch template and an Auto Scaling group with a minimum size of one so that a replacement instance is launched automatically."
+      "Create a launch template and an Auto Scaling group with a minimum size of one so that a replacement instance is launched automatically from the same AMI."
     ],
     "answer": [
       2
@@ -903,10 +903,10 @@
     "question": "A company runs network appliances on EC2 instances. The primary network interface of each instance serves customer traffic from the internet. The security team requires SSH management traffic to use a separate network path with more restrictive controls, and management access must be allowed only from the operations team's IP range. Which actions should the solutions architect take? (Select TWO.)",
     "options": [
       "Attach a secondary network interface from a dedicated management subnet in the same Availability Zone as the instance.",
-      "Attach a secondary network interface from a management subnet in a different Availability Zone for resilience.",
-      "Associate a network ACL directly with the secondary network interface to restrict the SSH sources.",
+      "Attach a secondary network interface from a management subnet in a different Availability Zone so that management access survives an AZ failure.",
+      "Associate a network ACL directly with the secondary network interface so that only the operations team's IP range can reach SSH on it.",
       "Associate a security group with the management interface that allows SSH only from the operations team's IP range.",
-      "Disable source/destination checking on the management interface so that it accepts only SSH traffic."
+      "Disable source/destination checking on the management interface so that it accepts only SSH traffic from the operations team's IP range."
     ],
     "answer": [
       0,
@@ -926,7 +926,7 @@
     "options": [
       "Secondary network interfaces can be moved only after the source instance has been terminated.",
       "A network interface can be attached only to an instance in the same Availability Zone as the interface.",
-      "The standby instance must first have its primary network interface detached.",
+      "The standby instance must first have its primary network interface detached so that the secondary interface can take its place.",
       "Network interfaces that have a security group associated with them cannot be moved between instances."
     ],
     "answer": [
@@ -946,7 +946,7 @@
     "options": [
       "Enable the DNS hostnames attribute on the VPC so that the instance keeps its public IP address.",
       "Assign a secondary private IPv4 address to the instance and give that address to the partners.",
-      "Modify the subnet so that it auto-assigns public IPv4 addresses from a reserved range.",
+      "Modify the subnet so that it auto-assigns public IPv4 addresses from a reserved range that persists across stop and start.",
       "Allocate an Elastic IP address, associate it with the instance, and give that address to the partners."
     ],
     "answer": [
@@ -1007,7 +1007,7 @@
     "question": "A company's security policy states that no VPC in its production account in eu-west-1 may send or receive traffic through internet gateways, except one egress VPC that hosts a proxy fleet. The policy must be enforced authoritatively, even if someone later adds an internet gateway route or a public IP address to a resource. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
       "Use an SCP to deny ec2:CreateInternetGateway and ec2:AttachInternetGateway for all principals in the account.",
-      "Deploy an AWS Config rule that detects internet gateway routes and an automatic remediation that removes them.",
+      "Deploy an AWS Config rule that detects internet gateway routes and public IP addresses, with an automatic SSM remediation that removes them.",
       "Turn on VPC Block Public Access in bidirectional mode for the Region and create an exclusion for the egress VPC.",
       "Associate a network ACL that denies 0.0.0.0/0 with every subnet in the account except the proxy subnets."
     ],
@@ -1069,7 +1069,7 @@
     "question": "A security team wants to stop EC2 instances in a VPC from resolving known malicious domains through the Amazon-provided DNS server. An engineer added network ACL deny rules for TCP and UDP port 53 to the VPC base plus two address, but the queries still succeed. Which solution should the solutions architect recommend?",
     "options": [
       "Add outbound security group rules that deny port 53 to the VPC base plus two address.",
-      "Associate a DHCP option set that has no domain name servers with the VPC.",
+      "Associate a DHCP option set that has no domain name servers so that instances cannot reach any resolver.",
       "Renumber the network ACL deny rules so that they come before the allow rules.",
       "Use Route 53 Resolver DNS Firewall with a domain list that blocks the malicious domains."
     ],
@@ -1089,9 +1089,9 @@
     "question": "A junior engineer is documenting how network ACLs work in Amazon VPC. Which statements are correct? (Select TWO.)",
     "options": [
       "A network ACL can be associated with multiple subnets, but a subnet can be associated with only one network ACL at a time.",
-      "All network ACL rules are evaluated together, and the most permissive matching rule is applied.",
-      "Return traffic for an allowed inbound request is automatically allowed out of the subnet.",
-      "Network ACL rules can block DNS queries that instances send to the Amazon-provided DNS server.",
+      "All network ACL rules are evaluated together, and the most permissive matching rule is applied, similar to how security group rules are combined.",
+      "Return traffic for an allowed inbound request is automatically allowed out of the subnet, so outbound ephemeral port rules are optional.",
+      "Network ACL rules can block DNS queries that instances send to the Amazon-provided DNS server at the VPC base plus two address.",
       "A subnet that is not explicitly associated with a network ACL is automatically associated with the default network ACL."
     ],
     "answer": [
@@ -1111,7 +1111,7 @@
     "question": "An auditor asks a solutions architect to identify which subnets in a VPC are public subnets. Which characteristic determines that a subnet is public?",
     "options": [
       "The route table associated with the subnet has a direct route to an internet gateway.",
-      "The subnet has the auto-assign public IPv4 address setting enabled.",
+      "The subnet has the auto-assign public IPv4 address setting enabled for instances launched into it.",
       "The network ACL associated with the subnet allows inbound traffic from 0.0.0.0/0.",
       "The route table associated with the subnet has a 0.0.0.0/0 route to a NAT gateway."
     ],
@@ -1130,10 +1130,10 @@
     "difficulty": 3,
     "question": "A company's VPC uses 10.0.0.0/16 and connects to an on-premises network through AWS Site-to-Site VPN on a virtual private gateway. An on-premises payment system accepts connections only from source addresses in 100.64.1.0/24, a range the network team has reserved for this VPC. Hundreds of EC2 instances in the VPC must call the payment system. Which solution meets these requirements?",
     "options": [
-      "Create a public NAT gateway with an Elastic IP address and route traffic for the on-premises network through it to the virtual private gateway.",
-      "Assign each instance a secondary private IPv4 address from 100.64.1.0/24 and configure the application to use it as the source address.",
+      "Create a public NAT gateway with an Elastic IP address in a public subnet and route traffic for the on-premises network through it to the virtual private gateway for translation.",
+      "Assign each instance a secondary private IPv4 address from 100.64.1.0/24 and configure the application to use it as the source address for payment calls.",
       "Associate 100.64.1.0/24 with the VPC, place a private NAT gateway in a subnet from that range, and route on-premises traffic through it to the virtual private gateway.",
-      "Create a VPC peering connection to a new VPC that uses 100.64.1.0/24 and route the on-premises traffic through the peer VPC."
+      "Create a VPC peering connection to a new VPC that uses 100.64.1.0/24 and route the on-premises traffic through the peer VPC's virtual private gateway."
     ],
     "answer": [
       2
@@ -1152,8 +1152,8 @@
     "options": [
       "Configure the regional NAT gateway with the private connectivity type so that it expands across Availability Zones automatically.",
       "Deploy zonal NAT gateways with the private connectivity type in each Availability Zone, and keep the regional NAT gateway for internet egress.",
-      "Run a NAT instance in each Availability Zone with source/destination checking enabled to translate the inter-VPC traffic.",
-      "Replace the transit gateway with VPC peering so that the regional NAT gateway can translate the inter-VPC traffic."
+      "Run a NAT instance in each Availability Zone with source/destination checking enabled and an Auto Scaling group to translate the inter-VPC traffic.",
+      "Replace the transit gateway with VPC peering connections so that the regional NAT gateway can translate the inter-VPC traffic in every zone."
     ],
     "answer": [
       1
@@ -1190,10 +1190,10 @@
     "difficulty": 2,
     "question": "A security engineer wants to restrict which outbound ports instances in private subnets can use when they reach the internet through a public NAT gateway. The engineer plans to attach a restrictive security group to the NAT gateway. What should the solutions architect recommend?",
     "options": [
-      "Restrict the outbound rules of the instances' security groups, and use a network ACL on the NAT gateway's subnet if needed, because a NAT gateway cannot have a security group.",
-      "Attach the security group to the NAT gateway's requester-managed network interface and remove its default outbound rule.",
-      "Replace the NAT gateway with an egress-only internet gateway, which supports security groups for IPv4 traffic.",
-      "Attach the security group to the internet gateway so that it filters all traffic leaving the VPC."
+      "Restrict the instances' security group outbound rules, and use a network ACL on the NAT gateway's subnet if needed, because a NAT gateway cannot have a security group.",
+      "Attach the security group to the NAT gateway's requester-managed network interface and replace its default outbound rule with rules for the approved ports only.",
+      "Replace the NAT gateway with an egress-only internet gateway, which supports security groups for IPv4 traffic and filters outbound ports per subnet.",
+      "Attach the security group to the internet gateway so that it filters all traffic leaving the VPC, including traffic translated by the NAT gateway."
     ],
     "answer": [
       0
@@ -1211,9 +1211,9 @@
     "question": "A company wants branch offices connected through AWS Site-to-Site VPN to reach the internet through a NAT gateway in a central VPC instead of using local internet breakouts. The VPN currently terminates on a virtual private gateway attached to that VPC. Routes to the NAT gateway have been added, but branch traffic never reaches the internet. Which change will make this design work?",
     "options": [
       "Add a 0.0.0.0/0 route that targets the NAT gateway in the virtual private gateway's route propagation settings.",
-      "Replace the public NAT gateway with a private NAT gateway in the same public subnet.",
+      "Replace the public NAT gateway with a private NAT gateway in the same public subnet so that it can accept traffic arriving from the VPN.",
       "Terminate the VPN on a transit gateway attached to the VPC and route branch internet traffic through the transit gateway to the NAT gateway.",
-      "Enable route propagation on the public subnet's route table so that the NAT gateway learns the branch routes."
+      "Enable route propagation on the public subnet's route table so that the NAT gateway learns the branch prefixes advertised over BGP."
     ],
     "answer": [
       2
@@ -1292,8 +1292,8 @@
     "difficulty": 2,
     "question": "A company plans one VPC for a large container platform that will eventually need about 200,000 private IPv4 addresses. An engineer tries to create the VPC with the CIDR block 10.64.0.0/14, and the request fails. How should the solutions architect provide the required address space in a single VPC?",
     "options": [
-      "Request a service quota increase so that the VPC can use a /14 primary CIDR block.",
-      "Create the VPC with a /14 IPv6 CIDR block and translate it to IPv4 by using NAT64.",
+      "Request a service quota increase for the VPC CIDR block size so that the VPC can use a /14 primary CIDR block.",
+      "Create the VPC with a /14 IPv6 CIDR block and translate it to IPv4 by using NAT64 and DNS64 on the subnets.",
       "Create four VPCs with /16 CIDR blocks and connect them with VPC peering to act as one network.",
       "Create the VPC with a /16 primary CIDR block and associate additional /16 secondary IPv4 CIDR blocks."
     ],
@@ -1352,10 +1352,10 @@
     "difficulty": 3,
     "question": "A company places an application server and a reporting server in the same private subnet. To limit lateral movement, the security team adds a network ACL rule to the subnet that denies traffic from the reporting server's IP address to the application server on port 8443. Traffic between the two servers still succeeds. What should the solutions architect do?",
     "options": [
-      "Renumber the network ACL deny rule so that it is evaluated before the allow rules.",
-      "Add the same deny rule to the outbound rules of the network ACL, because network ACLs are stateless.",
-      "Allow port 8443 on the application server's security group only from approved sources, because network ACLs do not evaluate traffic within a subnet.",
-      "Create a more specific route for the application server's IP address that targets a blackhole."
+      "Renumber the network ACL deny rule so that it is evaluated before the allow rule that permits all traffic within the VPC CIDR block.",
+      "Add the same deny rule to the outbound rules of the network ACL, because network ACLs are stateless and evaluate each direction separately.",
+      "Allow port 8443 on the application server's security group only from approved sources, because network ACLs do not filter traffic within a subnet.",
+      "Create a more specific /32 route for the application server's IP address that targets a blackhole so that the reporting server's packets are dropped."
     ],
     "answer": [
       2
@@ -1419,7 +1419,7 @@
       "Assign the application address as a secondary private IPv4 address and reassign it to the standby instance during failover.",
       "Use the primary private IPv4 address for the application and reassign it to the standby instance during failover.",
       "Associate an Elastic IP address with the application and remap it to the standby instance during failover.",
-      "Create a Route 53 private hosted zone record and update it to point to the standby instance during failover."
+      "Create a Route 53 private hosted zone record with a short TTL and point it to the standby instance during failover."
     ],
     "answer": [
       0
@@ -1437,9 +1437,9 @@
     "question": "An engineer changed a VPC's DHCP options setting to No DHCP option set. Afterward, EC2 instances built on the Xen hypervisor can no longer resolve domain names and lose access to internet services by name. What should the solutions architect do to restore name resolution with the LEAST effort?",
     "options": [
       "Associate a DHCP option set that uses AmazonProvidedDNS as the domain name server with the VPC.",
-      "Enable the enableDnsHostnames attribute on the VPC.",
-      "Add outbound security group rules that allow UDP port 53 to 0.0.0.0/0.",
-      "Create a Route 53 Resolver inbound endpoint in the VPC."
+      "Enable the enableDnsHostnames attribute on the VPC so that instances receive Amazon-provided DNS names again.",
+      "Add outbound security group rules that allow UDP and TCP port 53 to 0.0.0.0/0 so that the instances can reach public resolvers.",
+      "Create a Route 53 Resolver inbound endpoint in the VPC so that instances have an IP address to send queries to."
     ],
     "answer": [
       0
@@ -1458,8 +1458,8 @@
     "options": [
       "The workloads have no outbound access until the team creates a NAT gateway in a public subnet in the new Availability Zone.",
       "The workloads have no outbound access until the team adds the new Availability Zone to the NAT gateway's route table.",
-      "The workloads must use an egress-only internet gateway until the regional NAT gateway is replaced.",
-      "The NAT gateway expands to the new Availability Zone automatically, and traffic is processed in an existing zone until the expansion completes."
+      "The workloads must use an egress-only internet gateway until the regional NAT gateway is replaced with one that covers the new zone.",
+      "The NAT gateway expands to the new Availability Zone automatically and processes the traffic in an existing zone until the expansion completes."
     ],
     "answer": [
       3
@@ -1497,9 +1497,9 @@
     "question": "A web application runs on Amazon EC2 instances in private subnets behind an internet-facing Application Load Balancer in public subnets. During an attack from 198.51.100.0/24, an engineer added an inbound deny rule for that range to the network ACL of the private subnets, but the attack traffic still reaches the application. What should the engineer do to block the range at the network layer?",
     "options": [
       "Move the deny rule to the outbound rules of the private subnets' network ACL, because network ACLs are stateless.",
-      "Add the deny rule to the network ACL of the load balancer's public subnets, because the instances receive connections from the load balancer's own IP addresses.",
-      "Add a deny rule for the range to the instances' security group and give it a higher priority than the allow rule.",
-      "Renumber the deny rule so that it is higher than every allow rule and is evaluated last."
+      "Add the deny rule to the network ACL of the load balancer's public subnets, because the instances see connections from the load balancer's IP addresses.",
+      "Add a deny rule for the range to the instances' security group and give it a higher priority than the rule that allows the load balancer.",
+      "Renumber the deny rule so that it is higher than every allow rule, because network ACLs apply the last matching rule in the list."
     ],
     "answer": [
       1
@@ -1516,10 +1516,10 @@
     "difficulty": 2,
     "question": "A company serves its website through an Amazon CloudFront distribution that uses an Application Load Balancer as the origin. The security team must block requests from a list of 40 malicious IP addresses before the requests reach the origin. Which solution meets this requirement?",
     "options": [
-      "Add inbound deny rules for the 40 addresses to the network ACL of the load balancer's subnets.",
-      "Add the 40 addresses to a CloudFront geographic restriction block list on the distribution.",
-      "Add deny rules for the 40 addresses to the security group that is attached to the load balancer.",
-      "Create an AWS WAF IP set in the Global (CloudFront) scope, block it with an IP set match rule in a web ACL, and associate the web ACL with the distribution."
+      "Add inbound deny rules for the 40 addresses to the network ACL of the load balancer's subnets, numbered ahead of the rule that allows HTTPS.",
+      "Add the 40 addresses to the CloudFront geographic restriction block list on the distribution so that edge locations reject them.",
+      "Add deny rules for the 40 addresses to the security group attached to the load balancer and allow only the CloudFront managed prefix list.",
+      "Create an AWS WAF IP set in the Global (CloudFront) scope, reference it in a blocking rule in a web ACL, and associate the web ACL with the distribution."
     ],
     "answer": [
       3
@@ -1536,10 +1536,10 @@
     "difficulty": 2,
     "question": "A threat intelligence feed provides about 3,000 IPv4 addresses that must be blocked from reaching a public Application Load Balancer. The list changes daily and is updated by an automated job. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Store the addresses in an AWS WAF IP set that is referenced by a blocking rule in a web ACL associated with the load balancer, and have the job update the IP set.",
+      "Store the addresses in an AWS WAF IP set referenced by a blocking rule in a web ACL associated with the load balancer, and have the job update the IP set.",
       "Add a deny rule for each address to the network ACL of the load balancer's subnets after requesting the maximum rule quota increase.",
-      "Create security groups that contain one rule per address and attach them to the load balancer.",
-      "Add a route for each address to the public subnets' route table with a blackhole target."
+      "Create security groups that contain one rule per address, up to the per-group rule quota, and attach several of them to the load balancer.",
+      "Add a /32 route for each address to the public subnets' route table with a blackhole target so that responses to those addresses are dropped."
     ],
     "answer": [
       0
@@ -1556,10 +1556,10 @@
     "difficulty": 3,
     "question": "During a security incident, an engineer removes the inbound rule that allowed SSH from 203.0.113.25/32 from an EC2 instance's security group. The attacker's SSH session from that address, which was established before the change, stays connected. The engineer must immediately cut off all traffic between that address and the instance's subnet. What should the engineer do?",
     "options": [
-      "Enable VPC Flow Logs on the subnet with a filter that captures only rejected traffic from the address.",
+      "Enable VPC Flow Logs on the subnet with a filter that captures only rejected traffic from the address so that the session can be traced.",
       "Remove all outbound rules from the instance's security group so that the session's response traffic is blocked.",
       "Add inbound and outbound deny rules for 203.0.113.25/32 to the subnet's network ACL with rule numbers lower than any allow rules.",
-      "Add a deny rule for 203.0.113.25/32 to the instance's security group."
+      "Add a deny rule for 203.0.113.25/32 to the instance's security group, which immediately terminates tracked connections from that source."
     ],
     "answer": [
       2
@@ -1598,9 +1598,9 @@
     "difficulty": 2,
     "question": "Instances in an application subnet may send traffic to any destination except a decommissioned partner network, 192.0.2.0/24. The block must hold even if a developer later adds a broad outbound security group rule. Which solution meets these requirements?",
     "options": [
-      "Add an outbound security group rule that allows 0.0.0.0/0 and a second outbound rule that denies 192.0.2.0/24.",
-      "Add an outbound deny rule for 192.0.2.0/24 to the subnet's network ACL with a lower rule number than the rule that allows all outbound traffic.",
-      "Attach a gateway VPC endpoint policy that denies traffic to 192.0.2.0/24.",
+      "Add an outbound security group rule that allows 0.0.0.0/0 and a second outbound rule with a lower priority number that denies 192.0.2.0/24.",
+      "Add an outbound deny rule for 192.0.2.0/24 to the subnet's network ACL, numbered lower than the rule that allows all outbound traffic.",
+      "Attach a gateway VPC endpoint policy to the subnet's route table that denies traffic to 192.0.2.0/24 for all principals.",
       "Allow outbound 0.0.0.0/0 in the security group and rely on the security group's implicit deny for 192.0.2.0/24."
     ],
     "answer": [
@@ -1618,10 +1618,10 @@
     "difficulty": 1,
     "question": "An engineer creates a new custom network ACL and associates it with a subnet of web servers, planning to add rules later. Immediately afterward, the web servers stop receiving and sending all traffic. What is the cause?",
     "options": [
-      "The subnet is still associated with the default network ACL, which denies all traffic by default.",
-      "The subnet is now associated with two network ACLs, and the more restrictive one is applied.",
-      "Network ACL changes take effect only after the instances in the subnet are restarted.",
-      "A new custom network ACL contains only the non-modifiable asterisk rules, which deny all inbound and outbound traffic until allow rules are added."
+      "The subnet is still associated with the default network ACL, which denies all inbound and outbound traffic until custom rules are added.",
+      "The subnet is now associated with both the default and the custom network ACL, and the more restrictive rule set is applied.",
+      "Network ACL changes take effect only after the instances in the subnet are stopped and started, so traffic is paused meanwhile.",
+      "A new custom network ACL has only the asterisk rules, which deny all inbound and outbound traffic until allow rules are added."
     ],
     "answer": [
       3
@@ -1639,9 +1639,9 @@
     "question": "A central security team manages 60 AWS accounts in AWS Organizations. Application teams manage their own security groups, but every subnet in every account, including subnets created in the future, must have network ACL rules that deny inbound traffic on a set of high-risk ports. Noncompliant network ACLs must be fixed automatically. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
       "Deploy an AWS Config rule in each account that reports subnets whose network ACL lacks the deny rules, and have the security team fix them manually.",
-      "Attach a service control policy that denies ec2:CreateNetworkAclEntry to the application teams' accounts.",
-      "Create an AWS Firewall Manager network ACL policy from the administrator account that defines the required deny rules, scopes all accounts and subnets, and enables automatic remediation.",
-      "Use AWS CloudFormation StackSets to deploy a network ACL with the deny rules to every account once."
+      "Attach a service control policy that denies ec2:CreateNetworkAclEntry and ec2:DeleteNetworkAclEntry to the application teams' accounts.",
+      "Create an AWS Firewall Manager network ACL policy that defines the required deny rules, scopes all accounts and subnets, and enables automatic remediation.",
+      "Use AWS CloudFormation StackSets with service-managed permissions to deploy a network ACL with the deny rules to every account once."
     ],
     "answer": [
       2
@@ -1678,10 +1678,10 @@
     "difficulty": 2,
     "question": "An engineer creates a zonal public NAT gateway with an Elastic IP address in private subnet A and adds a 0.0.0.0/0 route to the NAT gateway in the route table of the application subnets. Private subnet A's route table contains only the local route. The application instances still cannot reach the internet. What should the engineer do?",
     "options": [
-      "Create the public NAT gateway in a public subnet whose route table sends 0.0.0.0/0 to the internet gateway, and point the application subnets' default route to it.",
-      "Assign public IPv4 addresses to the application instances so that the NAT gateway can translate them.",
-      "Add a second 0.0.0.0/0 route to the internet gateway in the application subnets' route table.",
-      "Attach a second internet gateway to the VPC and associate it with private subnet A."
+      "Create the public NAT gateway in a public subnet whose route table sends 0.0.0.0/0 to the internet gateway, and point the application subnets to it.",
+      "Assign public IPv4 addresses to the application instances so that the NAT gateway can translate their traffic to its Elastic IP address.",
+      "Add a second 0.0.0.0/0 route to the internet gateway in the application subnets' route table so that the NAT gateway has a path out.",
+      "Attach a second internet gateway to the VPC and associate it with private subnet A so that the NAT gateway can forward its traffic."
     ],
     "answer": [
       0
@@ -1698,7 +1698,7 @@
     "difficulty": 2,
     "question": "A private subnet hosts 20 application instances that must not have a route to the internet. One new reporting instance must be reachable directly from a partner over HTTPS at a fixed public IPv4 address. Which solution meets these requirements?",
     "options": [
-      "Associate a custom route table that has a 0.0.0.0/0 route to the internet gateway with the reporting instance's network interface.",
+      "Associate a custom route table that has a 0.0.0.0/0 route to the internet gateway with only the reporting instance's network interface, and add an Elastic IP address.",
       "Add a 0.0.0.0/0 route to the internet gateway in the private subnet's route table and use security groups to keep the other instances private.",
       "Add a /32 route for the reporting instance's private IP address that targets the internet gateway in the private subnet's route table.",
       "Launch the reporting instance in a separate public subnet whose route table has a route to the internet gateway, and associate an Elastic IP address with it."
@@ -1718,10 +1718,10 @@
     "difficulty": 3,
     "question": "A VPC uses 10.16.0.0/16. Twelve /20 subnets across three Availability Zones use 10.16.0.0 through 10.16.191.255, and 10.16.192.0/18 is not allocated to any subnet. The application subnet in AZ A, 10.16.32.0/20, has run out of free addresses, and the subnet 10.16.48.0/20 is also in AZ A. Which solution adds capacity for the application tier in AZ A with the LEAST disruption?",
     "options": [
-      "Modify the application subnet's CIDR block to 10.16.32.0/19 so that it includes more addresses.",
-      "Create a new subnet in AZ A from the unallocated range, such as 10.16.192.0/20, associate the application route table and network ACL, and add it to the Auto Scaling group.",
-      "Wait for the application subnet to extend automatically into the unallocated 10.16.192.0/18 range.",
-      "Add a secondary CIDR block of 10.16.0.0/16 to the VPC and recreate the application subnet in it."
+      "Modify the application subnet's CIDR block to 10.16.32.0/19 so that it includes more addresses while keeping its existing instances and subnet ID.",
+      "Create a new AZ A subnet from the unallocated range, such as 10.16.192.0/20, give it the application route table and network ACL, and add it to the Auto Scaling group.",
+      "Wait for the application subnet to extend automatically into the unallocated 10.16.192.0/18 range when it reaches its address limit.",
+      "Add a secondary CIDR block of 10.16.0.0/16 to the VPC and recreate the application subnet in it as a larger /19 subnet with the same route table."
     ],
     "answer": [
       1
@@ -1780,10 +1780,10 @@
     "difficulty": 2,
     "question": "A legacy web server on a single EC2 instance hosts three websites. Each website uses its own TLS certificate and must be reached at its own public IPv4 address. The company does not want to add instances or load balancers. Which solution is the MOST cost-effective?",
     "options": [
-      "Associate three Elastic IP addresses with the primary private IPv4 address of the instance's network interface.",
-      "Attach three internet gateways to the VPC and route each website's traffic through a different gateway.",
+      "Associate three Elastic IP addresses with the primary private IPv4 address of the instance's network interface and bind each website to one of them.",
+      "Attach three internet gateways to the VPC and route each website's traffic through a different gateway so that each site has its own public address.",
       "Assign two secondary private IPv4 addresses to the instance's network interface and associate an Elastic IP address with each private address, including the primary.",
-      "Configure the three public IPv4 addresses directly on the network interface inside the operating system."
+      "Configure the three public IPv4 addresses directly on the network interface inside the operating system and bind each certificate to one address."
     ],
     "answer": [
       2
@@ -1904,8 +1904,8 @@
     "options": [
       "Move the load balancer to public subnets that use at least a /27 CIDR block and keep at least eight free IP addresses in each subnet.",
       "Move the load balancer to the larger private application subnets so that it has more IP addresses to scale into.",
-      "Turn on cross-zone load balancing so that traffic is spread across both subnets.",
-      "Add a third /28 public subnet in another Availability Zone and register no targets in it."
+      "Turn on cross-zone load balancing so that traffic is spread across both subnets and neither load balancer node runs out of capacity.",
+      "Add a third /28 public subnet in another Availability Zone and register no targets in it, giving the load balancer additional nodes."
     ],
     "answer": [
       0
@@ -1984,10 +1984,10 @@
     "difficulty": 1,
     "question": "A developer asks why a multi-tier design uses separate web, application, and database subnets in each Availability Zone instead of one subnet per AZ with security groups for every tier. Which reasons are correct? (Select TWO.)",
     "options": [
-      "Security groups can be attached only to instances that are in different subnets.",
-      "Each subnet gets its own internet gateway, which increases bandwidth for each tier.",
+      "Security groups can be attached only to instances that are in different subnets, so tiers that share a subnet cannot be isolated.",
+      "Each subnet gets its own internet gateway, which increases bandwidth for each tier and isolates internet traffic between tiers.",
       "Route tables are associated with subnets, so only separate subnets let one tier route to the internet while another tier has no internet route.",
-      "Separate subnets give each tier higher network throughput than a shared subnet.",
+      "Separate subnets give each tier higher network throughput than a shared subnet, because subnet bandwidth is limited per CIDR block.",
       "Network ACLs are associated with subnets, so separate subnets allow a subnet-level rule set for each tier."
     ],
     "answer": [
@@ -2008,8 +2008,8 @@
     "options": [
       "Set the tenancy to default in the launch template for the development fleet, because instance-level tenancy overrides the VPC tenancy.",
       "Edit the VPC settings in the Amazon VPC console to change the instance tenancy to default, which also moves the regulated instances to shared hardware.",
-      "Change the VPC instance tenancy from dedicated to default by using the AWS CLI or API, and launch the regulated instances with dedicated tenancy specified in the future.",
-      "Create a new VPC with default tenancy, migrate the regulated instances into it, and delete the dedicated VPC."
+      "Change the VPC instance tenancy from dedicated to default by using the AWS CLI or API, and specify dedicated tenancy for future regulated launches.",
+      "Create a new VPC with default tenancy, migrate the regulated instances into it with dedicated tenancy set at launch, and delete the dedicated VPC."
     ],
     "answer": [
       2
@@ -2027,10 +2027,10 @@
     "question": "A solutions architect is reviewing VPC tenancy options for a company that must run a small number of instances on single-tenant hardware in an existing VPC that was created with default tenancy. Which statements about instance tenancy are correct? (Select TWO.)",
     "options": [
       "Individual instances can be launched as Dedicated Instances in a default-tenancy VPC by specifying dedicated tenancy at launch.",
-      "The existing VPC can be changed from default to dedicated tenancy later by using the AWS CLI.",
-      "EBS volumes attached to Dedicated Instances also run on single-tenant hardware.",
+      "The existing VPC can be changed from default to dedicated tenancy later by using the AWS CLI modify-vpc-tenancy command.",
+      "EBS volumes attached to Dedicated Instances also run on single-tenant hardware, so storage is isolated as well.",
       "Changing a VPC's tenancy from dedicated to default does not change the tenancy of instances that are already running in it.",
-      "VPC tenancy can be changed in the Amazon VPC console by editing the VPC settings."
+      "VPC tenancy can be changed in the Amazon VPC console by editing the VPC settings, which applies to running instances on the next stop and start."
     ],
     "answer": [
       0,
@@ -2050,8 +2050,8 @@
     "options": [
       "When the primary CIDR block is from 10.0.0.0/8, secondary CIDR blocks must come from the 100.64.0.0/10 range.",
       "A secondary CIDR block cannot be the same as or larger than the destination of an existing route in any of the VPC's route tables.",
-      "A secondary CIDR block must be smaller than the primary CIDR block of the VPC.",
-      "Secondary CIDR blocks cannot be associated while a virtual private gateway is attached to the VPC."
+      "A secondary CIDR block must be smaller than the primary CIDR block of the VPC, so only a /17 or smaller block can be added.",
+      "Secondary CIDR blocks cannot be associated while a virtual private gateway is attached to the VPC with static routes configured."
     ],
     "answer": [
       1
@@ -2068,9 +2068,9 @@
     "difficulty": 1,
     "question": "An audit finds that automation scripts sometimes launch EC2 instances without specifying a security group. Those instances can then exchange traffic on all ports with every other resource that uses the same security group. The security team wants any resource that ends up in this security group to receive and send no traffic. What should the solutions architect do?",
     "options": [
-      "Delete the default security group in each VPC so that launches without a security group fail.",
-      "Add an inbound rule that denies all traffic to the default security group in each VPC.",
-      "Associate a network ACL with every subnet that denies traffic between instances in the same subnet.",
+      "Delete the default security group in each VPC so that any launch without an explicitly specified security group fails.",
+      "Add an inbound rule that denies all traffic to the default security group in each VPC, overriding its self-referencing allow rule.",
+      "Associate a network ACL with every subnet that denies traffic between instances in the same subnet that share the default group.",
       "Remove all inbound and outbound rules from the default security group in each VPC, and use purpose-built security groups for workloads."
     ],
     "answer": [
@@ -2130,8 +2130,8 @@
     "options": [
       "Move the restrictive security group to the first position on the network interface so that its rules are evaluated first.",
       "Remove the SSH rule from the legacy security group or detach that group, because the rules of all associated security groups are combined.",
-      "Add a rule to the restrictive security group that denies TCP 22 from 0.0.0.0/0.",
-      "Replace both groups with a single group, because only the most recently attached security group is enforced."
+      "Add a rule to the restrictive security group that denies TCP 22 from 0.0.0.0/0 so that it overrides the legacy group's allow rule.",
+      "Replace both groups with a single group, because only the most recently attached security group is enforced on a network interface."
     ],
     "answer": [
       1
@@ -2275,7 +2275,7 @@
     "question": "A company wants to use a regional NAT gateway for internet egress. A partner allows traffic only from specific Elastic IP addresses that the company already owns, and the company's change process requires it to decide which addresses serve each Availability Zone and when egress is extended to a new zone. Which configuration meets these requirements?",
     "options": [
       "Create a regional NAT gateway in automatic mode and add the Elastic IP addresses as routes in its route table.",
-      "Create a zonal private NAT gateway in each Availability Zone and associate the Elastic IP addresses with them.",
+      "Create a zonal private NAT gateway in each Availability Zone and associate the company's Elastic IP addresses with them for the partner's allow list.",
       "Create a regional NAT gateway in automatic mode and let it expand to new Availability Zones as workloads appear.",
       "Create a regional NAT gateway in manual mode and associate the company's Elastic IP addresses with it for each Availability Zone."
     ],
@@ -2295,9 +2295,9 @@
     "question": "A market data workload in one Availability Zone opens a very large number of concurrent connections to a single external IP address and port through a zonal NAT gateway. The NAT gateway already has the maximum of eight IPv4 addresses, and the ErrorPortAllocation metric is still rising. The team wants to keep the workload in its current subnet. Which solution will provide more concurrent connections to that destination?",
     "options": [
       "Replace the zonal NAT gateway with a regional NAT gateway in manual mode and associate more than eight IP addresses in that Availability Zone.",
-      "Assign a second private IPv4 address to each instance so that each instance can open more connections.",
-      "Enable jumbo frames on the instances so that fewer connections are needed for the same throughput.",
-      "Replace the NAT gateway with an egress-only internet gateway, which has no connection limits."
+      "Assign a second private IPv4 address to each instance so that each instance can open more connections through the NAT gateway.",
+      "Enable jumbo frames on the instances so that fewer connections are needed for the same throughput to the external destination.",
+      "Replace the NAT gateway with an egress-only internet gateway, which does not limit the number of connections per destination."
     ],
     "answer": [
       0
@@ -2334,10 +2334,10 @@
     "difficulty": 3,
     "question": "After an acquisition, VPC A and VPC B both use 10.0.0.0/16, and re-addressing is not possible. Instances in VPC A must call an HTTP service that runs on instances in VPC B. All traffic between VPCs must stay private and must pass through the company's existing transit gateway for central monitoring. The network team has reserved 100.64.1.0/24 for VPC A and 100.64.2.0/24 for VPC B. Which solution meets these requirements?",
     "options": [
-      "Create a VPC peering connection and add routes for the service subnet in both VPCs' route tables.",
-      "Add each reserved range to its VPC, create a private NAT gateway in a VPC A subnet from 100.64.1.0/24 and an Application Load Balancer in a VPC B subnet from 100.64.2.0/24, attach both VPCs to the transit gateway using those subnets, and route only the reserved ranges through it.",
-      "Attach both VPCs to the transit gateway with route propagation enabled so that the transit gateway routes 10.0.0.0/16 to the correct VPC based on the source attachment.",
-      "Create a public NAT gateway in each VPC and send traffic between the VPCs through their internet gateways by using Elastic IP addresses."
+      "Create a VPC peering connection between VPC A and VPC B, add routes for only the HTTP service's subnet in both route tables, and enable Transit Gateway Flow Logs for monitoring.",
+      "Add each reserved range to its VPC, put a private NAT gateway in a VPC A subnet from 100.64.1.0/24 and an Application Load Balancer in a VPC B subnet from 100.64.2.0/24, and route only the reserved ranges through the transit gateway.",
+      "Attach both VPCs to the transit gateway, associate each attachment with its own transit gateway route table, and enable route propagation so that 10.0.0.0/16 is resolved to the other VPC based on which attachment the traffic arrived from.",
+      "Create a public NAT gateway in each VPC, allow-list the Elastic IP addresses in the security groups, and send traffic between the VPCs through their internet gateways."
     ],
     "answer": [
       1
@@ -2354,11 +2354,11 @@
     "difficulty": 3,
     "question": "A company must inspect all traffic between an application subnet and a database subnet in the same VPC by using firewall appliances behind a Gateway Load Balancer endpoint in a separate inspection subnet. The database security group currently allows TCP 3306 from the application security group. Which actions should the solutions architect take? (Select TWO.)",
     "options": [
-      "Delete the local route from both subnets' route tables and add a 0.0.0.0/0 route to the Gateway Load Balancer endpoint.",
-      "Add /32 routes for each database instance to the application subnet's route table that target the Gateway Load Balancer endpoint.",
+      "Delete the local route from both subnets' route tables and add a 0.0.0.0/0 route to the Gateway Load Balancer endpoint so that all traffic is inspected.",
+      "Add /32 routes for each database instance to the application subnet's route table that target the Gateway Load Balancer endpoint, and the reverse in the database subnet.",
       "Add a route in each subnet's route table whose destination is the entire CIDR block of the other subnet and whose target is the Gateway Load Balancer endpoint.",
       "Change the database security group rule to allow TCP 3306 from the application subnet's CIDR block instead of the application security group.",
-      "Move the firewall appliances into the database subnet so that they see all traffic that enters it."
+      "Move the firewall appliances into the database subnet so that they see all traffic that enters it, and keep the security group rule unchanged."
     ],
     "answer": [
       2,

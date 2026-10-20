@@ -7,10 +7,10 @@
     "difficulty": 1,
     "question": "A company runs Linux application servers in three Availability Zones that share data on an Amazon EFS file system with the Regional (Standard) storage class. Currently a mount target exists in only one Availability Zone. What should a solutions architect do to improve availability and avoid unnecessary cross-AZ traffic?",
     "options": [
-      "Attach an Elastic IP address to the existing mount target so it remains reachable if its AZ fails.",
+      "Attach an Elastic IP address to the existing mount target so it stays reachable from every Availability Zone if its own AZ fails.",
       "Create a mount target in each Availability Zone where instances run and have each instance mount using the mount target in its own AZ.",
-      "Change the file system to EFS One Zone in the Availability Zone that has the most instances.",
-      "Create a second EFS file system in each Availability Zone and synchronize them with AWS DataSync."
+      "Change the file system to EFS One Zone in the Availability Zone with the most instances so that most clients read locally without cross-AZ charges.",
+      "Create a separate EFS file system in each Availability Zone and keep them in sync with scheduled AWS DataSync tasks so each instance reads local data."
     ],
     "answer": [
       1
@@ -27,9 +27,9 @@
     "question": "EC2 instances cannot mount an Amazon EFS file system. The instances and mount targets are in the same VPC and subnets, and the mount command times out. What is the MOST likely cause?",
     "options": [
       "The security group attached to the mount targets does not allow inbound TCP port 445 from the instances.",
-      "The EFS file system is not encrypted at rest with an AWS KMS key.",
+      "The file system is not encrypted at rest with a customer managed AWS KMS key, which the mount targets require before they accept NFS connections.",
       "The security group attached to the mount targets does not allow inbound TCP port 2049 from the instances' security group.",
-      "The instances do not have an IAM instance profile with S3 read permissions."
+      "The instances do not have an IAM instance profile with Amazon S3 read permissions, so they cannot download the amazon-efs-utils mount helper."
     ],
     "answer": [
       2
@@ -64,10 +64,10 @@
     "difficulty": 2,
     "question": "A company is creating an Amazon EFS file system for a content management system that serves many small files to web servers and is very sensitive to per-operation latency. A team member proposes the Max I/O performance mode for better scalability. What should a solutions architect recommend?",
     "options": [
-      "Use the General Purpose performance mode, which provides the lowest per-operation latency and is recommended for most workloads.",
-      "Use the Max I/O performance mode with Bursting throughput to minimize latency.",
-      "Use the Max I/O performance mode, because it delivers the lowest latency for small files.",
-      "Use the Provisioned performance mode with a fixed number of IOPS."
+      "Use the General Purpose performance mode, which has the lowest per-operation latency and is recommended for most workloads.",
+      "Use the Max I/O performance mode with Bursting throughput so that burst credits keep per-operation latency low during traffic spikes.",
+      "Use the Max I/O performance mode, because it scales to higher aggregate IOPS and therefore gives the lowest latency for many small files.",
+      "Use the Provisioned performance mode with a fixed number of IOPS, as with an io2 EBS volume, to guarantee consistent latency."
     ],
     "answer": [
       0
@@ -121,10 +121,10 @@
     "difficulty": 2,
     "question": "A development team created an Amazon EFS file system using Bursting throughput mode. It stores only 20 GiB of build artifacts but is used heavily by a CI/CD fleet. Builds slowed down sharply after the first few days. What is the MOST likely reason?",
     "options": [
-      "The mount targets automatically switched to EFS Infrequent Access after a few days.",
-      "The file system reached the maximum file count supported by the General Purpose performance mode.",
-      "The file system exhausted its burst credits, and its baseline throughput is low because Bursting throughput scales with the amount of data stored.",
-      "EFS throttles file systems that are accessed from more than one Availability Zone."
+      "Lifecycle management automatically switched the mount targets to the EFS Infrequent Access storage class after a few days, adding latency to every operation.",
+      "The file system reached the maximum number of files supported by the General Purpose performance mode, so new artifacts are written more slowly.",
+      "It ran out of burst credits, and because Bursting baseline throughput scales with stored data, a 20 GiB file system has a very low baseline.",
+      "EFS throttles file systems that are mounted from more than one Availability Zone, and the CI/CD fleet has since scaled out into additional AZs."
     ],
     "answer": [
       2
@@ -161,9 +161,9 @@
     "difficulty": 2,
     "question": "A research institute keeps several hundred terabytes of instrument data on Amazon EFS for its Linux analysis cluster. After six months, data is read only a few times per year, but it must remain available through the same file system path. Which solution will MOST reduce storage cost?",
     "options": [
-      "Enable EFS Replication to a second Region with lower storage prices.",
-      "Keep all files in EFS Standard and purchase a Savings Plan for EFS.",
-      "Move the older files to Amazon S3 Glacier Deep Archive and update the application to read from S3.",
+      "Enable EFS Replication to a Region with lower storage prices and point the analysis cluster at the replica file system.",
+      "Keep all files in EFS Standard and buy a one-year Savings Plan that covers the EFS storage consumed by the analysis cluster.",
+      "Move files older than six months to S3 Glacier Deep Archive, the lowest-cost AWS storage class, and read them from S3.",
       "Configure EFS lifecycle management to move files to the EFS Archive storage class after 180 days without access."
     ],
     "answer": [
@@ -180,10 +180,10 @@
     "difficulty": 2,
     "question": "A company needs shared NFS storage for a development and test environment that runs in a single Availability Zone. The data can be recreated from source control if lost. The company wants the LOWEST storage cost. Which solution meets these requirements?",
     "options": [
-      "Use an Amazon EFS file system with the Regional storage class and enable EFS Replication.",
-      "Use an Amazon EFS file system with the Regional Standard storage class and Provisioned throughput.",
+      "Use an EFS file system with the Regional storage class and EFS Replication so the data survives an AZ failure.",
+      "Use an Amazon EFS file system with the Regional Standard storage class and Provisioned throughput sized for the test workload.",
       "Use an Amazon EFS file system with the One Zone storage class in the same Availability Zone as the instances.",
-      "Use Amazon FSx for Windows File Server with a Multi-AZ deployment."
+      "Use Amazon FSx for Windows File Server with a Multi-AZ deployment and HDD storage, the lowest-cost FSx for Windows storage type."
     ],
     "answer": [
       2
@@ -199,11 +199,11 @@
     "difficulty": 2,
     "question": "Three containerized applications share one Amazon EFS file system. Each application must see only its own directory and must write files with a specific POSIX user and group ID, regardless of the user inside the container. Which combination of steps will enforce this? (Select TWO.)",
     "options": [
-      "Create a separate mount target for each application in the same Availability Zone.",
-      "Configure the mount target security group to allow each application only on a different port.",
+      "Create a separate mount target for each application in the same Availability Zone and give each one its own subnet and security group.",
+      "Configure the mount target security group to allow each application on a different port, and map each port to that application's directory.",
       "Create an EFS access point for each application with its own root directory and an enforced POSIX user and group.",
       "Add an EFS file system policy that allows each application's IAM role to mount only through its own access point.",
-      "Encrypt each directory with a different AWS KMS key."
+      "Encrypt each application's directory with a different AWS KMS key and grant each task role kms:Decrypt only on its own key."
     ],
     "answer": [
       2,
@@ -220,10 +220,10 @@
     "difficulty": 2,
     "question": "An audit finds that an Amazon EFS file system containing customer documents was created without encryption at rest. Company policy now requires all file data to be encrypted at rest with an AWS KMS key. What should a solutions architect do?",
     "options": [
-      "Remount the file system on each client with the TLS mount option.",
-      "Enable default encryption for EBS volumes in the Region.",
-      "Edit the existing file system and enable encryption at rest with the KMS key.",
-      "Create a new EFS file system with encryption at rest enabled and copy the data to it, for example by using AWS DataSync, then switch the clients."
+      "Remount the file system on each client with the tls option of the EFS mount helper so that all file data is encrypted with the KMS key.",
+      "Enable Amazon EBS encryption by default in the Region and select the company's KMS key as the default key for new volumes and file systems.",
+      "Edit the existing file system in the Amazon EFS console, enable encryption at rest with the KMS key, and let EFS encrypt the existing data in the background.",
+      "Create a new EFS file system with encryption at rest enabled, copy the data to it with AWS DataSync, and then switch the clients to it."
     ],
     "answer": [
       3
@@ -280,9 +280,9 @@
     "question": "Several AWS Lambda functions need to read a 6 GB machine learning model and shared reference files at startup, and Amazon ECS tasks on AWS Fargate must read and write the same files. The files change several times a week. Which storage solution meets these requirements with the LEAST operational overhead?",
     "options": [
       "Store the files on an Amazon EFS file system and mount it in both the Lambda functions and the Fargate task definitions.",
-      "Store the files in the /tmp directory of each Lambda function and copy them to the Fargate tasks.",
-      "Package the files in each Lambda deployment package and each container image.",
-      "Store the files on an EBS volume and attach it to the Lambda functions and the Fargate tasks."
+      "Download the files to each Lambda function's /tmp directory, which supports up to 10 GB, and copy them to the Fargate tasks.",
+      "Package the files in each Lambda container image, which can be up to 10 GB, and in the Fargate container images.",
+      "Store the files on an Amazon EBS io2 volume with Multi-Attach enabled and attach it to the Lambda functions and the Fargate tasks."
     ],
     "answer": [
       0
@@ -338,10 +338,10 @@
     "difficulty": 2,
     "question": "A company's Windows file shares on Amazon FSx for Windows File Server must remain available if an Availability Zone fails, with automatic failover and no changes required on the clients. Which deployment option meets these requirements?",
     "options": [
-      "Two Single-AZ file systems in different Availability Zones synchronized by a scheduled script.",
+      "Two Single-AZ file systems in different Availability Zones, kept in sync every few minutes by a scheduled Robocopy script on a management instance.",
       "A Multi-AZ FSx for Windows File Server file system with a preferred and a standby file server in different Availability Zones.",
-      "A Single-AZ file system using HDD storage for better durability.",
-      "A Single-AZ FSx for Windows File Server file system with daily automatic backups."
+      "A Single-AZ file system using HDD storage, whose data is automatically replicated within the Availability Zone for higher durability.",
+      "A Single-AZ FSx for Windows File Server file system with daily automatic backups that can be restored into another Availability Zone."
     ],
     "answer": [
       1
@@ -416,9 +416,9 @@
     "difficulty": 2,
     "question": "A genomics company runs a 3-day compute job on hundreds of Linux instances. Input data is stored in Amazon S3, and the job needs a POSIX file system with sub-millisecond latency and very high throughput. The results are written back to S3, and the file system is deleted after the job. Which solution is MOST cost-effective?",
     "options": [
-      "Create an Amazon EFS file system with Provisioned throughput and copy the data from S3.",
-      "Create an Amazon FSx for Lustre persistent file system with Multi-AZ replication.",
-      "Create an Amazon FSx for Windows File Server file system with SSD storage.",
+      "Create an Amazon EFS file system with Provisioned throughput, copy the input data from S3 with AWS DataSync, and delete it after the job.",
+      "Create an Amazon FSx for Lustre persistent file system linked to the S3 bucket, so data is replicated and failed file servers are replaced during the job.",
+      "Create an Amazon FSx for Windows File Server file system with SSD storage and mount the shares from the Linux instances over SMB.",
       "Create an Amazon FSx for Lustre scratch file system linked to the S3 bucket and export the results to S3 when the job finishes."
     ],
     "answer": [
@@ -436,10 +436,10 @@
     "difficulty": 2,
     "question": "A machine learning team trains models for several weeks at a time on Linux instances using a shared Lustre file system. Intermediate checkpoints are written frequently and must survive the failure of a file server without the team having to restore from backup. Which deployment option should be used?",
     "options": [
-      "Amazon EBS st1 volumes attached to each training instance and synchronized with rsync.",
-      "An Amazon FSx for Lustre scratch file system with automatic daily backups to Amazon S3 Glacier.",
-      "An Amazon FSx for Lustre persistent file system, which replicates data within the Availability Zone and replaces failed file servers automatically.",
-      "An Amazon FSx for Lustre scratch file system, which replicates data across Availability Zones."
+      "Amazon EBS st1 volumes attached to each training instance, which are replicated within their Availability Zone, kept in sync with rsync.",
+      "An Amazon FSx for Lustre scratch file system with automatic daily backups to Amazon S3 Glacier that are restored if a file server fails.",
+      "An Amazon FSx for Lustre persistent file system, which replicates data within its Availability Zone and replaces failed file servers.",
+      "An Amazon FSx for Lustre scratch file system, which replicates data across Availability Zones and delivers the highest burst throughput."
     ],
     "answer": [
       2
@@ -455,10 +455,10 @@
     "difficulty": 2,
     "question": "A company has 400 TB of seismic data in an Amazon S3 bucket. An HPC cluster needs to process a subset of the files at high speed through a POSIX interface, and the processed output must be written back to the same bucket. The company does not want to copy the whole dataset in advance. Which solution meets these requirements?",
     "options": [
-      "Use Amazon EFS with Elastic throughput and an S3 lifecycle rule that copies objects into EFS.",
-      "Create an Amazon FSx for Lustre file system with a data repository association to the S3 bucket so files are loaded lazily on first access and changes are exported back to S3.",
-      "Use AWS DataSync to copy the entire bucket to an Amazon FSx for Windows File Server file system before each run.",
-      "Attach io2 EBS volumes to each node and use the AWS CLI to copy the files needed by each node."
+      "Use Amazon EFS with Elastic throughput and an S3 Lifecycle rule that transitions the objects each run needs into the EFS file system.",
+      "Link an Amazon FSx for Lustre file system to the bucket with a data repository association, which lazy-loads files on first access and exports changes to S3.",
+      "Use AWS DataSync to copy the entire bucket to an Amazon FSx for Windows File Server file system before each run, then sync the results back.",
+      "Attach io2 Block Express EBS volumes to each node and use the AWS CLI to copy only the files that each node needs from the bucket."
     ],
     "answer": [
       1
@@ -531,10 +531,10 @@
     "difficulty": 2,
     "question": "A company stores 300 TB of engineering files on Amazon FSx for NetApp ONTAP. Only about 10 percent of the data is actively used, but users need occasional access to the rest through the same file shares. Which approach will MOST reduce storage cost without moving data to another service?",
     "options": [
-      "Enable a tiering policy on the volumes so that cold data moves automatically from the SSD tier to the lower-cost capacity pool tier.",
-      "Copy the inactive data to Amazon S3 Glacier Deep Archive and delete it from the file system.",
-      "Increase the provisioned SSD storage so all data fits on the primary tier.",
-      "Switch the file system to a Multi-AZ deployment to spread data across Availability Zones."
+      "Set a tiering policy on the volumes so cold data moves automatically from the SSD tier to the lower-cost capacity pool tier.",
+      "Copy the inactive data to Amazon S3 Glacier Deep Archive with AWS DataSync and delete it from the file system to shrink the SSD tier.",
+      "Increase the provisioned SSD storage so all 300 TB fits on the primary tier, avoiding the request charges of the capacity pool tier.",
+      "Switch the file system to a Multi-AZ deployment so that inactive data is served from the standby file server in the second Availability Zone."
     ],
     "answer": [
       0
@@ -550,10 +550,10 @@
     "difficulty": 1,
     "question": "A company has EC2 instances, EBS volumes, RDS databases, DynamoDB tables, and EFS file systems in several AWS accounts. Backups are currently managed with separate scripts for each service. The company wants to centrally define backup schedules and retention for all of these resources. Which service should be used?",
     "options": [
-      "Amazon S3 Replication rules for each resource type.",
-      "Amazon Data Lifecycle Manager policies in each account.",
+      "Amazon S3 Replication rules for each resource type, with the replicas expired by S3 Lifecycle policies.",
+      "Amazon Data Lifecycle Manager policies in each account to automate snapshot creation, retention, and copy.",
       "AWS Backup with backup plans, managed across accounts through AWS Organizations backup policies.",
-      "AWS DataSync tasks scheduled for each resource."
+      "AWS DataSync tasks scheduled for each resource, copying the data to an Amazon S3 bucket with versioning enabled."
     ],
     "answer": [
       2
@@ -569,10 +569,10 @@
     "difficulty": 2,
     "question": "A company must keep daily backups of an Amazon EFS file system for 35 days and monthly backups for 7 years. The monthly backups will almost never be restored. Which AWS Backup configuration meets these requirements MOST cost-effectively?",
     "options": [
-      "Create a daily rule with 35-day retention and manually copy one backup per month to an S3 bucket.",
-      "Create a monthly rule that keeps backups in warm storage for 7 years and a daily rule that keeps backups for 7 years.",
-      "Create a backup plan with a daily rule retaining backups for 35 days and a monthly rule that transitions backups to cold storage after 30 days and deletes them after 7 years.",
-      "Create a single daily rule that retains every backup for 7 years in warm storage."
+      "Create a daily rule with 35-day retention and, once a month, manually copy one of the daily backups to an S3 bucket for 7-year retention.",
+      "Create a daily rule that keeps backups for 7 years and a monthly rule that keeps backups in warm storage for 7 years for faster restores.",
+      "Create a daily rule retaining backups for 35 days and a monthly rule that moves backups to cold storage after 30 days and deletes them after 7 years.",
+      "Create a single daily rule that retains every backup in warm storage for 7 years, which also covers the 35-day daily requirement."
     ],
     "answer": [
       2
@@ -607,10 +607,10 @@
     "difficulty": 3,
     "question": "A company wants to start enforcing minimum and maximum retention on an AWS Backup vault. The security team wants to test the settings first and still be able to adjust or remove the lock if the configuration is wrong, before eventually making it permanent. Which approach meets these requirements?",
     "options": [
-      "Apply S3 Object Lock in governance mode to the backup vault, then switch it to compliance mode.",
-      "Apply a vault access policy that denies deletions, then convert the policy to compliance mode.",
-      "Apply Vault Lock in compliance mode, let the grace time expire, and remove the lock later if the test fails.",
-      "Apply Vault Lock in governance mode, test the configuration, and later apply compliance mode with a grace time before it becomes immutable."
+      "Apply S3 Object Lock in governance mode to the backup vault, test it, and then switch the vault to compliance mode to make it permanent.",
+      "Apply a vault access policy that denies backup:DeleteRecoveryPoint, then convert the policy to compliance mode after testing.",
+      "Apply Vault Lock in compliance mode right away, let the grace time expire, and remove the lock later if testing shows the settings are wrong.",
+      "Apply Vault Lock in governance mode, test it, and later apply compliance mode with a grace time before it becomes immutable."
     ],
     "answer": [
       3
@@ -626,11 +626,11 @@
     "difficulty": 2,
     "question": "A company backs up Amazon EBS volumes and Amazon RDS databases with AWS Backup in us-east-1. For disaster recovery, a copy of every backup must also exist in eu-west-1, encrypted at rest. Which combination of steps will meet these requirements? (Select TWO.)",
     "options": [
-      "Enable S3 Cross-Region Replication on the us-east-1 backup vault.",
+      "Enable S3 Cross-Region Replication on the us-east-1 backup vault with a rule that targets an encrypted bucket in eu-west-1.",
       "Add a copy action to the backup plan rule that copies each recovery point to the eu-west-1 vault.",
       "Create a backup vault in eu-west-1 that is encrypted with an AWS KMS key in eu-west-1.",
-      "Configure AWS Backup Vault Lock to replicate recovery points to eu-west-1.",
-      "Enable Amazon EBS fast snapshot restore in eu-west-1 for each volume."
+      "Configure AWS Backup Vault Lock on the us-east-1 vault to replicate recovery points to eu-west-1 as immutable copies.",
+      "Enable Amazon EBS fast snapshot restore in eu-west-1 for each volume so the copies can be restored quickly."
     ],
     "answer": [
       1,
@@ -668,10 +668,10 @@
     "difficulty": 2,
     "question": "An auditor asks a company to prove continuously that all production resources are covered by backup plans, that backups are taken at least daily, and that retention meets policy. The company uses AWS Backup. Which solution meets this requirement with the LEAST effort?",
     "options": [
-      "Export AWS CloudTrail logs to Amazon S3 and query them manually each month with Amazon Athena.",
+      "Send AWS CloudTrail logs for AWS Backup to Amazon S3 and query them each month with Amazon Athena to build a report for the auditor.",
       "Use AWS Backup Audit Manager with a framework of controls for backup coverage, frequency, and retention and generate compliance reports.",
-      "Enable Amazon Inspector to scan backup plans for compliance with the retention policy.",
-      "Write a Lambda function that lists all recovery points daily and emails the results to the auditor."
+      "Enable Amazon Inspector to continuously scan backup plans and recovery points and report resources that do not meet the retention policy.",
+      "Write a Lambda function that lists all recovery points and backup plans daily, compares them with the policy, and emails the auditor."
     ],
     "answer": [
       1
@@ -688,9 +688,9 @@
     "question": "A company's disaster recovery policy requires proof that backups of its RDS databases and EBS volumes can actually be restored. Currently engineers restore samples manually each quarter, which is slow and often skipped. Which solution automates this validation with the LEAST operational overhead?",
     "options": [
       "Configure AWS Backup restore testing plans that periodically restore selected recovery points and record the restore results.",
-      "Turn on Amazon EBS fast snapshot restore for every snapshot taken by AWS Backup.",
-      "Enable AWS Backup Vault Lock so that recovery points are guaranteed to be restorable.",
-      "Use AWS Config to check that every resource has a recent recovery point."
+      "Turn on Amazon EBS fast snapshot restore for every snapshot taken by AWS Backup so that each one is pre-initialized and fully restorable.",
+      "Enable AWS Backup Vault Lock in compliance mode so that recovery points cannot be altered and are guaranteed to be restorable.",
+      "Use AWS Config managed rules to check continuously that every RDS database and EBS volume has a recovery point from the last 24 hours."
     ],
     "answer": [
       0
@@ -807,10 +807,10 @@
     "difficulty": 1,
     "question": "A company stores application logs in Amazon S3. Logs are read frequently for 30 days, rarely for the next 60 days, and must be kept for 7 years for audit but are almost never retrieved after 90 days. Which solution meets these requirements MOST cost-effectively?",
     "options": [
-      "Keep the logs in S3 Standard and delete them manually after 7 years.",
-      "Create an S3 Lifecycle configuration that transitions objects to S3 Standard-IA after 30 days, to S3 Glacier Deep Archive after 90 days, and expires them after 7 years.",
-      "Store the logs on Amazon EFS with lifecycle management to EFS Infrequent Access after 30 days.",
-      "Create an S3 Lifecycle configuration that moves objects to S3 One Zone-IA after 1 day and expires them after 90 days."
+      "Keep the logs in S3 Standard, which has no minimum storage duration or retrieval fees, and delete them with a script after 7 years.",
+      "Use an S3 Lifecycle configuration that transitions objects to S3 Standard-IA after 30 days, to S3 Glacier Deep Archive after 90 days, and expires them after 7 years.",
+      "Store the logs on Amazon EFS with lifecycle management that moves files to EFS Infrequent Access after 30 days and to EFS Archive after 90 days.",
+      "Create an S3 Lifecycle configuration that moves objects to S3 One Zone-IA after 30 days, which costs 20% less than Standard-IA, and expires them after 90 days."
     ],
     "answer": [
       1
@@ -846,9 +846,9 @@
     "question": "An engineer accidentally deleted several EBS snapshots and AMIs that were needed for recovery. The company wants deleted snapshots and AMIs to be recoverable for 14 days after deletion, without changing existing backup tools. Which solution meets this requirement?",
     "options": [
       "Create Recycle Bin retention rules for EBS snapshots and AMIs with a 14-day retention period.",
-      "Enable S3 Versioning on the bucket that stores the EBS snapshots.",
-      "Enable EBS fast snapshot restore on all snapshots.",
-      "Create an Amazon Data Lifecycle Manager policy that retains snapshots for 14 days."
+      "Enable S3 Versioning on the bucket that stores the EBS snapshots so deleted snapshots can be restored.",
+      "Enable EBS fast snapshot restore on all snapshots and AMIs so they can be recovered instantly.",
+      "Create an Amazon Data Lifecycle Manager policy that retains snapshots and AMIs for 14 days after they are created."
     ],
     "answer": [
       0
@@ -864,10 +864,10 @@
     "difficulty": 3,
     "question": "A security team requires that every client mounting a shared Amazon EFS file system use encryption in transit and that no client can mount the file system with root access unless explicitly allowed. Which solution enforces these requirements centrally?",
     "options": [
-      "Configure the mount target security groups to allow only TLS traffic on port 443 and deny root users.",
-      "Enable encryption at rest with a customer managed KMS key and restrict the key policy to approved roles.",
-      "Configure a network ACL that blocks NFS traffic from clients that do not use the mount helper.",
-      "Attach an EFS file system policy that denies requests when aws:SecureTransport is false and grants elasticfilesystem:ClientRootAccess only to approved IAM roles."
+      "Configure the mount target security groups to allow only TLS traffic on port 443 from approved clients and deny connections from root users.",
+      "Enable encryption at rest with a customer managed KMS key and restrict the key policy so that only approved IAM roles can use the key to mount.",
+      "Configure a network ACL on the mount target subnets that blocks NFS traffic on port 2049 from any client that does not use the EFS mount helper.",
+      "Attach an EFS file system policy that denies access when aws:SecureTransport is false and grants elasticfilesystem:ClientRootAccess only to approved roles."
     ],
     "answer": [
       3
@@ -883,10 +883,10 @@
     "difficulty": 3,
     "question": "On-premises Linux servers access an S3 bucket through an NFS share on an Amazon S3 File Gateway. A cloud-based pipeline also writes new objects directly to the same bucket by using the S3 API. Users report that the files created by the pipeline do not appear in the NFS share. Which solution will make the new files visible with the LEAST operational overhead?",
     "options": [
-      "Increase the size of the gateway's cache disks.",
-      "Enable S3 Versioning on the bucket so that the gateway detects new object versions.",
-      "Replace the S3 File Gateway with a Volume Gateway in cached mode.",
-      "Configure an automated cache refresh with a TTL on the file share, or call the RefreshCache API on a schedule."
+      "Increase the size of the gateway's cache disks so that more of the bucket's objects can be held locally and listed in the share.",
+      "Enable S3 Versioning on the bucket so that the gateway detects new object versions and adds them to the NFS share.",
+      "Replace the S3 File Gateway with a Volume Gateway in cached mode, which keeps the primary data in Amazon S3.",
+      "Configure automated cache refresh with a TTL on the file share, or call the RefreshCache API on a schedule."
     ],
     "answer": [
       3
@@ -903,10 +903,10 @@
     "difficulty": 2,
     "question": "A company runs an on-premises application on iSCSI volumes presented by an AWS Storage Gateway Volume Gateway in stored mode, with hourly snapshots. The company's data center has an extended outage, and the application must be brought up in AWS as quickly as possible with the most recent data. What should a solutions architect do?",
     "options": [
-      "Create an Amazon EBS volume from the most recent Volume Gateway snapshot and attach it to an EC2 instance that runs the application.",
-      "Read the volume data directly from the underlying S3 bucket by using the S3 API.",
-      "Retrieve the latest virtual tape from the Tape Gateway archive and restore it to an EC2 instance.",
-      "Use AWS DataSync to copy the gateway's upload buffer to Amazon EFS."
+      "Create an Amazon EBS volume from the latest Volume Gateway snapshot and attach it to an EC2 instance that runs the application.",
+      "Read the volume data directly from the S3 bucket that Volume Gateway uploads to, by using the S3 API from an EC2 instance.",
+      "Retrieve the most recent virtual tape from the Tape Gateway archive in S3 Glacier and restore it to an EC2 instance.",
+      "Use AWS DataSync to copy the gateway's upload buffer to Amazon EFS and mount it on EC2 instances that run the application."
     ],
     "answer": [
       0
@@ -923,10 +923,10 @@
     "difficulty": 3,
     "question": "A company is deploying Amazon FSx for Windows File Server. Its security policy requires that AWS resources, including file systems, reside in an Active Directory forest that is separate from the on-premises forest where user accounts live. Users must continue to sign in with their existing on-premises credentials. Which solution meets these requirements?",
     "options": [
-      "Join the file system directly to the on-premises self-managed Active Directory domain.",
-      "Join the file system to an AWS Managed Microsoft AD directory and create a one-way forest trust between that directory and the on-premises Active Directory.",
-      "Create local Windows users on the file system that match the on-premises user names.",
-      "Use IAM Identity Center users and map them to NTFS permissions on the file shares."
+      "Join the file system directly to the on-premises self-managed Active Directory domain over AWS Direct Connect or a Site-to-Site VPN.",
+      "Join the file system to AWS Managed Microsoft AD and create a one-way forest trust between that directory and the on-premises Active Directory.",
+      "Create local Windows users on the file system that match the on-premises user names and synchronize their passwords with a scheduled script.",
+      "Use IAM Identity Center with the on-premises directory as the identity source and map those users to NTFS permissions on the shares."
     ],
     "answer": [
       1
@@ -985,15 +985,15 @@
     "difficulty": 2,
     "question": "A compliance audit requires that all data in transit between clients and an Amazon FSx for Windows File Server file system be encrypted, and that clients unable to use SMB encryption be prevented from accessing any share. Which solution meets these requirements?",
     "options": [
-      "Enable encryption at rest with a customer managed AWS KMS key on the file system.",
-      "Restrict the file system's security group to allow TCP port 445 only from approved client subnets.",
-      "Enable SMB encryption on the share that holds the most sensitive data.",
+      "Enable encryption at rest with a customer managed AWS KMS key so that all file data and backups are encrypted.",
+      "Restrict the file system's security group to allow TCP port 445 only from approved client subnets that connect over AWS Site-to-Site VPN.",
+      "Enable SMB encryption with the Amazon FSx PowerShell commands on the share that holds the most sensitive data.",
       "Use the Amazon FSx PowerShell commands to enable server-wide SMB encryption and reject unencrypted access."
     ],
     "answer": [
       3
     ],
-    "explanation": "FSx for Windows encrypts data in transit with SMB encryption for clients that support SMB 3.0 or later, and the Set-FSxSmbServerConfiguration command with EncryptData and RejectUnencryptedAccess enforces encryption for the whole file system and blocks clients that cannot encrypt. Encryption at rest does not protect traffic, a security group controls which networks can connect but not whether traffic is encrypted, and enabling encryption on a single share leaves the other shares unencrypted.",
+    "explanation": "FSx for Windows encrypts data in transit with SMB encryption for clients that support SMB 3.0 or later, and the Set-FSxSmbServerConfiguration command with EncryptData and RejectUnencryptedAccess enforces encryption for the whole file system and blocks clients that cannot encrypt. Encryption at rest does not protect traffic, and a security group controls which networks can connect but not whether traffic is encrypted. A Site-to-Site VPN encrypts only the tunnel, not SMB traffic inside the VPC, and does not block clients that cannot encrypt. Enabling encryption on a single share leaves the other shares unencrypted.",
     "subtopic": "FSx for Windows encryption in transit",
     "source": "https://docs.aws.amazon.com/fsx/latest/WindowsGuide/encryption-in-transit.html"
   },
@@ -1025,10 +1025,10 @@
     "difficulty": 3,
     "question": "An autonomous vehicle company keeps a 2 PB dataset on a shared Lustre file system for simulation jobs. Only about 10% of the data is read in any given month, the dataset keeps growing, and the team does not want to provision or resize storage capacity. Frequently read data must still be served with sub-millisecond latency. Which Amazon FSx for Lustre configuration is MOST cost-effective?",
     "options": [
-      "A scratch file system with SSD storage sized for the full dataset",
-      "A persistent file system with SSD storage sized for the full dataset",
+      "A scratch file system with SSD storage sized for the full dataset and data loaded lazily from Amazon S3",
+      "A persistent file system with SSD storage sized for the full dataset and data compression enabled",
       "A persistent file system that uses the Intelligent-Tiering storage class with an SSD read cache",
-      "A persistent file system with HDD storage sized for the full dataset and no read cache"
+      "A persistent file system with HDD storage sized for the full dataset and no SSD read cache, the lowest-cost provisioned option"
     ],
     "answer": [
       2
@@ -1045,9 +1045,9 @@
     "difficulty": 2,
     "question": "A company runs critical NFS and SMB workloads on Amazon FSx for NetApp ONTAP in us-east-1. For disaster recovery, it needs an up-to-date copy of the volumes in us-west-2 with a recovery point objective of a few minutes, managed with familiar NetApp tools. Which solution meets these requirements?",
     "options": [
-      "Change the file system to a Multi-AZ deployment.",
-      "Create AWS Backup daily backups of the volumes with a cross-Region copy rule.",
-      "Use Amazon EFS Replication to replicate the ONTAP volumes to us-west-2.",
+      "Change the file system to a Multi-AZ deployment, which keeps a synchronously replicated standby file server.",
+      "Create AWS Backup daily backups of the volumes with a cross-Region copy rule to a backup vault in us-west-2.",
+      "Use Amazon EFS Replication to replicate the ONTAP volumes to us-west-2 with an RPO of about 15 minutes.",
       "Use NetApp SnapMirror to replicate the volumes to a second FSx for ONTAP file system in us-west-2."
     ],
     "answer": [
@@ -1125,11 +1125,11 @@
     "difficulty": 3,
     "question": "A company is preparing for a ransomware event in which attackers gain administrator access to its production accounts. It needs immutable copies of its AWS Backup recovery points and must be able to restore them quickly from a separate, clean recovery account. Which combination of steps will meet these requirements? (Select TWO.)",
     "options": [
-      "Apply AWS Backup Vault Lock in governance mode to the production backup vault.",
+      "Apply AWS Backup Vault Lock in governance mode to the production backup vault so that recovery points cannot be deleted before their retention ends.",
       "Copy the recovery points to an AWS Backup logically air-gapped vault, which is locked in compliance mode.",
-      "Enable S3 Cross-Region Replication on the backup vault's storage.",
-      "Tag every recovery point with a DoNotDelete tag.",
-      "Share the logically air-gapped vault with the recovery account through AWS Resource Access Manager (AWS RAM) and restore from that account."
+      "Enable S3 Cross-Region Replication on the backup vault's storage with S3 Object Lock on the destination bucket.",
+      "Tag every recovery point with a DoNotDelete tag so that AWS Backup skips it during lifecycle deletion.",
+      "Share the logically air-gapped vault with the recovery account through AWS RAM and restore the backups from that account."
     ],
     "answer": [
       1,
@@ -1209,10 +1209,10 @@
     "difficulty": 3,
     "question": "A company uses AWS Organizations. A central backup team works only in a dedicated member account and must create and manage AWS Backup policies for all accounts and monitor backup, restore, and copy jobs across the organization. The security team wants to minimize the number of people with access to the management account. Which solution meets these requirements?",
     "options": [
-      "Give the backup team IAM roles in the management account so they can manage backup policies.",
-      "Register the backup account as a delegated administrator for AWS Backup and delegate backup policy management to it through AWS Organizations.",
-      "Have the backup team create identical backup plans in every member account with CloudFormation.",
-      "Create a cross-account IAM role in each member account and have the team inspect backup jobs account by account."
+      "Give the backup team IAM roles in the management account that are limited to the AWS Backup and Organizations backup policy actions.",
+      "Register the backup account as a delegated administrator for AWS Backup and delegate backup policy management to it in AWS Organizations.",
+      "Have the backup team deploy identical backup plans to every member account with AWS CloudFormation StackSets from the backup account.",
+      "Create a cross-account IAM role in each member account and have the team assume each role to review backup jobs account by account."
     ],
     "answer": [
       1
@@ -1229,10 +1229,10 @@
     "difficulty": 3,
     "question": "During a Regional outage, a company failed over to its Amazon EFS replica in us-west-2 by deleting the replication configuration, and applications wrote new data to the replica for 3 days. The primary file system in us-east-1 is healthy again. The company must fail back to us-east-1 without losing the changes made during the outage. What should a solutions architect do?",
     "options": [
-      "Create a replication configuration on the us-west-2 file system with the original us-east-1 file system as the destination, and after it syncs, re-create the original replication direction.",
-      "Re-create the original replication configuration from the us-east-1 file system to the us-west-2 file system.",
-      "Restore the latest AWS Backup recovery point of the us-east-1 file system and then point applications back to it.",
-      "Mount both file systems on an EC2 instance and copy changed files manually with rsync."
+      "Replicate from the us-west-2 file system back to the original us-east-1 file system, and after it syncs, re-create the original replication direction.",
+      "Re-create the original replication configuration from us-east-1 to us-west-2; EFS then transfers only the differences between the two file systems.",
+      "Restore the latest AWS Backup recovery point of the us-east-1 file system in place and then point the applications back to us-east-1.",
+      "Mount both file systems on an EC2 instance and use rsync to copy the files that changed during the outage from us-west-2 to us-east-1."
     ],
     "answer": [
       0
@@ -1249,10 +1249,10 @@
     "difficulty": 1,
     "question": "A team created an Amazon EFS file system by using the Amazon EFS console with default settings. A manager asks what backup protection the file system has before any further configuration. Which statement is correct?",
     "options": [
-      "The file system has no backups until a backup plan is created manually.",
-      "EFS takes hourly EBS snapshots of the file system and keeps them for 7 days.",
+      "The file system has no backups until an AWS Backup plan is created and the file system is assigned to it manually.",
+      "EFS takes hourly snapshots of the file system, stores them as EBS snapshots, and keeps them for 7 days.",
       "Automatic backups are enabled through AWS Backup, with daily backups retained for 35 days in a default EFS backup vault.",
-      "EFS automatically replicates the file system to a second Region as a backup."
+      "EFS automatically replicates the file system to a second Region, which serves as its backup copy until a backup plan is added."
     ],
     "answer": [
       2
@@ -1269,9 +1269,9 @@
     "difficulty": 2,
     "question": "A company is deploying a Microsoft SQL Server failover cluster instance on EC2 instances in two Availability Zones and wants to store the database files on shared SMB storage instead of managing its own cluster storage. The storage must stay available if an Availability Zone fails and must support continuously available file shares. Which solution meets these requirements?",
     "options": [
-      "An Amazon FSx for Windows File Server Single-AZ 1 file system",
-      "An Amazon EFS file system with mount targets in both Availability Zones",
-      "An Amazon FSx for Lustre persistent file system",
+      "An Amazon FSx for Windows File Server Single-AZ 1 file system with continuously available shares",
+      "An Amazon EFS file system with mount targets in both Availability Zones and the Regional storage class",
+      "An Amazon FSx for Lustre persistent file system with replicated storage and automatic file server replacement",
       "An Amazon FSx for Windows File Server Multi-AZ file system with continuously available (CA) shares"
     ],
     "answer": [
@@ -1309,10 +1309,10 @@
     "difficulty": 2,
     "question": "A research lab stores large uncompressed text output from simulations on an Amazon FSx for Lustre persistent file system, and storage costs are growing quickly. The lab wants to reduce the storage consumed without changing its applications or significantly affecting latency. Which solution meets these requirements?",
     "options": [
-      "Enable Windows data deduplication on the file system.",
+      "Enable data deduplication on the file system to remove duplicate blocks from the simulation output.",
       "Enable LZ4 data compression on the file system and use lfs_migrate to compress existing files.",
-      "Convert the file system to a scratch deployment type.",
-      "Move the simulation output to S3 Glacier Deep Archive and restore it when needed."
+      "Convert the file system to a scratch deployment type, which does not replicate data and so keeps fewer copies of each file.",
+      "Move the simulation output to S3 Glacier Deep Archive with a data repository export and restore it when needed."
     ],
     "answer": [
       1
@@ -1329,10 +1329,10 @@
     "difficulty": 2,
     "question": "A healthcare company must record which users read, modify, or delete files on its Amazon FSx for Windows File Server shares and stream these records continuously to its Splunk deployment for analysis. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Enable AWS CloudTrail data events for the file system.",
-      "Enable VPC Flow Logs on the file system's network interfaces.",
+      "Enable AWS CloudTrail data events for the file system and stream the trail to Splunk through Amazon CloudWatch Logs.",
+      "Enable VPC Flow Logs on the file system's network interfaces and deliver them to Splunk through Amazon Data Firehose.",
       "Enable file access auditing on the file system with an Amazon Data Firehose delivery stream as the audit event log destination.",
-      "Enable shadow copies and compare snapshots daily to detect changes."
+      "Enable shadow copies on the file system and compare the snapshots daily with a script to detect changed and deleted files."
     ],
     "answer": [
       2
@@ -1349,9 +1349,9 @@
     "difficulty": 2,
     "question": "Backup operators in a company must be able to create on-demand backups and restore data from an AWS Backup vault, but only the security team's IAM role may delete recovery points from that vault. The company still wants to be able to adjust retention settings later. Which solution meets these requirements?",
     "options": [
-      "Apply AWS Backup Vault Lock in compliance mode to the vault.",
-      "Place a legal hold on all recovery points in the vault.",
-      "Attach a service control policy that denies all AWS Backup actions to everyone except the security team.",
+      "Apply AWS Backup Vault Lock in compliance mode to the vault so that no one except the security team can delete recovery points.",
+      "Place a legal hold on all recovery points in the vault so that they cannot be deleted by the backup operators.",
+      "Attach a service control policy that denies all AWS Backup actions in the account to every principal except the security team's role.",
       "Attach a vault access policy that denies backup:DeleteRecoveryPoint unless aws:PrincipalArn matches the security team's role."
     ],
     "answer": [
@@ -1370,10 +1370,10 @@
     "question": "A company uses AWS Organizations and wants AWS Backup to copy Amazon RDS backups from a production account to a vault in a separate backup account. The RDS instances are encrypted with the AWS managed key for RDS, and the copy jobs fail. Which combination of steps is required to make cross-account copies work? (Select TWO.)",
     "options": [
       "Encrypt the RDS resources with a customer managed KMS key and share that key with the backup account.",
-      "Move the backup account into a different organization so that its vault is isolated.",
-      "Use the backup account's default backup vault as the copy destination.",
-      "Transition the source backups to cold storage before copying them.",
-      "Add a vault access policy to the destination vault that allows backup:CopyIntoBackupVault from the production account or the organization."
+      "Move the backup account into a different organization so that its vault is fully isolated from the production account.",
+      "Use the backup account's default backup vault as the copy destination, because it already trusts accounts in the organization.",
+      "Transition the source backups to cold storage before copying them to reduce the cost of the cross-account copy.",
+      "Add a vault access policy to the destination vault that allows backup:CopyIntoBackupVault from the production account or organization."
     ],
     "answer": [
       0,
@@ -1391,10 +1391,10 @@
     "difficulty": 2,
     "question": "An Amazon EFS file system uses a lifecycle policy that moves files to EFS Infrequent Access after 30 days without access. A latency-sensitive application sometimes reopens old project files and then reads them heavily for several days, and users notice higher latency and per-access charges during those periods. The company wants to keep the savings for files that stay cold. What should a solutions architect do?",
     "options": [
-      "Set the lifecycle policy's Transition into Standard option to On first access.",
-      "Switch the file system to the Max I/O performance mode.",
-      "Switch the file system to Provisioned throughput.",
-      "Remove the lifecycle policy so that all files stay in EFS Standard."
+      "Set the lifecycle policy's Transition into Standard option to On first access instead of None.",
+      "Switch the file system to the Max I/O performance mode to raise the IOPS available to reactivated files.",
+      "Switch the file system to Provisioned throughput so that reads from the IA class are served faster.",
+      "Remove the lifecycle policy so that all files stay in EFS Standard and never incur IA access charges."
     ],
     "answer": [
       0
@@ -1433,10 +1433,10 @@
     "difficulty": 2,
     "question": "An upstream pipeline continuously adds and updates objects in an S3 bucket that is linked to an Amazon FSx for Lustre file system through a data repository association. HPC jobs must see new and changed objects as files without anyone running manual import tasks, and deleted objects should disappear from the file system. What should a solutions architect configure?",
     "options": [
-      "A scheduled Lambda function that re-creates the file system every hour",
+      "A scheduled Lambda function that re-creates the file system every hour from the linked S3 bucket",
       "An automatic import policy of New, Changed, and Deleted on the data repository association",
-      "S3 Cross-Region Replication from the bucket to the file system",
-      "An S3 File Gateway in front of the bucket that the HPC nodes mount"
+      "S3 Replication from the bucket to the file system, with delete marker replication enabled",
+      "An S3 File Gateway in front of the bucket that the HPC nodes mount over NFS instead of Lustre"
     ],
     "answer": [
       1
@@ -1473,15 +1473,15 @@
     "difficulty": 2,
     "question": "A company is joining Amazon FSx for Windows File Server file systems to its self-managed Active Directory domain. The security team does not want the domain join credentials stored in plaintext in infrastructure templates, wants the password to be rotatable, and wants FSx to use the least privileged account possible. Which approach meets these requirements?",
     "options": [
-      "Use a Domain Admins account and paste its password into the CloudFormation template parameters.",
-      "Create a local administrator account on each file system and use it for the domain join.",
-      "Store the Domain Admins credentials in an encrypted S3 object that FSx reads at creation time.",
-      "Use a dedicated service account with only the delegated permissions FSx requires, store its credentials in AWS Secrets Manager, and provide the secret ARN to FSx."
+      "Use a Domain Admins account and pass its password to the CloudFormation template as a NoEcho parameter so it is masked in the console.",
+      "Create a local administrator account on each file system with a rotating password and use it to perform the domain join.",
+      "Store the Domain Admins credentials in an S3 object encrypted with a KMS key that FSx reads when it creates the file system.",
+      "Use a dedicated service account with only the delegated permissions FSx needs, store its credentials in AWS Secrets Manager, and give FSx the secret ARN."
     ],
     "answer": [
       3
     ],
-    "explanation": "AWS recommends a separate service account with only the delegated permissions needed to join and manage computer objects in the target OU, rather than Domain Admins, and recommends storing its credentials in AWS Secrets Manager and supplying the secret ARN so that they are not kept in plaintext and can be rotated. Plaintext template parameters or Domain Admins credentials violate least privilege, local accounts cannot join the domain, and FSx does not read join credentials from S3.",
+    "explanation": "AWS recommends a separate service account with only the delegated permissions needed to join and manage computer objects in the target OU, rather than Domain Admins, and recommends storing its credentials in AWS Secrets Manager and supplying the secret ARN so that they are not kept in plaintext and can be rotated. A NoEcho parameter only masks the value in console and API output and offers no rotation, and Domain Admins credentials violate least privilege. Local accounts cannot join the domain, and FSx does not read join credentials from S3.",
     "subtopic": "FSx for Windows self-managed AD service account",
     "source": "https://docs.aws.amazon.com/fsx/latest/WindowsGuide/self-manage-prereqs.html"
   },
@@ -1553,10 +1553,10 @@
     "difficulty": 2,
     "question": "A self-managed database on EC2 stripes its data across four EBS volumes in a RAID 0 array. The team needs scheduled point-in-time backups that restore without inconsistencies between the volumes, and the database cannot be stopped for backups. Which approach meets these requirements?",
     "options": [
-      "Snapshot each volume one after another, starting with the volume that holds the most data",
+      "Snapshot each volume one after another as quickly as possible, starting with the volume that holds the most data",
       "Back up the instance with AWS Backup, which takes crash-consistent snapshots of all attached EBS volumes at the same moment",
-      "Enable Fast Snapshot Restore on the four volumes so that their snapshots are synchronized",
-      "Snapshot only the root volume, because the RAID metadata references the data volumes"
+      "Enable Fast Snapshot Restore on the four volumes so that their snapshots are synchronized to the same point in time",
+      "Snapshot only the root volume, because the RAID 0 metadata on it references and reconstructs the data volumes"
     ],
     "answer": [
       1
@@ -1574,9 +1574,9 @@
     "question": "A batch platform launches EC2 instances, and after each launch a script creates and attaches a 500 GiB gp3 scratch volume. When jobs finish, the instances are terminated. The EBS bill keeps growing, and the console shows hundreds of volumes in the available state. What is the cause, and what is the fix?",
     "options": [
       "Termination protection detaches volumes instead of deleting them, so the platform should disable termination protection",
-      "gp3 volumes are always kept after termination, so the platform should switch the scratch volumes to gp2",
-      "Volumes attached after launch default to DeleteOnTermination false, so the platform should set it to true or define the volumes in the launch template block device mapping",
-      "EBS volumes are deleted only after a final snapshot is taken, so the platform should enable Amazon Data Lifecycle Manager"
+      "gp3 volumes are always retained after termination unlike gp2, so the platform should switch the scratch volumes to gp2",
+      "Volumes attached after launch default to DeleteOnTermination false, so set it to true or define the volumes in the launch template block device mapping",
+      "EBS volumes are kept until a final snapshot is taken, so the platform should enable Amazon Data Lifecycle Manager to snapshot and delete them"
     ],
     "answer": [
       2

@@ -27,9 +27,9 @@
     "question": "A company has configured only one of the two tunnels in its new AWS Site-to-Site VPN connection. During AWS maintenance the connection briefly went down. What should the company do to improve availability with the least change?",
     "options": [
       "Configure the second tunnel on the customer gateway device so both tunnels are up and either can carry traffic",
-      "Create a second virtual private gateway and attach it to the same VPC as a standby",
-      "Replace the VPN connection with an AWS Client VPN endpoint that has two associated subnets",
-      "Move the VPN connection to a different AWS Region that has fewer maintenance events"
+      "Create a second virtual private gateway and attach it to the same VPC as a standby so that a new VPN connection can fail over to it",
+      "Replace the VPN connection with an AWS Client VPN endpoint that has two associated subnets in different Availability Zones",
+      "Move the VPN connection to a different AWS Region that has fewer scheduled maintenance events for its VPN endpoints"
     ],
     "answer": [
       0
@@ -45,10 +45,10 @@
     "difficulty": 2,
     "question": "A retailer connects 40 stores across Asia and South America to AWS with Site-to-Site VPN. Store VPN traffic crosses long internet paths and suffers from jitter and packet loss. The company wants more consistent VPN performance without buying private circuits. Which solution will meet these requirements?",
     "options": [
-      "Attach the VPN connections to a virtual private gateway and enable jumbo frames on the tunnels",
-      "Replace the VPN connections with AWS Client VPN endpoints in each Region near the stores",
-      "Use Amazon CloudFront in front of the virtual private gateway to cache VPN traffic at edge locations",
-      "Create accelerated Site-to-Site VPN connections attached to a transit gateway so traffic enters the AWS global network at the nearest edge location"
+      "Attach the VPN connections to a virtual private gateway and enable jumbo frames on the tunnels to reduce per-packet overhead on the long paths",
+      "Replace the Site-to-Site VPN connections with AWS Client VPN endpoints in the Regions closest to the stores to shorten the internet path",
+      "Put Amazon CloudFront in front of the virtual private gateway so that store VPN traffic is cached and served from the nearest edge location",
+      "Create accelerated Site-to-Site VPN connections on a transit gateway so traffic enters the AWS global network at the nearest edge location"
     ],
     "answer": [
       3
@@ -83,9 +83,9 @@
     "difficulty": 2,
     "question": "A bank connects its data center to AWS with a 10 Gbps dedicated AWS Direct Connect connection. A new regulation requires all traffic between the data center and AWS to be encrypted in transit. Which solutions will meet this requirement? (Select TWO.)",
     "options": [
-      "Turn on the encryption setting of the existing private virtual interface",
+      "Turn on the encryption setting of the existing private virtual interface so that traffic is encrypted between the router and AWS",
       "Enable MACsec on the dedicated connection, using a Direct Connect location and port that support MACsec",
-      "Encrypt all data with AWS KMS keys before it reaches the customer router",
+      "Encrypt all data with AWS KMS keys on the servers before it reaches the customer router and the Direct Connect link",
       "Replace the private virtual interface with a public virtual interface, which is encrypted by default",
       "Run an AWS Site-to-Site VPN connection over the Direct Connect connection so traffic is protected by IPsec"
     ],
@@ -104,10 +104,10 @@
     "difficulty": 1,
     "question": "A small media company needs a private connection to AWS with about 500 Mbps of bandwidth. It does not want to pay for a full 1 Gbps port and wants to work through a local network provider. Which option is the MOST cost-effective?",
     "options": [
-      "Order a 1 Gbps dedicated Direct Connect connection and use only half of it",
-      "Create a link aggregation group of two 1 Gbps dedicated connections",
+      "Order a 1 Gbps dedicated Direct Connect connection and use only half of it, leaving headroom for future growth",
+      "Create a link aggregation group of two 1 Gbps dedicated connections for redundancy and use a fraction of each",
       "Order a 500 Mbps hosted Direct Connect connection from an AWS Direct Connect Delivery Partner",
-      "Request a 10 Gbps dedicated connection and share it with other companies"
+      "Request a 10 Gbps dedicated connection and share it with other companies through the local network provider"
     ],
     "answer": [
       2
@@ -124,9 +124,9 @@
     "question": "A research institute already has an AWS Direct Connect connection. Its on-premises servers upload large datasets to Amazon S3 buckets through public S3 endpoints in several AWS Regions. The institute wants this traffic to use the Direct Connect link instead of the internet. Which virtual interface should the institute create?",
     "options": [
       "A public virtual interface, which advertises AWS public IP prefixes such as S3 endpoints to the on-premises router",
-      "A private virtual interface attached directly to an S3 gateway endpoint",
-      "A transit virtual interface attached to an S3 bucket policy",
-      "A hosted virtual interface that routes S3 traffic through a NAT gateway"
+      "A private virtual interface attached to the VPC's virtual private gateway, combined with an S3 gateway endpoint in that VPC",
+      "A transit virtual interface to a Direct Connect gateway, with an S3 bucket policy that allows the on-premises CIDR range",
+      "A hosted virtual interface on the existing connection that routes S3 traffic through a NAT gateway in each Region"
     ],
     "answer": [
       0
@@ -142,9 +142,9 @@
     "difficulty": 2,
     "question": "A company has one AWS Direct Connect connection in Frankfurt. It must reach VPCs in eu-central-1, us-east-1, and ap-northeast-1 privately through this connection. Each VPC has a virtual private gateway. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Order additional Direct Connect connections at a location in each Region",
-      "Create one private VIF per VPC on the connection and use VPC peering between Regions",
-      "Use a public VIF and route traffic to each VPC through its internet gateway",
+      "Order additional Direct Connect connections at a Direct Connect location in each of the other two Regions",
+      "Create one private VIF per VPC on the connection and use inter-Region VPC peering to reach the VPCs outside Frankfurt",
+      "Use a public VIF, which can reach AWS public prefixes in all Regions, and route traffic to each VPC through its internet gateway",
       "Create a Direct Connect gateway, connect a private VIF to it, and associate the three virtual private gateways with it"
     ],
     "answer": [
@@ -161,10 +161,10 @@
     "difficulty": 3,
     "question": "An enterprise has more than 300 VPCs attached to transit gateways in two AWS Regions. The network team needs on-premises access to all VPCs over its existing AWS Direct Connect connection while keeping the number of virtual interfaces small. Which design should a solutions architect use?",
     "options": [
-      "Create one private virtual interface for every VPC and associate each with the VPC's virtual private gateway",
+      "Create one private virtual interface for every VPC on the connection and associate each with the VPC's virtual private gateway",
       "Create a transit virtual interface to a Direct Connect gateway and associate the Direct Connect gateway with both transit gateways",
-      "Create a public virtual interface and advertise all VPC CIDR ranges as public prefixes",
-      "Create a Site-to-Site VPN from each VPC to the on-premises router"
+      "Create a public virtual interface and advertise all VPC CIDR ranges as public prefixes over BGP to the on-premises router",
+      "Create a Site-to-Site VPN from each VPC's virtual private gateway to the on-premises router over the internet"
     ],
     "answer": [
       1
@@ -239,10 +239,10 @@
     "difficulty": 2,
     "question": "A company has 60 VPCs connected by a full mesh of VPC peering connections, and it also needs every VPC to reach the data center through a single VPN. Managing peering and route tables has become difficult. Which service should a solutions architect use to simplify the network?",
     "options": [
-      "AWS PrivateLink with an endpoint service in every VPC",
-      "A virtual private gateway shared across all VPCs",
-      "AWS Client VPN with one endpoint per VPC",
-      "AWS Transit Gateway as a regional hub with VPC and VPN attachments"
+      "AWS PrivateLink with an endpoint service in every VPC and interface endpoints in the others",
+      "A single virtual private gateway shared across all VPCs and connected to the VPN",
+      "AWS Client VPN with one endpoint per VPC and authorization rules for each network",
+      "AWS Transit Gateway as a regional hub with VPC attachments and a VPN attachment"
     ],
     "answer": [
       3
@@ -258,10 +258,10 @@
     "difficulty": 3,
     "question": "A company attaches development, production, and shared services VPCs to one transit gateway. Development and production VPCs must both reach shared services, but development must never reach production. Which approach meets these requirements?",
     "options": [
-      "Use separate transit gateway route tables for development and production, propagating only shared services routes into each, and give shared services a route table with both",
-      "Use the default transit gateway route table and add security group rules in production that deny development CIDR ranges",
-      "Create VPC peering between development and production and remove the routes in the peering route tables",
-      "Attach development and production to different virtual private gateways connected to the same transit gateway"
+      "Use separate transit gateway route tables for development and production that propagate only shared services routes, and a shared services route table with both",
+      "Use the default transit gateway route table for all attachments and add security group rules in production that deny development CIDR ranges",
+      "Create VPC peering between development and production and remove the routes from the peering route tables so the VPCs cannot reach each other",
+      "Attach development and production to different virtual private gateways connected to the same transit gateway, each with its own route propagation"
     ],
     "answer": [
       0
@@ -299,10 +299,10 @@
     "question": "A company has a transit gateway in us-east-1 and another in ap-southeast-2, each with many attached VPCs. It wants VPCs in both Regions to communicate privately over the AWS network. Which steps are required? (Select TWO.)",
     "options": [
       "Create a transit gateway peering attachment between the two transit gateways and accept it in the peer Region",
-      "Enable route propagation from the peering attachment so routes are learned automatically",
-      "Create a Direct Connect gateway and associate both transit gateways to route between Regions",
+      "Enable route propagation from the peering attachment so that each transit gateway learns the remote VPC CIDR ranges automatically",
+      "Create a Direct Connect gateway and associate both transit gateways with it so that it routes traffic between the two Regions",
       "Add static routes in each transit gateway route table that point remote CIDR ranges to the peering attachment",
-      "Create VPC peering connections between the two transit gateways"
+      "Create an inter-Region VPC peering connection between the two transit gateways"
     ],
     "answer": [
       0,
@@ -319,10 +319,10 @@
     "difficulty": 3,
     "question": "A company runs 25 VPCs in one Region, and each VPC has its own NAT gateways in three Availability Zones for outbound internet access. All VPCs are already attached to a transit gateway. The company wants to reduce NAT costs while keeping outbound access. Which solution is MOST cost-effective?",
     "options": [
-      "Replace each NAT gateway with a NAT instance on a small burstable EC2 instance",
+      "Replace each NAT gateway with a NAT instance on a small burstable EC2 instance in every VPC and Availability Zone to remove the hourly NAT gateway charge",
       "Create a central egress VPC with NAT gateways and route internet-bound traffic from the other VPCs through the transit gateway to it",
-      "Add an internet gateway to every VPC and give all instances public IP addresses",
-      "Create gateway VPC endpoints for internet access in each VPC"
+      "Add an internet gateway to every VPC and give all instances public IP addresses so that no NAT device is needed",
+      "Create gateway VPC endpoints for internet access in each VPC, which have no hourly or data processing charges"
     ],
     "answer": [
       1
@@ -395,9 +395,9 @@
     "difficulty": 2,
     "question": "A company's on-premises SAN is almost full. An application needs block storage over iSCSI, but only about 10% of its 60 TB of data is accessed often. The company wants to avoid buying more on-premises storage. Which solution is MOST cost-effective?",
     "options": [
-      "Volume Gateway in stored mode with 60 TB of new local disks",
-      "S3 File Gateway mounted over NFS",
-      "Amazon FSx for Windows File Server accessed over DirectConnect",
+      "Volume Gateway in stored mode, keeping the full 60 TB on new local disks with asynchronous snapshots to Amazon S3",
+      "S3 File Gateway mounted over NFS, with a local cache for the most frequently accessed files",
+      "Amazon FSx for Windows File Server accessed over AWS Direct Connect, with data deduplication to reduce storage",
       "Volume Gateway in cached mode with primary data in AWS and a local cache for frequently accessed data"
     ],
     "answer": [
@@ -414,10 +414,10 @@
     "difficulty": 2,
     "question": "An insurance company backs up to an aging physical tape library and must keep backups for 10 years. It wants to stop handling physical tapes but keep its existing backup software and workflows. Which solution is MOST cost-effective?",
     "options": [
-      "Volume Gateway in cached mode with daily snapshots",
+      "Volume Gateway in cached mode with daily EBS snapshots kept for 10 years",
       "Tape Gateway with virtual tapes archived to S3 Glacier Deep Archive",
-      "S3 File Gateway with S3 Intelligent-Tiering",
-      "AWS DataSync copying backup files to Amazon EFS"
+      "S3 File Gateway with backups written to S3 Intelligent-Tiering",
+      "AWS DataSync copying backup files nightly to Amazon EFS Infrequent Access"
     ],
     "answer": [
       1
@@ -452,10 +452,10 @@
     "difficulty": 1,
     "question": "A film studio that is an existing AWS Snowball Edge customer must move 400 TB of archived footage to Amazon S3 within four weeks. Its internet link is 100 Mbps and is already heavily used. Which approach is MOST cost-effective?",
     "options": [
-      "Use AWS DataSync over the existing internet connection",
-      "Order a new 10 Gbps dedicated AWS Direct Connect connection",
+      "Use AWS DataSync over the existing internet connection with bandwidth throttling during business hours",
+      "Order a new 10 Gbps dedicated AWS Direct Connect connection and transfer the footage with DataSync",
       "Order multiple AWS Snowball Edge Storage Optimized devices and ship the data to AWS",
-      "Use Amazon S3 Transfer Acceleration for the uploads"
+      "Use Amazon S3 Transfer Acceleration so that the uploads enter the AWS network at the nearest edge location"
     ],
     "answer": [
       2
@@ -472,10 +472,10 @@
     "difficulty": 2,
     "question": "A mining company that already uses AWS Snowball Edge devices at other sites operates a remote site with no reliable network connectivity. It needs to run computer vision workloads on EC2-compatible instances next to its sensors, store results locally, and later move the data into Amazon S3. Which solution meets these requirements?",
     "options": [
-      "AWS Outposts racks installed at the site",
+      "AWS Outposts racks installed at the site, running EC2 instances and S3 on Outposts locally",
       "AWS Snowball Edge devices running EC2-compatible instances, shipped back to AWS to import data",
-      "AWS Local Zones closest to the mine",
-      "Amazon EC2 instances in the nearest Region accessed over satellite"
+      "AWS Local Zones closest to the mine, which run EC2 instances close to end users",
+      "Amazon EC2 instances in the nearest Region, accessed over a satellite link with results stored in Amazon EBS"
     ],
     "answer": [
       1
@@ -492,9 +492,9 @@
     "difficulty": 2,
     "question": "A company must copy 15 TB from an on-premises NFS server to Amazon EFS, then keep the two in sync every night until cutover. The transfer must verify data integrity and use bandwidth efficiently. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Write a cron job that runs rsync from an EC2 instance that mounts both file systems",
-      "Use an S3 File Gateway to upload data, then copy it from S3 to EFS with AWS Lambda",
-      "Ship the data on Snowball Edge each night",
+      "Write a cron job that runs rsync with checksums from an EC2 instance that mounts both the NFS share and Amazon EFS",
+      "Use an S3 File Gateway to upload the data to Amazon S3, then copy it from S3 to EFS with AWS Lambda functions",
+      "Ship the changed data on AWS Snowball Edge devices each night until the cutover",
       "Deploy an AWS DataSync agent on premises and schedule a DataSync task from the NFS share to Amazon EFS"
     ],
     "answer": [
@@ -570,10 +570,10 @@
     "difficulty": 2,
     "question": "A pharmaceutical distributor exchanges EDI documents with trading partners using the AS2 protocol, which requires signed and encrypted messages with receipts. The company wants a managed AWS service that stores the documents in Amazon S3. Which service should it use?",
     "options": [
-      "Amazon MQ with an AS2 plugin",
-      "AWS Transfer Family with an AS2 server and partner profiles",
-      "Amazon SES with receiving rules that save messages to S3",
-      "AWS Storage Gateway with an SMB share for each partner"
+      "Amazon MQ for ActiveMQ brokers that exchange signed messages with partners",
+      "AWS Transfer Family with an AS2 server, partner profiles, and agreements",
+      "Amazon SES with receiving rules that save signed messages to S3",
+      "AWS Storage Gateway with an SMB file share in S3 for each partner"
     ],
     "answer": [
       1
@@ -589,9 +589,9 @@
     "difficulty": 1,
     "question": "A company plans to rehost 200 on-premises servers running various Linux and Windows applications on Amazon EC2. It wants continuous replication and a cutover window of minutes, without changing the applications. Which AWS service should the company use?",
     "options": [
-      "AWS Database Migration Service",
-      "AWS DataSync",
-      "AWS Snowball Edge",
+      "AWS Database Migration Service (AWS DMS) with full load and ongoing replication",
+      "AWS DataSync with scheduled incremental transfer tasks",
+      "AWS Snowball Edge devices shipped in several waves",
       "AWS Transform MGN (previously AWS Application Migration Service)"
     ],
     "answer": [
@@ -610,9 +610,9 @@
     "question": "A company is using AWS Transform MGN (previously AWS Application Migration Service) to migrate an order management system. Before the final cutover, the team must validate that the migrated servers boot and run correctly in AWS without stopping replication from the source servers. What should the team do?",
     "options": [
       "Launch test instances from AWS Transform MGN, validate them, and then mark the servers ready for cutover",
-      "Stop the source servers, take EBS snapshots, and launch instances from the snapshots",
-      "Create AMIs from the replication server and launch them in a separate account",
-      "Use AWS Backup to restore the source servers into a test VPC"
+      "Stop the source servers, take EBS snapshots of the replicated volumes, and launch instances from those snapshots",
+      "Create AMIs from the replication servers in the staging area and launch them in a separate test account",
+      "Use AWS Backup to restore the source servers into an isolated test VPC and validate them there"
     ],
     "answer": [
       0
@@ -629,10 +629,10 @@
     "difficulty": 2,
     "question": "Before migrating 500 servers, a company wants to collect CPU, memory, and network utilization and map process-level dependencies between servers so it can right-size EC2 instances and plan migration waves. Which approach should a solutions architect recommend?",
     "options": [
-      "Enable AWS Compute Optimizer for the on-premises servers",
-      "Install the Amazon CloudWatch agent and use CloudWatch Contributor Insights",
-      "Use the AWS Transform discovery tool to collect server utilization, running processes, and server-to-server network connections for migration assessment",
-      "Run AWS Trusted Advisor checks against the data center"
+      "Enable AWS Compute Optimizer for the on-premises servers to get right-sizing recommendations for EC2 instance types",
+      "Install the Amazon CloudWatch agent on every server and use CloudWatch Contributor Insights to find the top talkers between servers",
+      "Use the AWS Transform discovery tool to collect utilization, running processes, and server-to-server network connections for migration assessment",
+      "Run AWS Trusted Advisor checks against the data center to find underutilized servers and their dependencies"
     ],
     "answer": [
       2
@@ -709,9 +709,9 @@
     "question": "A branch office firewall can establish IPsec tunnels but does not support BGP. The company wants to connect it to a VPC with AWS Site-to-Site VPN. How should the VPN connection be configured?",
     "options": [
       "Use static routing and specify the branch office IP prefixes on the VPN connection",
-      "Use dynamic routing with a private ASN assigned to the firewall",
-      "Use AWS Client VPN instead, because Site-to-Site VPN requires BGP",
-      "Use a Direct Connect hosted VIF as the routing protocol"
+      "Use dynamic routing and assign a private ASN to the firewall so that the tunnels can exchange routes",
+      "Use AWS Client VPN instead, because Site-to-Site VPN connections always require BGP",
+      "Use a Direct Connect hosted VIF as the routing mechanism for the branch office prefixes"
     ],
     "answer": [
       0
@@ -727,10 +727,10 @@
     "difficulty": 2,
     "question": "A company's AWS Client VPN endpoint sends all user traffic, including video calls and web browsing, through the VPN to the VPC and out through a NAT gateway. Costs are rising and users report slow browsing. The company only needs VPN access for resources inside the VPC. What should a solutions architect do?",
     "options": [
-      "Add more target network associations to the Client VPN endpoint",
-      "Replace the NAT gateway with an internet gateway in the Client VPN subnet",
+      "Add more target network associations to the Client VPN endpoint so that traffic is spread across more subnets",
+      "Replace the NAT gateway with an internet gateway in the Client VPN subnet to remove the NAT data processing charges",
       "Enable split-tunnel on the Client VPN endpoint so only routes for the VPC go through the tunnel",
-      "Move the Client VPN endpoint to a Region closer to the users"
+      "Move the Client VPN endpoint to a Region closer to the users to reduce latency for browsing and video calls"
     ],
     "answer": [
       2
@@ -790,9 +790,9 @@
     "difficulty": 3,
     "question": "A company has data centers in London and Singapore, each connected to AWS Direct Connect at a nearby location through private VIFs on one Direct Connect gateway. The company wants the two data centers to exchange traffic over the AWS global network without routing it through a VPC or AWS Region. Which solution meets this requirement?",
     "options": [
-      "Create an inter-Region transit gateway peering connection",
-      "Create a VPC in each Region with an EC2 router instance",
-      "Configure an accelerated Site-to-Site VPN between the data centers",
+      "Create an inter-Region transit gateway peering connection between London and Singapore",
+      "Create a VPC in each Region with an EC2 router instance and connect the VPCs with peering",
+      "Configure an accelerated Site-to-Site VPN between the two data centers through AWS Global Accelerator",
       "Enable SiteLink on the virtual interfaces attached to the Direct Connect gateway"
     ],
     "answer": [
@@ -809,10 +809,10 @@
     "difficulty": 3,
     "question": "A financial firm connects to a transit gateway through a transit VIF on AWS Direct Connect. Auditors require IPsec encryption for all traffic, and the security team does not want to create a public VIF or expose any public IP addresses for the VPN. Which solution meets these requirements?",
     "options": [
-      "Enable TLS on the transit gateway attachments",
-      "Create a standard Site-to-Site VPN over the internet in addition to Direct Connect",
+      "Enable TLS encryption on the transit gateway attachments used by the Direct Connect gateway",
+      "Create a standard Site-to-Site VPN over the internet in addition to Direct Connect and send all sensitive traffic through it",
       "Create a private IP Site-to-Site VPN attached to the transit gateway that uses the Direct Connect attachment as transport",
-      "Configure AWS Client VPN on each on-premises server"
+      "Install AWS Client VPN software on each on-premises server so that every connection to AWS is encrypted"
     ],
     "answer": [
       2
@@ -866,11 +866,11 @@
     "difficulty": 2,
     "question": "A solutions architect is reviewing a design that uses AWS Site-to-Site VPN. Which statements about Site-to-Site VPN are correct? (Select TWO.)",
     "options": [
-      "VPN traffic is sent unencrypted unless MACsec is enabled on the tunnels",
+      "VPN traffic is sent unencrypted unless MACsec is enabled on the tunnels by the customer gateway",
       "A single virtual private gateway can be attached to several VPCs at the same time",
       "Each VPN connection has two tunnels that terminate on different AWS endpoints for redundancy",
       "Accelerated VPN is supported only for VPN connections attached to a transit gateway",
-      "Static routing is required to use ECMP across tunnels on a transit gateway"
+      "Static routing is required to use ECMP across multiple VPN tunnels on a transit gateway"
     ],
     "answer": [
       2,
@@ -888,9 +888,9 @@
     "question": "A company connects 30 VPCs and a BGP-based Site-to-Site VPN to its data center through one transit gateway. The data center still advertises 10.99.0.0/16, the range of a decommissioned lab network that has been compromised. Until the network team removes the advertisement, the security team must stop all VPC traffic to 10.99.0.0/16 at the transit gateway without editing the 30 VPC route tables. Which solution meets this requirement with the LEAST effort?",
     "options": [
       "Add a static blackhole route for 10.99.0.0/16 to the transit gateway route table that is associated with the VPC attachments.",
-      "Add an outbound deny rule for 10.99.0.0/16 to the security groups of every instance in the 30 VPCs.",
-      "Disable route propagation from the VPN attachment to the transit gateway route table.",
-      "Add network ACL rules that deny 10.99.0.0/16 to every subnet in the 30 VPCs."
+      "Add an outbound rule that denies 10.99.0.0/16 to the security groups attached to every instance in the 30 VPCs.",
+      "Disable route propagation from the VPN attachment to the transit gateway route table so that the 10.99.0.0/16 route is no longer learned.",
+      "Add network ACL rules that deny traffic to 10.99.0.0/16 in every subnet of the 30 VPCs, evaluated before the allow rules."
     ],
     "answer": [
       0
@@ -907,10 +907,10 @@
     "difficulty": 3,
     "question": "A company is connecting a remote site to a transit gateway with AWS Site-to-Site VPN. The site's ISP occasionally changes the public IP address of the customer gateway device, and the security team does not want to manage pre-shared keys. The company wants the VPN to keep working after an IP change without reconfiguring the VPN connection. Which solution meets these requirements?",
     "options": [
-      "Use pre-shared keys stored in AWS Secrets Manager and rotate them whenever the device's IP address changes.",
+      "Use pre-shared keys stored in AWS Secrets Manager and rotate them automatically with a Lambda function whenever the device's IP address changes.",
       "Authenticate the tunnels with a private certificate from AWS Private Certificate Authority and create the customer gateway without specifying an IP address.",
-      "Register the device's current IP address as the customer gateway and create a new VPN connection after each change.",
-      "Replace the Site-to-Site VPN with AWS Client VPN and install the client on the device."
+      "Register the device's current IP address as the customer gateway and create a new customer gateway and VPN connection after each IP change.",
+      "Replace the Site-to-Site VPN with AWS Client VPN and install the client software on the customer gateway device so that its IP can change."
     ],
     "answer": [
       1
@@ -927,10 +927,10 @@
     "difficulty": 1,
     "question": "A logistics company is moving its partner SFTP server to AWS Transfer Family with Amazon S3 storage. Partner firewalls allow outbound connections only to fixed IP addresses, and the company must accept connections only from the partners' IP ranges. Which configuration meets these requirements?",
     "options": [
-      "Use a publicly accessible endpoint and filter partner IP ranges with network ACLs on the company's VPC.",
-      "Place an Application Load Balancer with Elastic IP addresses in front of the Transfer Family server.",
+      "Use a publicly accessible endpoint and filter the partner IP ranges with network ACLs on the subnets of the company's VPC.",
+      "Place an Application Load Balancer with Elastic IP addresses in front of the Transfer Family server and allow only partner ranges in its security group.",
       "Create a VPC-hosted, internet-facing endpoint with Elastic IP addresses and restrict inbound access with security group rules for the partner IP ranges.",
-      "Put an Amazon CloudFront distribution in front of the server and use geographic restrictions."
+      "Put an Amazon CloudFront distribution in front of the server and use geographic restrictions to allow only the partners' countries."
     ],
     "answer": [
       2
@@ -948,10 +948,10 @@
     "question": "A networking account owns a Direct Connect gateway that is attached to the company's private virtual interfaces. An application team in a separate AWS account owns a VPC with a virtual private gateway and needs on-premises connectivity through that Direct Connect gateway. The network team wants to control which prefixes are allowed. Which steps are required? (Select TWO.)",
     "options": [
       "The application account, which owns the virtual private gateway, creates an association proposal for the Direct Connect gateway.",
-      "The networking account shares the private virtual interface with the application account by using AWS RAM.",
-      "The application account creates its own Direct Connect connection to the same location.",
+      "The networking account shares the private virtual interface with the application account by using AWS RAM so that the VPC can attach to it.",
+      "The application account creates its own Direct Connect connection at the same location and attaches a private VIF to its gateway.",
       "The networking account, which owns the Direct Connect gateway, accepts the association proposal and can override the requested allowed prefixes.",
-      "Both accounts create VPC peering connections to a shared services VPC that owns the Direct Connect gateway."
+      "Both accounts create VPC peering connections to a shared services VPC that owns the Direct Connect gateway and its virtual interfaces."
     ],
     "answer": [
       0,
@@ -969,9 +969,9 @@
     "difficulty": 2,
     "question": "A bank is rehosting 80 on-premises servers on Amazon EC2 with AWS Transform MGN (previously named AWS Application Migration Service). Security policy states that replication data must not travel over the public internet. The bank already has AWS Direct Connect to the VPC that hosts the replication staging area. What should a solutions architect configure?",
     "options": [
-      "Keep the default replication settings, because replicated data is encrypted in transit.",
-      "Enable Amazon S3 Transfer Acceleration for the replication traffic.",
-      "Use AWS DataSync to copy the servers' file systems over Direct Connect instead of using MGN.",
+      "Keep the default replication settings, because replicated data is always encrypted in transit between the source servers and the staging area.",
+      "Enable Amazon S3 Transfer Acceleration for the replication traffic so that it enters the AWS network at the nearest edge location.",
+      "Use AWS DataSync to copy the servers' file systems over Direct Connect instead of MGN, because DataSync supports private VPC endpoints.",
       "Turn on the Use private IP option for data replication in the MGN replication settings so that traffic flows over Direct Connect."
     ],
     "answer": [
@@ -989,10 +989,10 @@
     "difficulty": 2,
     "question": "A company wants its 2,000 employees to upload files to Amazon S3 over SFTP by using their existing on-premises Microsoft Active Directory credentials. The company does not want to create or manage separate user accounts for SFTP. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Create an AWS Transfer Family SFTP server that uses AWS Directory Service as its identity provider, connected to the on-premises directory through AD Connector.",
-      "Create an AWS Transfer Family server with service-managed users and import every employee's SSH public key.",
-      "Create an IAM user with access keys for each employee and distribute an SFTP client configuration.",
-      "Create a Simple AD directory, recreate the users in it, and configure it as the Transfer Family identity provider."
+      "Create an AWS Transfer Family SFTP server that uses AWS Directory Service as its identity provider, with AD Connector pointing to the on-premises directory.",
+      "Create an AWS Transfer Family server with service-managed users and import every employee's SSH public key from the on-premises directory.",
+      "Create an IAM user with access keys for each employee and distribute an SFTP client configuration that uses those keys to sign in.",
+      "Create a Simple AD directory, recreate the employees' accounts in it, and configure it as the Transfer Family identity provider through AWS Directory Service."
     ],
     "answer": [
       0
@@ -1031,15 +1031,15 @@
     "difficulty": 2,
     "question": "A security review of a company's AWS Site-to-Site VPN found that the tunnels accept the default options, including IKEv1, AES128, and SHA1. The new standard requires IKEv2 only, AES-256 encryption, and SHA-2 integrity algorithms. Which action meets this requirement?",
     "options": [
-      "Enable MACsec on the VPN tunnels to add stronger encryption.",
-      "Modify the VPN tunnel options to allow only IKEv2 and only the required Phase 1 and Phase 2 encryption algorithms, integrity algorithms, and Diffie-Hellman groups.",
-      "Replace the Site-to-Site VPN with AWS Client VPN, which uses only strong ciphers.",
-      "Attach a security group to the virtual private gateway that blocks IKEv1 traffic."
+      "Enable MACsec on the VPN tunnels so that traffic is also encrypted with AES-256 at layer 2 in addition to IPsec.",
+      "Modify the VPN tunnel options to allow only IKEv2 and only the required Phase 1 and Phase 2 encryption, integrity, and Diffie-Hellman group settings.",
+      "Replace the Site-to-Site VPN with AWS Client VPN, which uses only strong ciphers, and run the client software on the on-premises firewall.",
+      "Attach a security group to the virtual private gateway that blocks UDP port 500 so that IKEv1 negotiation fails and IKEv2 is used."
     ],
     "answer": [
       1
     ],
-    "explanation": "Site-to-Site VPN tunnel options let you choose the IKE versions and restrict the Phase 1 and Phase 2 encryption algorithms, integrity algorithms, and Diffie-Hellman groups that the AWS endpoints accept, so weaker defaults can be removed. MACsec is a Direct Connect feature, not a VPN option. Client VPN is for remote users, and virtual private gateways do not have security groups.",
+    "explanation": "Site-to-Site VPN tunnel options let you choose the IKE versions and restrict the Phase 1 and Phase 2 encryption algorithms, integrity algorithms, and Diffie-Hellman groups that the AWS endpoints accept, so weaker defaults can be removed. MACsec is a Direct Connect feature, not a VPN option. Client VPN is for remote users, and virtual private gateways do not have security groups; IKEv2 also uses UDP port 500, so blocking it would break both versions.",
     "subtopic": "VPN Tunnel Options",
     "source": "https://docs.aws.amazon.com/vpn/latest/s2svpn/VPNTunnels.html"
   },
@@ -1051,10 +1051,10 @@
     "difficulty": 1,
     "question": "Auditors require a record of every AWS Client VPN connection attempt, including whether it succeeded, the reason for any failure, and when each client disconnected. Which solution meets this requirement?",
     "options": [
-      "Enable VPC Flow Logs on the network interfaces of the Client VPN target subnets.",
-      "Enable AWS CloudTrail and filter for Client VPN API calls.",
+      "Enable VPC Flow Logs on the network interfaces in the Client VPN target subnets and publish them to CloudWatch Logs.",
+      "Enable AWS CloudTrail for the account and filter the trail for Client VPN connection events by using Amazon Athena.",
       "Enable connection logging on the Client VPN endpoint and send the logs to Amazon CloudWatch Logs.",
-      "Add an authorization rule for each user group so that denied users are recorded."
+      "Add an authorization rule for each Active Directory user group so that denied connection attempts are recorded."
     ],
     "answer": [
       2
@@ -1092,9 +1092,9 @@
     "question": "A company has two AWS Direct Connect connections in an active/passive design. When the primary path fails without the link going down, BGP takes about 90 seconds to detect the failure and move traffic to the backup. The company wants failover in about a second. What should a solutions architect recommend?",
     "options": [
       "Configure Bidirectional Forwarding Detection (BFD) on the customer routers for the Direct Connect BGP sessions.",
-      "Increase the BGP hold timer on the customer routers.",
-      "Enable MACsec on both Direct Connect connections.",
-      "Lower the TTL of the company's DNS records to 10 seconds."
+      "Increase the BGP hold timer on the customer routers so that the BGP sessions stay stable during brief link problems.",
+      "Enable MACsec on both Direct Connect connections so that link-layer failures are detected and reported to BGP immediately.",
+      "Lower the TTL of the company's DNS records to 10 seconds so that clients switch to the backup path faster."
     ],
     "answer": [
       0
@@ -1111,10 +1111,10 @@
     "difficulty": 3,
     "question": "A company has two AWS Direct Connect connections, A and B, with private virtual interfaces to the same Direct Connect gateway, and it advertises the same on-premises prefixes over both. The company wants traffic from AWS to on premises to use connection A, and to use connection B only if A fails. Which configuration meets this requirement?",
     "options": [
-      "Prepend the company's ASN several times on the prefixes advertised over connection A.",
+      "Prepend the company's ASN several times on the prefixes advertised over connection A so that AWS prefers connection A.",
       "Tag the prefixes advertised over connection A with the 7224:7300 BGP community and the prefixes over connection B with 7224:7100.",
-      "Set a higher MED value on the prefixes advertised over connection A than on connection B.",
-      "Create Amazon Route 53 failover records that point to the on-premises gateways behind each connection."
+      "Set a higher MED value on the prefixes advertised over connection A than on connection B so that AWS prefers connection A.",
+      "Create Amazon Route 53 failover records with health checks that point to the on-premises gateways behind each connection."
     ],
     "answer": [
       1
@@ -1151,11 +1151,11 @@
     "difficulty": 2,
     "question": "A company connects its data center to a VPC with one AWS Site-to-Site VPN connection to a virtual private gateway. Both tunnels are configured, but they terminate on a single on-premises customer gateway device, which is now the main single point of failure. Which combination of actions will remove this single point of failure? (Select TWO.)",
     "options": [
-      "Attach a second virtual private gateway to the same VPC.",
-      "Enable acceleration on the existing VPN connection.",
+      "Attach a second virtual private gateway to the same VPC so that each tunnel terminates on a different gateway.",
+      "Enable acceleration on the existing VPN connection so that the tunnels use AWS Global Accelerator edge locations.",
       "Add a second customer gateway device and create a second Site-to-Site VPN connection from it to the same virtual private gateway.",
       "Use dynamic routing with BGP on both VPN connections so that traffic moves to the working device automatically.",
-      "Use static routing with identical routes on both connections so that traffic is split evenly."
+      "Use static routing with identical routes on both VPN connections so that traffic is split evenly across the two devices."
     ],
     "answer": [
       2,
@@ -1193,10 +1193,10 @@
     "difficulty": 1,
     "question": "A company created an AWS Site-to-Site VPN connection to a virtual private gateway attached to its VPC, and both tunnels show UP. EC2 instances still cannot reach on-premises servers, and security groups and network ACLs allow the traffic. What is the MOST likely fix?",
     "options": [
-      "Enable route propagation for the virtual private gateway on the subnet route tables, or add static routes for the on-premises ranges that target the virtual private gateway.",
-      "Attach an internet gateway to the VPC so that the instances can reach the VPN endpoints.",
-      "Enable DNS hostnames on the VPC.",
-      "Create a NAT gateway in each subnet that needs to reach the data center."
+      "Enable route propagation from the virtual private gateway on the subnet route tables, or add static routes for the on-premises ranges that target it.",
+      "Attach an internet gateway to the VPC and add a 0.0.0.0/0 route so that the instances can reach the public IP addresses of the VPN tunnel endpoints.",
+      "Enable DNS hostnames and DNS resolution on the VPC so that instances can resolve the on-premises server names.",
+      "Create a NAT gateway in each subnet that needs to reach the data center and send the on-premises ranges through it."
     ],
     "answer": [
       0
@@ -1255,10 +1255,10 @@
     "difficulty": 1,
     "question": "Users on several continents upload large video files to a single Amazon S3 bucket in us-east-1, and uploads from distant countries are slow. The company wants faster uploads with minimal changes to its upload tool. What should a solutions architect recommend?",
     "options": [
-      "Enable S3 Cross-Region Replication to buckets near each group of users.",
-      "Deploy AWS DataSync agents on every user's workstation.",
+      "Enable S3 Cross-Region Replication from the us-east-1 bucket to buckets in Regions near each group of users.",
+      "Deploy AWS DataSync agents on every user's workstation to transfer the videos with parallel, compressed streams.",
       "Enable S3 Transfer Acceleration on the bucket and upload through the s3-accelerate endpoint.",
-      "Order AWS Direct Connect connections in each country."
+      "Order AWS Direct Connect connections in each country where users upload from and route uploads over them."
     ],
     "answer": [
       2
@@ -1275,10 +1275,10 @@
     "difficulty": 2,
     "question": "An AWS DataSync task is migrating a large NFS share to Amazon S3 over a 2 Gbps AWS Direct Connect connection. During business hours, the transfer saturates the link and slows other applications. The company wants to limit the migration during the day and let it run at full speed at night. What should a solutions architect do?",
     "options": [
-      "Enable S3 Transfer Acceleration on the destination bucket.",
-      "Switch the migration to AWS Transfer Family with SFTP.",
-      "Split the share into many small tasks that run one at a time.",
-      "Set a bandwidth limit on the DataSync task during business hours and raise it at night, because the limit can be changed while the task is running."
+      "Enable S3 Transfer Acceleration on the destination bucket so that DataSync traffic uses edge locations instead of Direct Connect.",
+      "Switch the migration to AWS Transfer Family with SFTP, which lets clients control their own transfer rate.",
+      "Split the share into many small DataSync tasks and run them one at a time during the day and in parallel at night.",
+      "Lower the bandwidth limit of the running DataSync task execution during business hours and raise it again at night."
     ],
     "answer": [
       3
@@ -1296,9 +1296,9 @@
     "question": "On-premises users read reports through an NFS share on Amazon S3 File Gateway. A new analytics pipeline in AWS writes result objects directly into the same S3 bucket, not through the gateway. Users report that the new files do not appear on the share. Which action fixes this?",
     "options": [
       "Refresh the file share's cached inventory with the RefreshCache operation, or configure automated cache refresh with a TTL.",
-      "Increase the size of the gateway's local cache disk.",
-      "Enable S3 Versioning on the bucket.",
-      "Enable S3 Cross-Region Replication to a second bucket that the gateway also exports."
+      "Increase the size of the gateway's local cache disk so that more of the bucket's objects are held on premises.",
+      "Enable S3 Versioning on the bucket so that the gateway detects new object versions written by the pipeline.",
+      "Enable S3 Cross-Region Replication to a second bucket that the gateway also exports as a separate file share."
     ],
     "answer": [
       0
@@ -1315,10 +1315,10 @@
     "difficulty": 2,
     "question": "Every night, a company must copy the /exports directory of an Amazon EFS file system in us-east-1 to an existing EFS file system in eu-west-1 in the same AWS account, where a reporting team also stores its own files. The company wants the LEAST operational overhead. Which solution meets these requirements?",
     "options": [
-      "Launch an EC2 instance in each Region with a DataSync agent and create a task between the agents.",
-      "Create an AWS DataSync task between the two EFS locations with an include filter for /exports and a daily schedule, without deploying an agent.",
-      "Mount both file systems on an EC2 instance and run an rsync cron job across Regions.",
-      "Deploy Amazon S3 File Gateway in eu-west-1 and copy the files through an S3 bucket."
+      "Launch an EC2 instance in each Region with a DataSync agent installed, and create a scheduled task between the two agents.",
+      "Create an AWS DataSync task between the two EFS locations, with an include filter for /exports and a daily schedule, without an agent.",
+      "Mount both file systems on an EC2 instance through inter-Region VPC peering and run a nightly rsync cron job for /exports.",
+      "Deploy Amazon S3 File Gateway in eu-west-1 and copy the /exports files through an S3 bucket into the destination file system each night."
     ],
     "answer": [
       1
@@ -1355,9 +1355,9 @@
     "difficulty": 3,
     "question": "A company has 40 VPCs with CIDR blocks 10.0.0.0/16 through 10.39.0.0/16 attached to a transit gateway. The transit gateway is associated with a Direct Connect gateway that uses a transit virtual interface. The on-premises router has limited route table capacity and should receive one summarized route, 10.0.0.0/10, instead of 40 VPC routes. What should a solutions architect do?",
     "options": [
-      "Configure allowed prefixes on each VPC's virtual private gateway to 10.0.0.0/10.",
-      "Add a 10.0.0.0/10 route to every VPC route table that targets the transit gateway.",
-      "Create a public virtual interface and advertise 10.0.0.0/10 over it.",
+      "Configure allowed prefixes of 10.0.0.0/10 on each VPC's virtual private gateway association with the Direct Connect gateway.",
+      "Add a 10.0.0.0/10 route that targets the transit gateway to every VPC route table so that BGP advertises the summary.",
+      "Create a public virtual interface on the same connection and advertise 10.0.0.0/10 over it to the on-premises router.",
       "Set the allowed prefixes on the Direct Connect gateway association with the transit gateway to 10.0.0.0/10."
     ],
     "answer": [
@@ -1376,9 +1376,9 @@
     "question": "A company needs about 4 Gbps of encrypted connectivity over the internet between its data center and AWS until a Direct Connect order is completed. It already uses a transit gateway, and its current Site-to-Site VPN tunnels are limited to 1.25 Gbps each. The company wants to avoid managing many VPN connections and ECMP. Which solution meets these requirements?",
     "options": [
       "Create a Site-to-Site VPN connection attached to the transit gateway that uses Large Bandwidth Tunnels of up to 5 Gbps per tunnel.",
-      "Create a Site-to-Site VPN connection to a virtual private gateway with Large Bandwidth Tunnels enabled.",
-      "Enable acceleration on a Large Bandwidth Tunnel VPN connection to raise throughput further.",
-      "Enable jumbo frames on the existing VPN tunnels to increase throughput."
+      "Create a Site-to-Site VPN connection to a virtual private gateway with Large Bandwidth Tunnels enabled, which avoids transit gateway data processing charges.",
+      "Enable acceleration on a Large Bandwidth Tunnel VPN connection on the transit gateway so that throughput rises further over the AWS global network.",
+      "Enable jumbo frames on the existing VPN tunnels to increase throughput per tunnel without adding VPN connections."
     ],
     "answer": [
       0
@@ -1395,10 +1395,10 @@
     "difficulty": 2,
     "question": "A retailer has five branch offices. Each has an AWS Site-to-Site VPN connection to the same virtual private gateway, uses BGP, and has a unique ASN and non-overlapping IP ranges. The branches now need to exchange data with each other occasionally. The company wants the MOST cost-effective solution without new circuits or devices. What should a solutions architect recommend?",
     "options": [
-      "Order AWS Direct Connect hosted connections for every branch.",
+      "Order AWS Direct Connect hosted connections for every branch and route traffic between them through a Direct Connect gateway.",
       "Use the existing setup as AWS VPN CloudHub so that the branches communicate through the virtual private gateway.",
-      "Replace the virtual private gateway with a transit gateway and move all five VPN connections to it.",
-      "Deploy an EC2 router instance in the VPC to forward traffic between the branches."
+      "Replace the virtual private gateway with a transit gateway and move all five VPN connections to it as attachments.",
+      "Deploy an EC2 router instance in the VPC with source/destination checking disabled to forward traffic between the branches."
     ],
     "answer": [
       1
@@ -1415,11 +1415,11 @@
     "difficulty": 3,
     "question": "A company that has never used AWS Snowball Edge must migrate 600 TB from on-premises NAS systems to Amazon S3 within three months. Its 1 Gbps internet link is already heavily used. The company does not need a permanent private connection after the project. Which combination of actions is the MOST cost-effective way to meet the deadline? (Select TWO.)",
     "options": [
-      "Order AWS Snowball Edge Storage Optimized devices and ship the data to AWS.",
+      "Order AWS Snowball Edge Storage Optimized devices and ship the 600 TB to AWS in several batches.",
       "Procure a 10 Gbps hosted Direct Connect connection from an AWS Direct Connect Delivery Partner for the duration of the project.",
-      "Enable S3 Transfer Acceleration and upload the data over the existing internet link.",
+      "Enable S3 Transfer Acceleration and upload the data over the existing internet link outside business hours.",
       "Use AWS DataSync agents to transfer the data to Amazon S3 over the Direct Connect connection.",
-      "Create an accelerated Site-to-Site VPN connection over the existing internet link."
+      "Create an accelerated Site-to-Site VPN connection over the existing internet link to improve throughput."
     ],
     "answer": [
       1,
@@ -1437,10 +1437,10 @@
     "difficulty": 1,
     "question": "A company plans to rehost 50 on-premises servers on Amazon EC2 within two months with continuous replication and short cutover windows. The company wants to keep the cost of migration tooling as low as possible. Which approach meets these requirements?",
     "options": [
-      "Use AWS DMS to replicate each server to Amazon EC2.",
-      "Purchase third-party block-level replication licenses for all 50 servers.",
-      "Use AWS Transform MGN, which has a free period of 2,160 hours per source server, and pay only for the AWS resources used for replication.",
-      "Copy each server's file system with AWS DataSync and rebuild the servers manually."
+      "Use AWS DMS with ongoing replication to replicate each server to Amazon EC2 on low-cost replication instances.",
+      "Purchase third-party block-level replication licenses for all 50 servers and run the replication software on EC2.",
+      "Use AWS Transform MGN, which is free for 2,160 hours per source server, and pay only for the AWS resources used for replication.",
+      "Copy each server's file system with AWS DataSync, which has no per-server license fee, and rebuild the servers on EC2."
     ],
     "answer": [
       2
@@ -1479,9 +1479,9 @@
     "difficulty": 2,
     "question": "A media company is moving 300 TB of finished project archives from an on-premises NFS server to AWS. The data must be kept for 10 years and is restored at most once or twice a year, with retrieval within 48 hours acceptable. Which approach is MOST cost-effective?",
     "options": [
-      "Copy the data with AWS DataSync to Amazon EFS Standard.",
-      "Upload the data to S3 Standard with S3 Transfer Acceleration and keep it there.",
-      "Use Volume Gateway stored volumes and keep EBS snapshots of the data in AWS.",
+      "Copy the data with AWS DataSync to Amazon EFS Standard, which stores data durably across multiple Availability Zones.",
+      "Upload the data to S3 Standard with S3 Transfer Acceleration and keep it there for the full 10-year retention period.",
+      "Use Volume Gateway stored volumes and keep EBS snapshots of the data in AWS for the 10-year retention period.",
       "Use an AWS DataSync task with an S3 location configured to write objects directly to the S3 Glacier Deep Archive storage class."
     ],
     "answer": [

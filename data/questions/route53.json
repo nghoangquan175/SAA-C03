@@ -45,10 +45,10 @@
     "difficulty": 3,
     "question": "A company exposes a public HTTP API on four Amazon EC2 instances that each have an Elastic IP address. The company currently pays for a Network Load Balancer only to spread requests and to stop sending traffic to failed instances. Request volume is low, and clients automatically retry another IP address when a connection fails. The company wants to reduce costs. Which solution is MOST cost-effective while still avoiding failed instances?",
     "options": [
-      "Replace the Network Load Balancer with an Application Load Balancer.",
+      "Replace the Network Load Balancer with an Application Load Balancer that performs HTTP health checks on the four instances.",
       "Replace the Network Load Balancer with Route 53 multivalue answer records, one per Elastic IP address, each associated with an HTTP health check.",
-      "Replace the Network Load Balancer with a single Route 53 simple routing record that contains all four Elastic IP addresses.",
-      "Replace the Network Load Balancer with an AWS Global Accelerator standard accelerator."
+      "Replace the Network Load Balancer with a single Route 53 simple routing record that contains all four Elastic IP addresses and a short 60-second TTL so that clients retry quickly.",
+      "Replace the Network Load Balancer with an AWS Global Accelerator standard accelerator that health checks each Elastic IP address endpoint."
     ],
     "answer": [
       1
@@ -64,10 +64,10 @@
     "difficulty": 2,
     "question": "A company runs a warm-standby disaster recovery environment. The primary application runs behind an ALB in us-east-1, and a scaled-down copy runs behind an ALB in us-west-2. Traffic must go to us-west-2 only when the us-east-1 application is unhealthy. Which Route 53 configuration will meet this requirement?",
     "options": [
-      "Failover routing with a primary alias record for the us-east-1 ALB and a secondary alias record for the us-west-2 ALB, with health evaluation on the primary",
-      "Latency routing with alias records for both ALBs and Evaluate Target Health enabled",
-      "Weighted routing with equal weights for both ALBs and health checks on both records",
-      "Multivalue answer routing that returns the DNS names of both ALBs"
+      "Failover routing with a primary alias record for the us-east-1 ALB and a secondary alias record for the us-west-2 ALB, evaluating the primary's health",
+      "Latency routing with alias records for both ALBs and Evaluate Target Health enabled, so that an unhealthy Region is skipped automatically",
+      "Weighted routing with equal weights for both ALBs and health checks on both records so that an unhealthy Region receives no traffic",
+      "Multivalue answer routing that returns the DNS names of both ALBs and health checks each one before answering"
     ],
     "answer": [
       0
@@ -83,10 +83,10 @@
     "difficulty": 3,
     "question": "A company runs an internal order-processing API on EC2 instances in private subnets. The API has no public endpoint. The company uses Route 53 failover records in a private hosted zone and wants to fail over to a standby stack in another Region when the API's 5xx error rate exceeds a threshold. How should the Route 53 health check for the primary record be configured?",
     "options": [
-      "Create an endpoint health check that targets the private IP address of the API.",
-      "Create a calculated health check that monitors the private IP address of the API.",
+      "Create an endpoint health check that targets the private IP address of the API's internal load balancer on its health path.",
+      "Create a calculated health check that monitors the private IP address of the API and the 5xx error rate together.",
       "Create a CloudWatch alarm on the error-rate metric and a Route 53 health check that monitors the state of that alarm.",
-      "Create an endpoint health check that targets the public IP address of the VPC's NAT gateway."
+      "Create an endpoint health check that targets the public IP address of the VPC's NAT gateway that the API uses for egress."
     ],
     "answer": [
       2
@@ -104,8 +104,8 @@
     "options": [
       "Create a health check that monitors a CloudWatch alarm on the HealthyHostCount metric of one of the stacks.",
       "Create a calculated health check that uses the three existing health checks as child health checks with a healthy threshold of 2.",
-      "Create a fourth endpoint health check with a failure threshold of 2 that targets all three stacks.",
-      "Configure multivalue answer routing with the three health checks and a weight of 2."
+      "Create a fourth endpoint health check with a failure threshold of 2 that targets all three stacks' endpoints in turn.",
+      "Configure multivalue answer routing with the three health checks and a weight of 2 so that at least two of the stacks must be healthy."
     ],
     "answer": [
       1
@@ -122,8 +122,8 @@
     "question": "A gaming company uses a Route 53 simple routing record that contains the public IP addresses of five EC2 instances that run a lobby service. When an instance fails, some players still receive its IP address and cannot connect. The company does not want to add a load balancer. Which change will improve availability?",
     "options": [
       "Increase the TTL of the simple routing record so that clients cache working addresses longer.",
-      "Change to latency routing with one record for each instance in the same Region.",
-      "Associate a Route 53 health check with the existing simple routing record.",
+      "Change to latency routing with one record for each instance in the same Region, each with its own health check.",
+      "Associate a Route 53 health check with the existing simple routing record so that failed addresses are removed from answers.",
       "Replace the record with multivalue answer records, one for each instance, each associated with a health check."
     ],
     "answer": [
@@ -141,9 +141,9 @@
     "question": "A company is releasing a new version of its API behind a separate ALB. The company wants to send about 5% of DNS queries to the new version at first and then increase the percentage gradually while monitoring errors. Which Route 53 configuration meets these requirements?",
     "options": [
       "Two weighted alias records with the same name, one with weight 95 for the current ALB and one with weight 5 for the new ALB",
-      "Two failover alias records, with the current ALB as primary and the new ALB as secondary",
-      "Geolocation alias records that send users from one country to the new ALB",
-      "A multivalue answer record that contains the IP addresses of both ALBs"
+      "Two failover alias records, with the current ALB as primary and the new ALB as secondary, and a health check on the primary ALB",
+      "Geolocation alias records that send users from one small country to the new ALB and everyone else to the current ALB",
+      "A multivalue answer record that contains the IP addresses of both ALBs, with health checks on each address"
     ],
     "answer": [
       0
@@ -178,10 +178,10 @@
     "difficulty": 2,
     "question": "A financial services company must ensure that users located in Germany are always served by its application stack in eu-central-1 to meet data residency requirements. Users in every other country can be served by a stack in us-east-1. Which routing configuration will meet these requirements?",
     "options": [
-      "Latency-based records for eu-central-1 and us-east-1",
+      "Latency-based records for eu-central-1 and us-east-1, because German users always have the lowest latency to Frankfurt",
       "A geolocation record for Germany that points to eu-central-1 and a default geolocation record that points to us-east-1",
-      "Geoproximity records with a large positive bias on eu-central-1",
-      "Weighted records with a much higher weight on eu-central-1"
+      "Geoproximity records with a large positive bias on eu-central-1 so that its region expands to cover all of Germany",
+      "Weighted records with a much higher weight on eu-central-1 and health checks on both Regional endpoints"
     ],
     "answer": [
       1
@@ -218,7 +218,7 @@
     "options": [
       "Geolocation routing with a record for the ISP's home country",
       "Latency-based routing with a health check on the eu-west-2 endpoint",
-      "Geoproximity routing with a large bias toward eu-west-2",
+      "Geoproximity routing with a large bias toward eu-west-2 for the ISP's area",
       "IP-based routing with a CIDR collection that contains the ISP's IP ranges"
     ],
     "answer": [
@@ -236,8 +236,8 @@
     "question": "A company registered the domain example.org with a third-party registrar, which also hosts its DNS records. The company wants Route 53 to host its DNS records but wants to keep the registration with the current registrar. What should the company do?",
     "options": [
       "Transfer the domain registration to Route 53, which is required before Route 53 can answer queries for the domain.",
-      "Create a private hosted zone for example.org and associate it with a VPC that has internet access.",
-      "Create a Route 53 Resolver outbound endpoint that forwards queries for example.org to the registrar.",
+      "Create a private hosted zone for example.org and associate it with a VPC that has internet access so that public resolvers can query it.",
+      "Create a Route 53 Resolver outbound endpoint that forwards queries for example.org to the registrar's name servers until the records are migrated.",
       "Create a public hosted zone for example.org, recreate the records, and update the name servers at the registrar to the Route 53 name servers."
     ],
     "answer": [
@@ -255,9 +255,9 @@
     "question": "A bank is concerned that attackers could forge DNS responses for its public domain and redirect customers to a fraudulent website. The domain is registered with Route 53, and the public hosted zone is in Route 53. Which solution addresses this risk?",
     "options": [
       "Enable DNSSEC signing for the public hosted zone and establish a chain of trust with the parent zone.",
-      "Associate a Route 53 Resolver DNS Firewall rule group with the public hosted zone.",
+      "Associate a Route 53 Resolver DNS Firewall rule group with the public hosted zone to block forged responses.",
       "Enable query logging for the public hosted zone and send the logs to CloudWatch Logs.",
-      "Turn on AWS Shield Advanced protection for the public hosted zone."
+      "Turn on AWS Shield Advanced protection for the public hosted zone to block spoofed DNS traffic."
     ],
     "answer": [
       0
@@ -294,10 +294,10 @@
     "difficulty": 2,
     "question": "A company connects its data center to AWS through AWS Direct Connect. On-premises servers must resolve records in a Route 53 private hosted zone that is associated with a VPC. Which solution will meet this requirement?",
     "options": [
-      "Create a Route 53 Resolver outbound endpoint in the VPC and a forwarding rule for the private hosted zone domain.",
-      "Create a Route 53 Resolver inbound endpoint in the VPC and configure the on-premises DNS servers to conditionally forward the domain to the endpoint IP addresses.",
-      "Convert the private hosted zone to a public hosted zone and restrict access with a resource policy.",
-      "Configure the on-premises servers to query the Amazon-provided DNS address at the VPC CIDR base plus two."
+      "Create a Route 53 Resolver outbound endpoint in the VPC and a forwarding rule for the private hosted zone domain that targets on premises.",
+      "Create a Route 53 Resolver inbound endpoint in the VPC and have the on-premises DNS servers conditionally forward the domain to its IP addresses.",
+      "Convert the private hosted zone to a public hosted zone and restrict access to the data center's IP ranges with a resource policy.",
+      "Configure the on-premises servers to query the Amazon-provided DNS address at the VPC CIDR base plus two over the Direct Connect connection."
     ],
     "answer": [
       1
@@ -313,10 +313,10 @@
     "difficulty": 2,
     "question": "Applications on EC2 instances in a VPC must resolve hostnames in corp.example.local, a domain served by Active Directory DNS servers in the company's data center. A Site-to-Site VPN connects the VPC to the data center. The company wants to keep using the Amazon-provided DNS resolver for all other names. What should a solutions architect do?",
     "options": [
-      "Create a private hosted zone named corp.example.local and copy the on-premises records into it manually.",
-      "Change the VPC DHCP options set so that instances use only the on-premises DNS servers.",
-      "Create a Route 53 Resolver outbound endpoint and a forwarding rule for corp.example.local that targets the on-premises DNS servers, and associate the rule with the VPC.",
-      "Create a Route 53 Resolver inbound endpoint and configure it to forward queries to the on-premises DNS servers."
+      "Create a private hosted zone named corp.example.local, associate it with the VPC, and copy the on-premises records into it manually.",
+      "Change the VPC DHCP options set so that instances use only the on-premises DNS servers, which can forward other names to the internet.",
+      "Create a Route 53 Resolver outbound endpoint and a forwarding rule for corp.example.local that targets the on-premises DNS servers, and associate it with the VPC.",
+      "Create a Route 53 Resolver inbound endpoint in the VPC and configure it with a conditional forwarder that sends corp.example.local queries to the on-premises DNS servers."
     ],
     "answer": [
       2
@@ -332,10 +332,10 @@
     "difficulty": 2,
     "question": "A company has 40 AWS accounts in AWS Organizations. A central networking account contains Route 53 Resolver outbound endpoints and forwarding rules for several on-premises domains. VPCs in the other accounts must use the same forwarding rules. Which solution meets this requirement MOST cost-effectively and with the LEAST operational overhead?",
     "options": [
-      "Share the Resolver rules from the networking account by using AWS Resource Access Manager and associate the shared rules with the VPCs in each account.",
-      "Create outbound endpoints and identical forwarding rules in each of the 40 accounts.",
-      "Peer every VPC with the networking VPC and set the DHCP options of each VPC to the outbound endpoint IP addresses.",
-      "Create private hosted zones for each on-premises domain in every account and synchronize the records with a script."
+      "Share the Resolver rules from the networking account with AWS Resource Access Manager and associate the shared rules with the VPCs in each account.",
+      "Create outbound endpoints and identical forwarding rules in each of the 40 accounts by using CloudFormation StackSets.",
+      "Peer every VPC with the networking VPC and set the DHCP options of each VPC to the outbound endpoint IP addresses as the DNS servers.",
+      "Create private hosted zones for each on-premises domain in every account and synchronize the records nightly with a scheduled script."
     ],
     "answer": [
       0
@@ -352,9 +352,9 @@
     "question": "A company has a Route 53 private hosted zone in Account A. A VPC in Account B, in the same Region, must resolve the records in that zone. The company does not want to duplicate the records. Which approach will meet this requirement?",
     "options": [
       "Create a private hosted zone with the same name in Account B and add an NS record that delegates it to the zone in Account A.",
-      "Create a VPC peering connection between the VPCs so that the hosted zone becomes available automatically.",
-      "Attach a resource-based policy to the hosted zone that grants Account B permission to send queries.",
-      "In Account A, authorize the association of Account B's VPC with the hosted zone, and then in Account B associate the VPC with the hosted zone by using the CLI or API."
+      "Create a VPC peering connection between the VPCs and enable DNS resolution support so that the hosted zone becomes available automatically.",
+      "Attach a resource-based policy to the hosted zone that grants Account B's VPC permission to send queries to the zone.",
+      "In Account A, authorize the association of Account B's VPC with the zone, then associate the VPC with the zone from Account B by using the CLI or API."
     ],
     "answer": [
       3
@@ -371,7 +371,7 @@
     "question": "A payments company runs an active-passive application in us-east-1 and us-west-2. During a regional event, operators must be able to move traffic to the standby Region by flipping simple on/off switches that change Route 53 DNS answers. The switch API must be served by a highly available cluster that does not depend on any single Region. Which solution will meet these requirements?",
     "options": [
       "Route 53 failover records with endpoint health checks, and an operator who edits the record values during an event",
-      "AWS Global Accelerator endpoint groups whose traffic dials are changed by an operator",
+      "AWS Global Accelerator endpoint groups whose traffic dials are changed by an operator during a regional event",
       "Route 53 Application Recovery Controller routing controls that are associated with health checks on the failover records",
       "Weighted records whose weights are updated by an AWS Lambda function that runs in the primary Region"
     ],
@@ -391,7 +391,7 @@
     "options": [
       "Change the health check protocol to HTTPS so that the request bypasses the security group.",
       "Allow inbound HTTP in the security group from the IP address ranges that Route 53 health checkers use.",
-      "Associate the health check with a private hosted zone so that it runs inside the VPC.",
+      "Associate the health check with a private hosted zone so that the checks originate from inside the VPC.",
       "Enable string matching on the health check so that it evaluates the response body."
     ],
     "answer": [
@@ -409,9 +409,9 @@
     "question": "A company will migrate its website from an on-premises server to an ALB next weekend. The current A record for www.example.com has a TTL of 86,400 seconds. The company wants clients to start using the new endpoint as quickly as possible after the cutover. What should the company do?",
     "options": [
       "Several days before the cutover, lower the TTL of the existing record to a short value such as 60 seconds, and then change the record at cutover.",
-      "Delete the hosted zone during the cutover and create a new hosted zone with the new record.",
-      "Increase the TTL to 172,800 seconds so that clients cache the new record for longer after cutover.",
-      "Create a second public hosted zone for the same domain that contains the new record."
+      "Delete the hosted zone during the cutover and create a new hosted zone with the new record so that caches are invalidated.",
+      "Increase the TTL to 172,800 seconds at cutover so that clients cache the new record for longer and the old endpoint stops receiving queries sooner.",
+      "Create a second public hosted zone for the same domain that contains the new record and a 60-second TTL."
     ],
     "answer": [
       0
@@ -467,10 +467,10 @@
     "difficulty": 2,
     "question": "An e-commerce website returns HTTP 200 even when its backend database is unreachable, and it displays an error message in the page body instead of the product catalog. The company uses Route 53 failover routing and wants failover to occur in this situation. Which health check configuration will meet this requirement?",
     "options": [
-      "A TCP health check on port 443 of the web server",
+      "A TCP health check on port 443 of the web server with a failure threshold of 1",
       "An HTTPS health check with string matching that looks for text that appears only on a healthy page",
-      "An HTTPS health check with the request interval reduced to 10 seconds",
-      "A calculated health check that has the existing HTTPS health check as its only child"
+      "An HTTPS health check with the request interval reduced to 10 seconds and a failure threshold of 1",
+      "A calculated health check that has the existing HTTPS health check as its only child and a threshold of 1"
     ],
     "answer": [
       1
@@ -526,7 +526,7 @@
     "options": [
       "Add a second app.example.com record with the internal ALB's private IP addresses to the public hosted zone by using geolocation routing.",
       "Add latency-based records to the public hosted zone so that queries from the VPC's Region return the internal ALB.",
-      "Create a Route 53 Resolver outbound endpoint that rewrites answers for app.example.com.",
+      "Create a Route 53 Resolver outbound endpoint and a forwarding rule that rewrites answers for app.example.com to the internal ALB.",
       "Create a private hosted zone named app.example.com, associate it with the VPC, and add an alias record at its apex that targets the internal ALB."
     ],
     "answer": [
@@ -564,10 +564,10 @@
     "difficulty": 1,
     "question": "A company runs two EC2 instances with BIND to provide internal DNS names for its VPCs. The servers require patching and monitoring. The company wants to reduce cost and operational effort while keeping the internal names private. Which solution is MOST cost-effective?",
     "options": [
-      "Move BIND into containers on Amazon ECS with AWS Fargate.",
-      "Create a public hosted zone that uses hard-to-guess record names.",
+      "Move BIND into containers on Amazon ECS with AWS Fargate to remove instance patching.",
+      "Create a public hosted zone that uses hard-to-guess record names for the internal hosts.",
       "Migrate the records to a Route 53 private hosted zone that is associated with the VPCs.",
-      "Run BIND on Spot Instances in an Auto Scaling group."
+      "Run BIND on Spot Instances in an Auto Scaling group to cut compute cost by up to 90%."
     ],
     "answer": [
       2
@@ -585,8 +585,8 @@
     "options": [
       "Deploy a second ALB with one small EC2 instance in another Region and use it as a failover target.",
       "Configure Route 53 failover routing with the ALB as primary and a static maintenance page in Amazon S3 as the secondary.",
-      "Use multivalue answer routing to return both the ALB and the S3 website endpoint.",
-      "Use an AWS Lambda function that replaces the record with the S3 website endpoint when an alarm fires."
+      "Use multivalue answer routing with health checks to return both the ALB and the S3 website endpoint.",
+      "Use an AWS Lambda function, triggered by a CloudWatch alarm, that replaces the record with the S3 website endpoint when the ALB becomes unhealthy."
     ],
     "answer": [
       1
@@ -623,7 +623,7 @@
     "options": [
       "Delete all DNS records and disable the hosted zone at the current registrar.",
       "Create an alias record at the current registrar that points to Route 53.",
-      "Set the TTL of all records at the current registrar to 0 seconds.",
+      "Set the TTL of all records at the current registrar to 0 seconds so that the name servers can change.",
       "Unlock the domain for transfer and obtain the authorization code from the current registrar."
     ],
     "answer": [
@@ -659,10 +659,10 @@
     "difficulty": 3,
     "question": "A regulated company must allow EC2 instances in a VPC to resolve only an approved list of domain names. All other DNS queries must be blocked. Which Route 53 Resolver DNS Firewall configuration will meet this requirement?",
     "options": [
-      "A single rule that applies a BLOCK action to the approved domain list",
-      "A rule that ALLOWs the approved domain list with a higher priority (lower number), followed by a rule that BLOCKs a domain list that contains only the wildcard *",
-      "A rule that ALERTs on all domains, followed by a rule that ALLOWs the approved domain list",
-      "A rule that BLOCKs the wildcard * with the highest priority, followed by a rule that ALLOWs the approved domain list"
+      "A single rule that applies a BLOCK action with a NODATA response to the approved domain list",
+      "A rule that ALLOWs the approved domain list with a higher priority (lower number), followed by a rule that BLOCKs a domain list containing only *",
+      "A rule that ALERTs on all domains with the highest priority, followed by a rule that ALLOWs the approved domain list",
+      "A rule that BLOCKs a domain list containing only the wildcard * with the highest priority (lowest number), followed by a rule that ALLOWs the approved domain list"
     ],
     "answer": [
       1
@@ -678,9 +678,9 @@
     "difficulty": 2,
     "question": "A company manages DNS for 30 brand domains that all need the same multi-level routing: geolocation for compliance, then latency between Regions, then failover to a backup endpoint. The company wants to design this configuration once in a visual editor, keep versions of it, and apply it to all domains. Which solution will meet these requirements?",
     "options": [
-      "Create the records manually in each hosted zone by using the Route 53 console.",
+      "Create the records manually in each hosted zone in the Route 53 console and keep versioned zone file exports in Amazon S3.",
       "Create a Route 53 Traffic Flow traffic policy and create a policy record for each domain.",
-      "Create Route 53 Resolver forwarding rules and share them with AWS RAM.",
+      "Create Route 53 Resolver forwarding rules and share them across all domains with AWS RAM.",
       "Create a calculated health check that references the records in each domain."
     ],
     "answer": [
@@ -698,8 +698,8 @@
     "question": "A company runs an application behind an ALB with targets in three Availability Zones. During a gray failure, one Availability Zone shows elevated latency and errors even though target health checks still pass. The company wants to quickly and temporarily move traffic away from that Availability Zone without modifying the load balancer, Auto Scaling group, or DNS records. Which solution will meet these requirements?",
     "options": [
       "Remove the subnet in the impaired Availability Zone from the ALB.",
-      "Create a Route 53 failover record that points to a secondary ALB.",
-      "Disable cross-zone load balancing on the ALB.",
+      "Create a Route 53 failover record that points to a secondary ALB in another Region.",
+      "Disable cross-zone load balancing on the ALB's target group for the impaired zone.",
       "Start a zonal shift for the ALB by using Route 53 Application Recovery Controller."
     ],
     "answer": [
@@ -739,10 +739,10 @@
     "difficulty": 3,
     "question": "A company wants an Amazon SNS email whenever a Route 53 health check for its production website becomes unhealthy. All of the company's workloads run in eu-west-1. The operations team tried to create a CloudWatch alarm in eu-west-1 but cannot find the health check metric. What should the team do?",
     "options": [
-      "Enable detailed monitoring for the hosted zone in eu-west-1.",
-      "Create a calculated health check in eu-west-1 that wraps the existing health check.",
+      "Enable detailed monitoring for the hosted zone in eu-west-1 so that health check metrics are published there.",
+      "Create a calculated health check in eu-west-1 that wraps the existing health check and publishes its status to the Region.",
       "Create the CloudWatch alarm on the HealthCheckStatus metric in us-east-1, with an SNS topic in us-east-1 as the alarm action.",
-      "Enable query logging for the hosted zone to CloudWatch Logs in eu-west-1."
+      "Enable query logging for the hosted zone to CloudWatch Logs in eu-west-1 and create a metric filter for failures."
     ],
     "answer": [
       2
@@ -822,10 +822,10 @@
     "question": "A company's domain is registered with Route 53, and its public hosted zone is also in Route 53. The security team must enable DNSSEC so that validating resolvers can verify the zone's responses. Which actions are required? (Select TWO.)",
     "options": [
       "Enable DNSSEC signing on the hosted zone and create a key-signing key (KSK) that uses a customer managed asymmetric AWS KMS key in us-east-1.",
-      "Enable SSE-KMS encryption on the hosted zone records.",
+      "Enable SSE-KMS encryption on the hosted zone records by using a customer managed KMS key in us-east-1.",
       "Establish a chain of trust by adding the KSK's public key information to the parent zone through the registered domain's DNSSEC settings.",
-      "Import an ACM public certificate into the hosted zone.",
-      "Associate a Route 53 Resolver DNS Firewall rule group with the hosted zone."
+      "Request an ACM public certificate for the domain and import it into the hosted zone so that validating resolvers can verify the record signatures.",
+      "Associate a Route 53 Resolver DNS Firewall rule group with the hosted zone to reject unsigned responses."
     ],
     "answer": [
       0,
@@ -842,10 +842,10 @@
     "difficulty": 3,
     "question": "For compliance, a company must serve users located in Europe only from its European Regions. European users should normally be served from eu-west-1 and, if eu-west-1 is unhealthy, from eu-central-1. Users outside Europe should be served from us-east-1. Which Route 53 configuration will meet these requirements?",
     "options": [
-      "Latency-based records for all three Regions, with health checks on each record",
-      "Failover records with eu-west-1 as primary and us-east-1 as secondary",
-      "Geoproximity records with a positive bias on eu-west-1 and health checks",
-      "A geolocation record for Europe that is an alias to a failover record set (eu-west-1 primary, eu-central-1 secondary), plus a default geolocation record for us-east-1"
+      "Latency-based records for all three Regions with health checks on each record, so that European users reach the closest healthy Region, which is normally a European one",
+      "Failover records with eu-west-1 as primary and us-east-1 as secondary, both associated with health checks",
+      "Geoproximity records with a positive bias on eu-west-1 and eu-central-1 and health checks on all three endpoints",
+      "A geolocation record for Europe that aliases a failover record set (eu-west-1 primary, eu-central-1 secondary), plus a default geolocation record for us-east-1"
     ],
     "answer": [
       3
@@ -904,10 +904,10 @@
     "difficulty": 2,
     "question": "A security team is investigating a compromised EC2 instance. The team needs a record of the DNS names that instances in several VPCs look up, including the source instance ID and the response returned, and wants to store the records in Amazon S3 for later analysis. The VPCs use the Amazon-provided DNS resolver. Which solution will meet these requirements?",
     "options": [
-      "Enable VPC Flow Logs for the VPCs and filter the records for port 53.",
-      "Enable public DNS query logging on the company's public hosted zones.",
+      "Enable VPC Flow Logs for the VPCs with a custom format and filter the records for port 53.",
+      "Enable public DNS query logging on the company's public hosted zones and export the logs from CloudWatch Logs to Amazon S3 for analysis.",
       "Create a Route 53 VPC Resolver query logging configuration that sends logs to an S3 bucket, and associate it with the VPCs.",
-      "Enable AWS CloudTrail data events for Route 53 in each Region."
+      "Enable AWS CloudTrail data events for Route 53 in each Region and deliver them to Amazon S3."
     ],
     "answer": [
       2
@@ -925,9 +925,9 @@
     "question": "A company runs all of its workloads in eu-west-1. Its compliance team wants to log the DNS queries that Route 53 receives for the company's public hosted zone. When configuring query logging, an engineer cannot select a CloudWatch Logs log group that was created in eu-west-1. What should the engineer do?",
     "options": [
       "Create the CloudWatch Logs log group in the US East (N. Virginia) Region and use it for the query logging configuration.",
-      "Create an S3 bucket in eu-west-1 and configure the hosted zone to deliver query logs directly to it.",
-      "Enable Route 53 VPC Resolver query logging in eu-west-1 for the public hosted zone.",
-      "Create a Kinesis data stream in eu-west-1 and select it as the query logging destination."
+      "Create an S3 bucket in eu-west-1 and configure the hosted zone to deliver query logs directly to it, as Resolver query logging can.",
+      "Enable Route 53 VPC Resolver query logging in eu-west-1 and associate it with the public hosted zone.",
+      "Create a Kinesis data stream in eu-west-1 and select it as the query logging destination for the hosted zone."
     ],
     "answer": [
       0
@@ -964,10 +964,10 @@
     "difficulty": 3,
     "question": "A company has more than 200 AWS accounts in AWS Organizations. The security team must make sure that a central set of Route 53 Resolver DNS Firewall rule groups is associated with every VPC in every account, including VPCs created in the future, and that account owners cannot remove or reorder those associations. Which solution meets these requirements with the LEAST operational overhead?",
     "options": [
-      "Share the rule groups with AWS RAM and ask each account team to associate them with their VPCs.",
+      "Share the rule groups with AWS RAM across the organization and ask each account team to associate them with their VPCs at the highest priority.",
       "Create an AWS Firewall Manager DNS Firewall policy in the Firewall Manager administrator account that applies the rule groups to the organization.",
       "Run a scheduled AWS Lambda function in each account that finds new VPCs and associates the rule groups.",
-      "Attach a service control policy that denies the route53resolver:CreateFirewallRule action in member accounts."
+      "Attach a service control policy that denies the route53resolver:CreateFirewallRule action in member accounts so that only central rules exist."
     ],
     "answer": [
       1
@@ -984,10 +984,10 @@
     "difficulty": 2,
     "question": "A company already blocks known malicious domains with Route 53 Resolver DNS Firewall managed domain lists. A penetration test showed that malware could still exfiltrate data by encoding it in DNS queries to newly registered domains that are on no threat list. The company wants to detect and block this behavior for queries that go through the VPC Resolver. Which solution will meet these requirements?",
     "options": [
-      "Add network ACL rules that deny outbound UDP port 53 from the application subnets.",
-      "Enable Amazon GuardDuty and rely on it to drop the suspicious DNS queries.",
+      "Add network ACL rules that deny outbound UDP and TCP port 53 from the application subnets to block tunneling.",
+      "Enable Amazon GuardDuty DNS log monitoring and rely on it to drop the suspicious DNS queries automatically.",
       "Add DNS Firewall Advanced rules that detect DNS tunneling and domain generation algorithm (DGA) patterns with a BLOCK action.",
-      "Increase the number of AWS managed domain lists in the existing rule group."
+      "Add more AWS managed domain lists, such as the aggregate threat list, to the existing rule group with a BLOCK action."
     ],
     "answer": [
       2
@@ -1005,9 +1005,9 @@
     "question": "A company created a Route 53 private hosted zone named example.com and associated it with its production VPC so that internal names such as db.example.com resolve privately. Since then, EC2 instances in the VPC receive NXDOMAIN when they look up www.example.com, which exists only in the company's public hosted zone. What is the cause of this behavior?",
     "options": [
       "VPC Resolver found a matching private hosted zone, did not find the record in it, and returned NXDOMAIN instead of querying the public zone.",
-      "Private hosted zones block all queries for public records until a Resolver outbound endpoint is created.",
-      "The VPC needs a NAT gateway so that the Amazon-provided resolver can reach the public hosted zone.",
-      "The public hosted zone must be associated with the VPC before instances can resolve its records."
+      "Private hosted zones block all queries for public records from the VPC until a Resolver outbound endpoint is created for forwarding.",
+      "The VPC needs a NAT gateway so that the Amazon-provided resolver can reach the public hosted zone's name servers on the internet.",
+      "The public hosted zone must also be associated with the VPC before instances can resolve its records through VPC Resolver."
     ],
     "answer": [
       0
@@ -1065,9 +1065,9 @@
     "question": "A company has 300 Route 53 health checks. Most monitor Application Load Balancers that are already targets of alias records, and every health check uses the fast 10-second interval and latency measurement, although the recovery objective allows a few minutes to detect failure. Which actions will reduce health check costs while keeping automatic failover? (Select TWO.)",
     "options": [
       "Turn off the fast request interval and latency measurement on health checks that do not need them.",
-      "Convert the alias records to CNAME records so that health checks are billed at a lower rate.",
-      "Replace the endpoint health checks with calculated health checks that monitor the same endpoints.",
-      "Lower the TTL of the records to 0 seconds so that unhealthy targets are skipped faster.",
+      "Convert the alias records to CNAME records so that health checks are billed at a lower rate per endpoint.",
+      "Replace the endpoint health checks with calculated health checks that monitor the same endpoints at a lower monthly price.",
+      "Lower the TTL of the records to 0 seconds so that unhealthy targets are skipped faster without extra health checks.",
       "Remove the endpoint health checks for ALB alias records and set Evaluate Target Health to Yes on those records."
     ],
     "answer": [
@@ -1086,10 +1086,10 @@
     "difficulty": 1,
     "question": "In a Route 53 hosted zone, example.com is an alias record that points to a CloudFront distribution, and www.example.com is a CNAME record that points to example.com. The company receives a large number of queries for www.example.com and wants to reduce Route 53 query charges. What should the company do?",
     "options": [
-      "Increase the TTL of the example.com alias record.",
-      "Move www.example.com to a separate hosted zone.",
+      "Increase the TTL of the example.com alias record so that resolvers cache the answer for longer.",
+      "Move www.example.com to a separate hosted zone that is delegated from the example.com zone.",
       "Replace the www.example.com CNAME record with an alias record that points to the CloudFront distribution.",
-      "Change the example.com record to latency-based routing."
+      "Change the example.com record to latency-based routing so that fewer queries reach Route 53."
     ],
     "answer": [
       2
@@ -1106,10 +1106,10 @@
     "difficulty": 2,
     "question": "A video platform serves content from endpoints in two Regions. Its network team knows the IP ranges of three large internet service providers, and transit costs are much lower when subscribers of those ISPs reach the endpoint in eu-central-1. All other users should continue to reach the nearest endpoint. Which Route 53 configuration will meet these requirements MOST cost-effectively?",
     "options": [
-      "IP-based routing records that use a CIDR collection with the ISPs' ranges mapped to eu-central-1, plus a default location record",
-      "Geolocation records for each country where the ISPs operate, pointing to eu-central-1",
-      "Weighted records that send a fixed share of all traffic to eu-central-1",
-      "Geoproximity records with a large positive bias for eu-central-1"
+      "IP-based routing records with a CIDR collection that maps the ISPs' ranges to eu-central-1, plus a default location record",
+      "Geolocation records for each country where the ISPs operate pointing to eu-central-1, plus a default record",
+      "Weighted records that send a fixed share of all traffic, matching the ISPs' user share, to eu-central-1",
+      "Geoproximity records with a large positive bias for eu-central-1 that expands its area to cover the ISPs' regions"
     ],
     "answer": [
       0
@@ -1209,9 +1209,9 @@
     "question": "A company's disaster recovery runbook uses an AWS Lambda function that calls the Route 53 ChangeResourceRecordSets API to replace the IP address in a simple record during a Regional outage. A resilience review recommends that failover should not depend on the Route 53 control plane. Which change follows AWS best practices?",
     "options": [
       "Pre-create failover records for both Regions with health checks so that Route 53 health checking switches the answers automatically.",
-      "Run the Lambda function in two Regions so that one copy can always call the API.",
-      "Store the record changes in an S3 bucket and apply them with the AWS CLI during an incident.",
-      "Increase the TTL of the record so that clients keep working while the API call is retried."
+      "Run the Lambda function in two Regions so that one copy can always call the ChangeResourceRecordSets API during an outage.",
+      "Store the prepared record changes in an S3 bucket and apply them with the AWS CLI from a second Region during an incident.",
+      "Increase the TTL of the record so that clients keep working from cached answers while the API call is retried."
     ],
     "answer": [
       0
@@ -1228,9 +1228,9 @@
     "difficulty": 2,
     "question": "A company runs a web application behind an Application Load Balancer with targets in three Availability Zones. Auto Scaling minimum capacity is set so that two Availability Zones can carry full load. The company wants AWS to move traffic away from an Availability Zone automatically when AWS telemetry detects an impairment in that zone, without waiting for an operator. Which solution will meet these requirements?",
     "options": [
-      "Create Route 53 failover records that point to a second ALB in another Region.",
-      "Enable cross-zone load balancing on the ALB.",
-      "Configure an Amazon EventBridge rule that removes the impaired subnet from the ALB.",
+      "Create Route 53 failover records that point to a second ALB in another Region with health checks on the primary.",
+      "Enable cross-zone load balancing on the ALB so that healthy zones absorb traffic from the impaired one.",
+      "Configure an Amazon EventBridge rule and Lambda function that remove the impaired subnet from the ALB.",
       "Enable zonal autoshift for the ALB in Amazon Application Recovery Controller (ARC) and allow its weekly practice runs."
     ],
     "answer": [
@@ -1290,8 +1290,8 @@
     "difficulty": 2,
     "question": "A company must keep requests from users located in Canada inside ca-central-1 to meet a residency requirement. All other users in North America should be served from us-east-1, and users elsewhere should be served from eu-west-1. Which Route 53 configuration will meet these requirements?",
     "options": [
-      "Latency records for ca-central-1, us-east-1, and eu-west-1",
-      "Geoproximity records with a positive bias on ca-central-1",
+      "Latency records for ca-central-1, us-east-1, and eu-west-1 with health checks on each record",
+      "Geoproximity records with a positive bias on ca-central-1 large enough to cover all of Canada",
       "Geolocation records for Canada (ca-central-1) and North America (us-east-1), plus a default record for eu-west-1",
       "A geolocation record for North America (us-east-1) and a weighted record for Canada (ca-central-1)"
     ],
@@ -1310,9 +1310,9 @@
     "difficulty": 2,
     "question": "A company uses Route 53 failover routing with an HTTPS health check on its primary web server. The TLS certificate on the server expired, and users saw browser certificate errors for several hours, but Route 53 never failed over to the secondary site. Why did failover not occur?",
     "options": [
-      "HTTPS health checks only test that port 443 accepts TCP connections.",
-      "Health checks for failover records run only every 30 minutes.",
-      "Route 53 cannot fail over when the primary record is an alias record.",
+      "HTTPS health checks only test that port 443 accepts TCP connections and complete the TLS handshake, without evaluating the HTTP response.",
+      "Health checks for failover records run only every 30 minutes, so the failure was not detected in time.",
+      "Route 53 cannot fail over when the primary failover record is an alias record rather than a basic record.",
       "Route 53 HTTPS health checks do not validate SSL/TLS certificates, so an expired certificate does not make the check fail."
     ],
     "answer": [
@@ -1330,10 +1330,10 @@
     "difficulty": 3,
     "question": "A company serves users from an Application Load Balancer in eu-west-1 and from its own data center in Johannesburg, which is not in an AWS Region. The company wants each user routed to the geographically closest site and wants to shift more users toward Johannesburg later without per-country mappings. Which Route 53 configuration will meet these requirements?",
     "options": [
-      "Latency records for eu-west-1 and for the Region nearest to Johannesburg",
-      "Geoproximity records that use the eu-west-1 Region for the ALB and the latitude and longitude of the data center, with a bias that can be adjusted",
-      "Geolocation records for Africa and Europe with a default record",
-      "Multivalue answer records that return both sites"
+      "Latency records for eu-west-1 and for the AWS Region nearest to Johannesburg, which is af-south-1 (Cape Town), so that users reach the faster site",
+      "Geoproximity records that use the eu-west-1 Region for the ALB and the data center's latitude and longitude, with an adjustable bias",
+      "Geolocation records for Africa and Europe with a default record, adjusting the continents later to shift users",
+      "Multivalue answer records that return both sites with a health check on each"
     ],
     "answer": [
       1
@@ -1350,10 +1350,10 @@
     "difficulty": 1,
     "question": "A company enabled IPv6 on its CloudFront distribution. The domain app.example.com has an alias A record in Route 53 that targets the distribution. Clients on IPv6-only networks report that app.example.com does not resolve to any IPv6 address. What should the company do?",
     "options": [
-      "Enable Evaluate Target Health on the existing alias A record.",
-      "Enable IPv6 on the Route 53 public hosted zone.",
+      "Enable Evaluate Target Health on the existing alias A record so that it also returns IPv6 answers.",
+      "Enable IPv6 on the Route 53 public hosted zone so that alias records return both address types.",
       "Create an alias AAAA record for app.example.com that targets the same CloudFront distribution.",
-      "Create an A record that contains the IPv6 addresses of the edge locations."
+      "Create an A record that contains the IPv6 addresses of the CloudFront edge locations for the distribution."
     ],
     "answer": [
       2
@@ -1371,9 +1371,9 @@
     "question": "A company has a Route 53 VPC Resolver forwarding rule that sends all queries for corp.example.com to on-premises DNS servers. The company now hosts records for aws.corp.example.com in a private hosted zone associated with the VPC, but instances still send those queries on premises. The company wants aws.corp.example.com resolved by VPC Resolver while everything else under corp.example.com keeps being forwarded. What should a solutions architect do?",
     "options": [
       "Create a Resolver system rule for aws.corp.example.com and associate it with the VPC.",
-      "Delete the forwarding rule for corp.example.com.",
-      "Create a Resolver inbound endpoint and point the instances to it.",
-      "Add a DNS Firewall rule that blocks aws.corp.example.com."
+      "Delete the forwarding rule for corp.example.com so that VPC Resolver answers from the private zone.",
+      "Create a Resolver inbound endpoint and point the instances to it for aws.corp.example.com queries.",
+      "Add a DNS Firewall rule that blocks aws.corp.example.com from being forwarded on premises."
     ],
     "answer": [
       0
@@ -1390,9 +1390,9 @@
     "difficulty": 2,
     "question": "A company migrated the records for internal.example.com from on-premises DNS into a Route 53 private hosted zone with the same name and associated the zone with its VPC. EC2 instances still receive answers from the on-premises servers, which are being decommissioned. The VPC also has a Resolver forwarding rule for internal.example.com. What should the company do?",
     "options": [
-      "Lower the TTL of every record in the private hosted zone.",
+      "Lower the TTL of every record in the private hosted zone to 60 seconds.",
       "Associate the private hosted zone with the VPC a second time.",
-      "Create a Resolver outbound endpoint in another Availability Zone.",
+      "Create a Resolver outbound endpoint in another Availability Zone for redundancy.",
       "Disassociate the forwarding rule for internal.example.com from the VPC."
     ],
     "answer": [
@@ -1434,7 +1434,7 @@
     "options": [
       "Weighted routing with equal weights",
       "Geolocation routing with a default record",
-      "Multivalue answer routing",
+      "Multivalue answer routing with health checks",
       "Simple routing with three values"
     ],
     "answer": [
@@ -1534,10 +1534,10 @@
     "difficulty": 3,
     "question": "An application on an Amazon EC2 instance sends order confirmation emails for example.com. Several recipient mail servers flag the messages as spam because a reverse DNS lookup of the sending IP address does not return the company's mail host name. The domain is hosted in a Route 53 public hosted zone. What should the company do?",
     "options": [
-      "Create a PTR record for the instance's current public IPv4 address in the example.com public hosted zone.",
-      "Associate an Elastic IP address with the instance, create an A record for mail.example.com that points to it, and then set the Elastic IP address's reverse DNS name to mail.example.com.",
-      "Create a Route 53 private hosted zone for the in-addr.arpa domain and associate it with the instance's VPC.",
-      "Enable DNS hostnames on the VPC so that the instance's public DNS name is returned for reverse lookups."
+      "Create a PTR record for the instance's current public IPv4 address in the example.com public hosted zone, and add an SPF TXT record that authorizes the address.",
+      "Associate an Elastic IP address with the instance, create an A record for mail.example.com that points to it, and then set the address's reverse DNS name to mail.example.com.",
+      "Create a Route 53 private hosted zone for the in-addr.arpa domain with a PTR record for mail.example.com and associate it with the VPC.",
+      "Enable DNS hostnames on the VPC so that the instance's public DNS name is returned for reverse lookups of its public IP address."
     ],
     "answer": [
       1
@@ -1576,10 +1576,10 @@
     "difficulty": 2,
     "question": "The record www.example.com is a Route 53 alias A record that targets an Application Load Balancer. To reduce Route 53 query charges, an engineer wants to raise the record's TTL to 3,600 seconds, but the console does not offer a TTL setting for the record. What should the engineer know?",
     "options": [
-      "Alias records always use a TTL of 0 seconds, so resolvers query Route 53 on every request and the record should be converted to a CNAME.",
-      "The TTL becomes editable only after Evaluate Target Health is turned off on the alias record.",
-      "Alias records inherit the minimum TTL from the hosted zone's SOA record, so the SOA record must be edited instead.",
-      "The TTL of an alias record that targets an AWS resource cannot be set because Route 53 uses the resource's default TTL, and alias queries to AWS resources are not charged anyway."
+      "Alias records always use a TTL of 0 seconds, so resolvers query Route 53 on every request, and the record should be converted to a CNAME with a 3,600-second TTL.",
+      "The TTL becomes editable only after Evaluate Target Health is turned off on the alias record, because health evaluation needs a fixed TTL.",
+      "Alias records inherit the minimum TTL from the hosted zone's SOA record, so the SOA record must be edited to raise it to 3,600 seconds.",
+      "An alias record that targets an AWS resource uses the resource's default TTL, which cannot be set, and alias queries to AWS resources are not charged anyway."
     ],
     "answer": [
       3
@@ -1636,10 +1636,10 @@
     "difficulty": 1,
     "question": "A company's marketing website suddenly became unreachable for all users. The Application Load Balancer and EC2 instances are healthy, and nobody changed the Route 53 records. The domain was registered with Route 53, and an administrator turned off automatic renewal for it last year. What is the MOST likely cause, and how can the company prevent this in the future?",
     "options": [
-      "Route 53 deletes hosted zones automatically after 12 months; enable deletion protection on the hosted zone.",
-      "The ALB's DNS name changed; replace the alias record with a CNAME record that has a longer TTL.",
-      "Route 53 health checks expire after one year; recreate the health checks and associate them with the records.",
-      "The domain registration expired, which made the domain unavailable on the internet; keep automatic renewal enabled for domains the company wants to keep."
+      "Route 53 deletes hosted zones that have had no record changes for 12 months; enable deletion protection on the hosted zone to keep it.",
+      "The ALB's DNS name changed after a scaling event; replace the alias record with a CNAME record that has a longer TTL.",
+      "Route 53 health checks expire after one year; recreate the health checks and associate them with the records again.",
+      "The domain registration expired and the domain became unavailable on the internet; keep automatic renewal enabled for domains the company wants."
     ],
     "answer": [
       3
@@ -1656,9 +1656,9 @@
     "difficulty": 1,
     "question": "A startup is registering a domain with Amazon Route 53. The founders do not want their names, home address, phone numbers, and email addresses to be returned by public WHOIS queries. What should the startup do?",
     "options": [
-      "Create a private hosted zone for the domain so that the contact details are visible only inside the company's VPC.",
+      "Create a private hosted zone for the domain so that the WHOIS contact details are visible only to resolvers inside the company's VPC.",
       "Keep privacy protection enabled for all of the domain's contacts, which Route 53 turns on by default where the TLD registry supports it.",
-      "Enable DNSSEC signing for the domain so that WHOIS responses are encrypted for anyone outside the company.",
+      "Enable DNSSEC signing for the domain so that WHOIS responses are encrypted and readable only by the domain's administrative contacts.",
       "Store the contact details in AWS Secrets Manager and reference the secret from the domain registration instead."
     ],
     "answer": [
@@ -1676,10 +1676,10 @@
     "difficulty": 3,
     "question": "A hosting provider manages 300 customer domains in Route 53 public hosted zones in one AWS account. It wants every hosted zone to use the same four name servers so that it can give customers one standard set, and it later wants to brand them as ns1 to ns4.provider.example (white-label name servers). Many of the hosted zones already exist. What must the provider do?",
     "options": [
-      "Edit the NS record in each existing hosted zone so that it lists the same four Route 53 name servers.",
-      "Associate all of the hosted zones with a single Route 53 Profile so that they share the Profile's name servers.",
-      "Create one hosted zone for provider.example and add NS records in it that delegate every customer domain to that zone.",
-      "Create a reusable delegation set, create the hosted zones (re-creating existing ones) with that delegation set, and then set up the white-label name server records and glue records."
+      "Edit the NS record in each existing hosted zone so that it lists the same four Route 53 name servers, then update the registrar for each domain.",
+      "Associate all of the hosted zones with a single Route 53 Profile so that they share the Profile's name servers, which can then be renamed.",
+      "Create one hosted zone for provider.example and add NS records in it that delegate every customer domain to that zone's four name servers.",
+      "Create a reusable delegation set, create the hosted zones with it (re-creating existing ones), and then set up the white-label name server and glue records."
     ],
     "answer": [
       3

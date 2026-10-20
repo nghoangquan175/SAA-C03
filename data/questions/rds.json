@@ -8,8 +8,8 @@
     "question": "An online furniture retailer is building an order management system. Orders, customers, invoices, and inventory are highly related, reports require multi-table joins, and each checkout must update several tables atomically. Which database choice best fits these requirements?",
     "options": [
       "Amazon RDS for PostgreSQL with a normalized relational schema",
-      "Amazon Neptune with orders modeled as graph vertices",
-      "Amazon DynamoDB with a single table keyed by order ID",
+      "Amazon Neptune with orders, customers, and invoices modeled as connected graph vertices",
+      "Amazon DynamoDB with a single-table design keyed by order ID and transactional writes",
       "Amazon ElastiCache for Valkey as the primary data store"
     ],
     "answer": [
@@ -26,11 +26,11 @@
     "difficulty": 1,
     "question": "A solutions architect is comparing transaction models for a new platform. Which statements correctly describe ACID and BASE characteristics? (Select TWO.)",
     "options": [
-      "BASE systems favor availability and accept that replicas may be temporarily inconsistent before converging to the same state.",
+      "BASE systems favor availability and accept that replicas may be temporarily inconsistent before converging.",
       "ACID systems guarantee that a committed transaction is durable and that all its changes are applied together or not at all.",
-      "ACID guarantees are only possible in NoSQL databases that use eventual consistency.",
-      "BASE systems guarantee that every read returns the most recent committed write across all replicas.",
-      "BASE systems require a fixed schema to be defined before any data can be written."
+      "ACID guarantees are only possible in NoSQL databases that rely on eventual consistency to apply changes across replicas.",
+      "BASE systems guarantee that every read returns the most recent committed write across all replicas, even during a network partition.",
+      "BASE systems require a fixed schema to be defined before any data can be written, in the same way as relational tables."
     ],
     "answer": [
       0,
@@ -47,10 +47,10 @@
     "difficulty": 1,
     "question": "A startup runs MySQL on a single Amazon EC2 instance. Two engineers spend several hours each week applying patches, managing backups, and handling storage growth. The company wants to reduce this administrative work without changing the database engine. Which solution will meet these requirements with the LEAST operational overhead?",
     "options": [
-      "Install MySQL on an EC2 Auto Scaling group spread across two Availability Zones.",
+      "Install MySQL on an EC2 Auto Scaling group spread across two Availability Zones with a minimum of two instances.",
       "Move MySQL to a larger EC2 instance and script backups with cron jobs and the AWS CLI.",
       "Migrate the database to Amazon RDS for MySQL and use its automated backups and managed patching.",
-      "Containerize MySQL and run it on Amazon ECS with an Amazon EFS volume for data."
+      "Containerize MySQL and run it on Amazon ECS with AWS Fargate and an Amazon EFS volume for the data directory."
     ],
     "answer": [
       2
@@ -123,8 +123,8 @@
     "difficulty": 2,
     "question": "A trading platform runs on Amazon RDS for MySQL. The company needs failover that typically completes in under 35 seconds and also wants the standby capacity to serve read traffic. Which deployment option should a solutions architect recommend?",
     "options": [
-      "A Single-AZ DB instance with three same-Region read replicas",
-      "A Multi-AZ DB instance deployment with one synchronous standby instance",
+      "A Single-AZ DB instance with three same-Region read replicas that can be promoted if the primary fails",
+      "A Multi-AZ DB instance deployment with one synchronous standby instance in a different Availability Zone",
       "A Multi-AZ DB cluster deployment with one writer and two readable standby instances",
       "A Single-AZ DB instance with automated backups and point-in-time recovery"
     ],
@@ -162,8 +162,8 @@
     "question": "A healthcare company must retain a monthly backup of its Amazon RDS for SQL Server database for 7 years to satisfy auditors. The team wants a centrally managed solution with minimal custom code. Which solution will meet these requirements?",
     "options": [
       "Create a cross-Region read replica and keep it running for the 7-year period.",
-      "Enable point-in-time recovery and restore to the first day of each month when needed.",
-      "Set the RDS automated backup retention period to 2,555 days on the DB instance.",
+      "Enable point-in-time recovery on the DB instance and restore to the first day of each month whenever auditors ask.",
+      "Set the RDS automated backup retention period to 2,555 days so that each daily backup is kept for 7 years.",
       "Create an AWS Backup plan with a monthly backup rule that retains recovery points for 7 years."
     ],
     "answer": [
@@ -180,10 +180,10 @@
     "difficulty": 2,
     "question": "At 10:42 a developer accidentally dropped a critical table in an Amazon RDS for MySQL production database. Automated backups are enabled with a 14-day retention period. The company wants to recover the data with the smallest possible data loss. What should the solutions architect do?",
     "options": [
-      "Promote the Multi-AZ standby instance because it still contains the dropped table.",
-      "Restore the DB instance to a point in time just before 10:42 to a new DB instance, then redirect the application or copy the table back.",
-      "Use Aurora Backtrack on the RDS for MySQL instance to rewind to 10:41.",
-      "Restore the most recent automated daily snapshot over the existing DB instance in place."
+      "Initiate a reboot with failover so the Multi-AZ standby, which still contains the dropped table, becomes the primary.",
+      "Perform a point-in-time restore to 10:41 into a new DB instance, then copy the table back to production.",
+      "Use Aurora Backtrack on the RDS for MySQL instance to rewind the database in place to 10:41 without creating a new instance.",
+      "Restore the most recent automated daily snapshot over the existing DB instance in place to keep the same endpoint."
     ],
     "answer": [
       1
@@ -220,8 +220,8 @@
     "difficulty": 2,
     "question": "A company runs Amazon RDS for PostgreSQL in us-east-1. For disaster recovery, it needs the ability to restore the database in us-west-2 with an RPO of a few hours. Recovery time of several hours is acceptable. Which solution is the MOST cost-effective?",
     "options": [
-      "Create a cross-Region read replica in us-west-2 and keep it running continuously.",
-      "Run AWS DMS continuously to replicate changes into a standby RDS instance in us-west-2.",
+      "Create a cross-Region read replica in us-west-2 and keep it running continuously so it can be promoted.",
+      "Run an AWS DMS task with ongoing replication to keep a standby RDS for PostgreSQL instance in us-west-2 current.",
       "Enable cross-Region automated backup replication to us-west-2 and restore from it during a disaster.",
       "Migrate the database to an Aurora global database with a secondary cluster in us-west-2."
     ],
@@ -262,10 +262,10 @@
     "difficulty": 3,
     "question": "A company wants to share a manual snapshot of an encrypted Amazon RDS for PostgreSQL database with a partner AWS account. The snapshot is currently encrypted with the AWS managed key aws/rds. What must the solutions architect do so the partner can restore the snapshot?",
     "options": [
-      "Export the snapshot to Amazon S3 and enable S3 Cross-Region Replication to the partner.",
-      "Share the existing snapshot directly and grant the partner account access to the aws/rds key.",
-      "Make the snapshot public so the partner can copy it without needing any KMS permissions.",
-      "Copy the snapshot using a customer managed KMS key, share that key with the partner account through its key policy, and share the copied snapshot."
+      "Export the snapshot to Amazon S3 and use S3 Cross-Region Replication to deliver the exported files to the partner's bucket.",
+      "Share the existing snapshot directly with the partner account ID and grant that account kms:Decrypt on the aws/rds key.",
+      "Mark the snapshot as public so the partner can copy it into their own account and re-encrypt it with their own key.",
+      "Copy the snapshot with a customer managed KMS key, allow the partner account in that key's policy, and share the copy."
     ],
     "answer": [
       3
@@ -301,9 +301,9 @@
     "question": "A financial services company uses Amazon RDS for PostgreSQL. A new policy requires that every client connection to the database uses SSL/TLS, and unencrypted connections must be rejected. Which solution will meet this requirement?",
     "options": [
       "Set the rds.force_ssl parameter to 1 in a custom DB parameter group associated with the instance.",
-      "Enable encryption at rest with a customer managed AWS KMS key on the instance.",
+      "Enable encryption at rest with a customer managed AWS KMS key and turn on automatic yearly key rotation.",
       "Place the DB instance in private subnets and remove the internet gateway route.",
-      "Restrict the DB security group to allow only port 443 from the application subnets."
+      "Restrict the DB security group to allow inbound traffic only on port 443 from the application subnets' CIDR ranges."
     ],
     "answer": [
       0
@@ -319,10 +319,10 @@
     "difficulty": 2,
     "question": "An application on Amazon EC2 connects to Amazon RDS for MySQL using a password stored in a configuration file. The security team wants to eliminate long-lived database passwords and use the EC2 instance role to control database access. Which solution will meet these requirements?",
     "options": [
-      "Store the password in AWS Systems Manager Parameter Store as a String parameter.",
-      "Create a security group rule that allows only the instance role to connect on port 3306.",
-      "Enable Kerberos authentication by attaching the instance role to the DB subnet group.",
-      "Enable IAM database authentication and have the application request a short-lived authentication token using the instance role."
+      "Store the password as a String parameter in Systems Manager Parameter Store and let the instance role read it at startup.",
+      "Create a DB security group rule that references the instance role so only EC2 instances with that role can reach port 3306.",
+      "Enable Kerberos authentication on the DB instance by attaching the instance role to the DB subnet group.",
+      "Enable IAM database authentication and have the application generate a short-lived token with the instance role."
     ],
     "answer": [
       3
@@ -437,8 +437,8 @@
     "options": [
       "The DB instance is not configured as a Multi-AZ DB instance deployment.",
       "Automated backups are disabled because the backup retention period is set to 0.",
-      "The DB instance uses gp3 storage instead of Provisioned IOPS storage.",
-      "Encryption at rest is not enabled on the source DB instance."
+      "The DB instance uses General Purpose SSD (gp3) storage, while read replicas require Provisioned IOPS storage.",
+      "Encryption at rest is not enabled on the source DB instance, so RDS cannot create a replica of it."
     ],
     "answer": [
       1
@@ -454,10 +454,10 @@
     "difficulty": 3,
     "question": "A social media application writes user profile updates to an Amazon RDS for MySQL primary and serves all reads from three read replicas. Users complain that immediately after saving their profile, the old values sometimes appear. The company wants to keep offloading most reads. Which solution will fix the issue?",
     "options": [
-      "Enable the Query cache on the primary so the replicas receive changes sooner.",
-      "Convert the read replicas to synchronous replication by enabling Multi-AZ on each replica.",
-      "Route reads that must reflect a user's own recent writes to the primary instance and keep other reads on the replicas.",
-      "Increase the number of read replicas so replication finishes faster for each user."
+      "Enable the query cache on the primary instance so that changed rows are pushed to the read replicas sooner.",
+      "Enable Multi-AZ on each read replica so that replication from the primary to that replica becomes synchronous.",
+      "Send reads that must reflect a user's own recent writes to the primary, and keep all other reads on the replicas.",
+      "Add more read replicas so that each replica serves fewer users and applies replicated changes faster."
     ],
     "answer": [
       2
@@ -473,9 +473,9 @@
     "difficulty": 1,
     "question": "A company runs a steady production workload on several Amazon RDS for PostgreSQL DB instances 24 hours a day and expects to keep the same instance families for at least 3 years. Which option will reduce cost the MOST?",
     "options": [
-      "Use Amazon EC2 Spot Instances to host the production databases.",
-      "Enable storage autoscaling to reduce the provisioned storage size.",
-      "Convert the instances to Aurora Serverless v2 with a high maximum capacity.",
+      "Use Amazon EC2 Spot Instances to self-host the production databases at up to a 90% discount.",
+      "Enable storage autoscaling so that provisioned storage shrinks when the databases use less space.",
+      "Convert the instances to Aurora Serverless v2, which bills per ACU-hour and scales down when idle.",
       "Purchase Amazon RDS Reserved Instances with a 3-year term for the production instances."
     ],
     "answer": [
@@ -492,8 +492,8 @@
     "difficulty": 2,
     "question": "A development team uses five Amazon RDS for MySQL DB instances only on weekdays from 8 AM to 6 PM. The company wants to reduce costs with minimal operational effort while keeping the databases available during work hours. Which solution will meet these requirements?",
     "options": [
-      "Delete the instances every evening and restore them from snapshots each morning.",
-      "Purchase 1-year Reserved Instances for all five development instances.",
+      "Delete the instances each evening after a final snapshot and restore them from those snapshots each morning.",
+      "Purchase 1-year All Upfront Reserved Instances for all five development instances to get the largest discount.",
       "Use Amazon EventBridge Scheduler to stop the instances each evening and start them each weekday morning.",
       "Convert the instances to Multi-AZ so the standby can be shut down at night."
     ],
@@ -608,10 +608,10 @@
     "difficulty": 3,
     "question": "An Aurora PostgreSQL cluster has a writer, two small replicas that serve the web application, and two large memory-optimized replicas reserved for analytics. Analysts must connect to only the large replicas, and the web tier must never use them. Which solution will meet these requirements?",
     "options": [
-      "Give analysts the reader endpoint and set a higher failover priority tier on the large replicas.",
-      "Give analysts the cluster endpoint and configure a read-only user for analytical queries.",
-      "Create a custom endpoint that contains the two large replicas and give analysts that endpoint, and a second custom endpoint containing the two small replicas for the web tier.",
-      "Create a second Aurora cluster by cloning the volume and run analytics on the clone weekly."
+      "Give analysts the reader endpoint and assign the large replicas a higher failover priority tier so the reader endpoint prefers them.",
+      "Give analysts the cluster endpoint and a database user with read-only privileges so analytical queries cannot modify data.",
+      "Create one custom endpoint with the two large replicas for analysts and another with the two small replicas for the web tier.",
+      "Clone the cluster volume weekly with Aurora cloning and let the analysts query the clone instead of the replicas."
     ],
     "answer": [
       2
@@ -627,10 +627,10 @@
     "difficulty": 3,
     "question": "An Aurora MySQL cluster has a db.r6g.4xlarge writer, one db.r6g.4xlarge replica, and two db.r6g.large replicas used for light reporting. The company wants to ensure that if the writer fails, the replica that can handle the production write load becomes the new writer. What should the solutions architect do?",
     "options": [
-      "Enable Backtrack so the writer can be rewound instead of failing over.",
-      "Assign the db.r6g.4xlarge replica the highest failover priority (tier 0) and give the smaller replicas lower-priority tiers.",
-      "Place the db.r6g.4xlarge replica in the same Availability Zone as the writer.",
-      "Add the db.r6g.4xlarge replica to a custom endpoint named failover."
+      "Enable Backtrack on the cluster so that the writer can be rewound to its last good state instead of failing over.",
+      "Assign the db.r6g.4xlarge replica failover tier 0 and put the two smaller replicas in lower-priority tiers.",
+      "Place the db.r6g.4xlarge replica in the same Availability Zone as the writer so that it is chosen first during failover.",
+      "Add the db.r6g.4xlarge replica to a custom endpoint named failover that the cluster uses when promoting a replica."
     ],
     "answer": [
       1
@@ -684,8 +684,8 @@
     "difficulty": 2,
     "question": "A company is launching a ticketing application whose database load is low most of the day but spikes sharply and unpredictably when popular events go on sale. The company wants to avoid paying for peak capacity all day while keeping MySQL compatibility. Which solution is the MOST cost-effective?",
     "options": [
-      "Use RDS for MySQL with Provisioned IOPS sized for the peak throughput.",
-      "Use RDS for MySQL with a Reserved Instance sized for the average load.",
+      "Use RDS for MySQL with Provisioned IOPS storage sized for the peak throughput of on-sale events.",
+      "Use RDS for MySQL with a Reserved Instance sized for the average load to lock in the lowest hourly rate.",
       "Use Amazon Aurora Serverless v2 with appropriate minimum and maximum capacity settings.",
       "Use a provisioned Aurora MySQL writer sized for the largest expected peak."
     ],
@@ -703,9 +703,9 @@
     "difficulty": 3,
     "question": "An Aurora PostgreSQL cluster has a steady write workload handled well by a provisioned writer. Read traffic from a mobile app is highly variable, sometimes rising tenfold for a few minutes. The company wants reads to scale quickly without overprovisioning. Which solution will meet these requirements?",
     "options": [
-      "Replace the cluster with a Multi-AZ DB cluster deployment of RDS for PostgreSQL.",
-      "Add cross-Region read replicas so read traffic is spread across Regions.",
-      "Increase the provisioned writer size so it can also absorb the read spikes.",
+      "Replace the cluster with an RDS for PostgreSQL Multi-AZ DB cluster deployment, which has two readable standby instances.",
+      "Add secondary Regions with Aurora Global Database so the read spikes are spread across several AWS Regions.",
+      "Increase the provisioned writer to a larger memory-optimized instance class so it can also absorb the read spikes.",
       "Add Aurora Serverless v2 reader instances to the existing cluster and send reads to the reader endpoint."
     ],
     "answer": [
@@ -760,8 +760,8 @@
     "difficulty": 2,
     "question": "Which statements correctly describe Amazon Aurora Global Database? (Select TWO.)",
     "options": [
-      "AWS DMS must be configured by the customer to move changes between Regions.",
-      "Each secondary Region accepts writes natively, and conflicts are resolved with last-writer-wins.",
+      "Customers must configure AWS DMS tasks with ongoing replication to move committed changes between the Regions.",
+      "Each secondary Region accepts writes natively, and write conflicts between Regions are resolved with last-writer-wins.",
       "Replication between Regions is synchronous, so the primary waits for every secondary to commit.",
       "Replication to secondary Regions is performed at the storage layer with typical lag under one second.",
       "A secondary cluster can be promoted to become the primary during a Regional disaster or planned switchover."
@@ -782,8 +782,8 @@
     "question": "A serverless application uses AWS Lambda functions that connect to an Amazon RDS for PostgreSQL database. During traffic spikes, thousands of concurrent invocations open new connections and the database reports too many connections. Which solution will resolve this with the LEAST code changes?",
     "options": [
       "Increase the max_connections parameter to the highest allowed value for the instance class.",
-      "Reduce the Lambda timeout so that connections are closed more quickly.",
-      "Add read replicas and have each function choose a replica at random.",
+      "Reduce the Lambda function timeout so that idle database connections are closed and released more quickly.",
+      "Add read replicas and have each function pick a replica endpoint at random to spread out the connections.",
       "Place Amazon RDS Proxy in front of the database and have the functions connect to the proxy endpoint."
     ],
     "answer": [
@@ -800,10 +800,10 @@
     "difficulty": 3,
     "question": "A company is adding Amazon RDS Proxy in front of an Amazon Aurora MySQL cluster used by containerized microservices. Which benefits will RDS Proxy provide? (Select TWO.)",
     "options": [
-      "It caches query results in memory so repeated SELECT statements bypass the database.",
+      "It caches the results of repeated SELECT statements in memory so that read-heavy microservices bypass the database.",
       "It can require IAM authentication from clients while retrieving database credentials from AWS Secrets Manager.",
       "It reduces application-visible failover time by keeping client connections and routing to the new writer.",
-      "It replicates the cluster to another Region for disaster recovery.",
+      "It replicates the Aurora cluster to a second Region so microservices can fail over during a Regional outage.",
       "It makes the database reachable from the public internet without exposing the cluster."
     ],
     "answer": [
@@ -821,10 +821,10 @@
     "difficulty": 2,
     "question": "A company must migrate a 3 TB on-premises MySQL database to Amazon RDS for MySQL. The application can tolerate only a few minutes of downtime during the cutover. Which approach should a solutions architect use?",
     "options": [
-      "Use AWS Snowball Edge to ship the data files and attach them to the RDS instance.",
+      "Use AWS Snowball Edge to ship the MySQL data files to AWS and attach them to the new RDS for MySQL DB instance.",
       "Use AWS DMS with a full load followed by ongoing change data capture, then cut over when the target is in sync.",
-      "Use AWS DataSync to copy the database data files to the RDS instance.",
-      "Take a mysqldump backup, copy it to Amazon S3, and import it during a weekend outage."
+      "Use AWS DataSync to copy the MySQL data directory to the RDS instance and keep it in sync until cutover.",
+      "Take a mysqldump backup, copy it to Amazon S3, and import it into RDS for MySQL during a weekend outage."
     ],
     "answer": [
       1
@@ -841,10 +841,10 @@
     "question": "A company wants to eliminate commercial database licensing costs by moving an on-premises Oracle database, including stored procedures, to Amazon Aurora PostgreSQL. Which actions should the solutions architect take? (Select TWO.)",
     "options": [
       "Use AWS Schema Conversion Tool or DMS Schema Conversion to convert the schema and code objects to PostgreSQL.",
-      "Use AWS DataSync to copy the Oracle data files into the Aurora cluster volume.",
+      "Use AWS DataSync to copy the Oracle data files into the Aurora cluster volume over AWS Direct Connect.",
       "Use Aurora Backtrack to import the Oracle redo logs into the Aurora cluster.",
       "Use AWS Database Migration Service to migrate the data and replicate ongoing changes.",
-      "Restore an Oracle RMAN backup directly into the Aurora PostgreSQL cluster."
+      "Restore an Oracle RMAN backup from Amazon S3 directly into the Aurora PostgreSQL cluster."
     ],
     "answer": [
       0,
@@ -861,10 +861,10 @@
     "difficulty": 3,
     "question": "A DMS task is configured for full load and change data capture from a self-managed MySQL database on Amazon EC2 to Amazon Aurora MySQL. The full load succeeds, but no ongoing changes are replicated. What is the MOST likely cause?",
     "options": [
-      "The DMS replication instance is not in a Multi-AZ configuration.",
+      "The DMS replication instance is not deployed in a Multi-AZ configuration with a standby.",
       "The source database does not have read replicas configured.",
       "Binary logging is not enabled with ROW format on the source MySQL database.",
-      "The target Aurora cluster does not have Backtrack enabled."
+      "The target Aurora MySQL cluster does not have Backtrack enabled to apply the change events."
     ],
     "answer": [
       2
@@ -939,9 +939,9 @@
     "difficulty": 1,
     "question": "Users report that an Amazon RDS for MySQL database became slow after a new feature release. A solutions architect needs to identify which SQL statements and wait events are contributing most to the database load. Which tool should be used?",
     "options": [
-      "VPC Flow Logs for the DB subnet group",
-      "AWS Trusted Advisor cost optimization checks",
-      "AWS CloudTrail data events for Amazon RDS",
+      "VPC Flow Logs for the subnets in the DB subnet group, analyzed with Amazon Athena",
+      "AWS Trusted Advisor checks for idle and underutilized Amazon RDS DB instances",
+      "AWS CloudTrail data events for Amazon RDS delivered to CloudWatch Logs",
       "Performance Insights in Amazon CloudWatch Database Insights"
     ],
     "answer": [
@@ -1017,10 +1017,10 @@
     "difficulty": 3,
     "question": "A bank must monitor all database activity on its Amazon Aurora PostgreSQL cluster in near real time for compliance. The security team requires that database administrators cannot alter or disable the audit trail, and that the stream is encrypted. Which solution will meet these requirements?",
     "options": [
-      "Enable AWS CloudTrail management events for the Aurora cluster.",
-      "Enable the pgaudit extension and allow administrators to export the logs weekly.",
-      "Enable Database Activity Streams, which push encrypted activity records to an Amazon Kinesis data stream for the security team's tools.",
-      "Enable Enhanced Monitoring and send the metrics to a CloudWatch dashboard."
+      "Enable AWS CloudTrail management events for the Aurora cluster and deliver them to an S3 bucket with Object Lock.",
+      "Enable the pgaudit extension, publish the logs to CloudWatch Logs, and let administrators export them weekly.",
+      "Enable Database Activity Streams, which push encrypted activity records to an Amazon Kinesis data stream.",
+      "Enable Enhanced Monitoring and stream the metrics to a CloudWatch dashboard owned by the security team."
     ],
     "answer": [
       2
@@ -1055,10 +1055,10 @@
     "difficulty": 2,
     "question": "A company runs a Multi-AZ DB instance deployment of Amazon RDS for MySQL. The company wants to minimize the downtime caused by required operating system maintenance on the DB host. How does Multi-AZ help in this situation?",
     "options": [
-      "RDS applies maintenance to the standby first, promotes the standby, and then applies maintenance to the old primary.",
-      "RDS moves the workload to a read replica while the primary is patched.",
-      "RDS applies maintenance to both instances simultaneously and then restarts them together.",
-      "RDS defers all operating system maintenance indefinitely for Multi-AZ deployments."
+      "RDS patches the standby first, fails over to it, and then patches the old primary.",
+      "RDS moves the workload to a read replica in another Availability Zone while the primary is being patched.",
+      "RDS applies maintenance to both instances simultaneously and then restarts them together to keep them in sync.",
+      "RDS defers all operating system maintenance indefinitely for Multi-AZ deployments to avoid failovers."
     ],
     "answer": [
       0
@@ -1261,9 +1261,9 @@
     "question": "A company is migrating a Microsoft SQL Server database to Amazon RDS for SQL Server. Employees must sign in to the database with their existing on-premises Active Directory accounts by using Windows Authentication. Which solution will meet this requirement?",
     "options": [
       "Use AD Connector to forward authentication requests from the DB instance to the on-premises domain.",
-      "Enable IAM database authentication and map each employee to an IAM user.",
-      "Join the DB instance to an AWS Managed Microsoft AD directory that has a forest trust with the on-premises Active Directory.",
-      "Store each employee's database password in AWS Secrets Manager and rotate it every 30 days."
+      "Enable IAM database authentication and map each employee to a federated IAM role.",
+      "Join the DB instance to AWS Managed Microsoft AD and create a forest trust with the on-premises Active Directory.",
+      "Store each employee's database login in AWS Secrets Manager and rotate it automatically every 30 days with Lambda."
     ],
     "answer": [
       2
@@ -1300,9 +1300,9 @@
     "difficulty": 1,
     "question": "A news website uses an Amazon Aurora MySQL cluster. Read traffic varies widely during the day, and the operations team adds and removes Aurora Replicas by hand. The company wants the number of replicas to change automatically with the read load. What should the solutions architect configure?",
     "options": [
-      "Aurora Serverless v2 for the writer DB instance only",
-      "A Multi-AZ DB cluster deployment with two readable standby instances",
-      "RDS storage autoscaling with a maximum storage threshold",
+      "Aurora Serverless v2 for the writer DB instance only, scaling between 0.5 and 128 ACUs",
+      "An RDS Multi-AZ DB cluster deployment with two readable standby instances behind a reader endpoint",
+      "RDS storage autoscaling with a maximum storage threshold that grows capacity as load rises",
       "Aurora Auto Scaling with a target tracking policy on average reader CPU utilization"
     ],
     "answer": [
@@ -1320,8 +1320,8 @@
     "difficulty": 2,
     "question": "A company runs a production Amazon Aurora PostgreSQL cluster that contains only a single writer DB instance. During a recent instance failure, the database was unavailable for almost 10 minutes while Aurora recreated the instance. The company wants failover to complete in well under a minute. What should the solutions architect do?",
     "options": [
-      "Enable Backtrack on the cluster so that it can rewind after an instance failure.",
-      "Increase the writer's instance size so that it restarts faster after a failure.",
+      "Enable Backtrack on the cluster so that it can rewind to a healthy state after an instance failure.",
+      "Increase the writer's instance size so that Aurora can recreate and restart it faster after a failure.",
       "Add at least one Aurora Replica in a different Availability Zone to act as a failover target.",
       "Enable cross-Region automated backup replication for the cluster."
     ],
@@ -1340,7 +1340,7 @@
     "difficulty": 3,
     "question": "An Aurora MySQL cluster uses Aurora Serverless v2 for its writer and for one reader that is the planned failover target. During a test, the writer had scaled up to 64 ACUs, but after failover the promoted reader was running at low capacity and the application slowed down until it scaled up. How should the solutions architect fix this?",
     "options": [
-      "Move the reader into the same Availability Zone as the writer.",
+      "Move the reader into the same Availability Zone as the writer to remove cross-AZ latency during failover.",
       "Give the reader a failover priority of tier 0 or 1 so that its capacity scales together with the writer.",
       "Place Amazon RDS Proxy in front of the cluster so it caches query results during failover.",
       "Switch the cluster to Aurora I/O-Optimized so the reader keeps the writer's buffer cache."
@@ -1360,15 +1360,15 @@
     "difficulty": 1,
     "question": "A company wants to move an application from Microsoft SQL Server to Amazon Aurora PostgreSQL to remove SQL Server licensing costs. The application uses T-SQL and SQL Server client drivers, and the team wants to minimize code changes. Which solution should the solutions architect recommend?",
     "options": [
-      "Run SQL Server on Amazon EC2 instances launched from License Included AMIs.",
-      "Use Amazon RDS Custom for SQL Server with Bring Your Own Media.",
-      "Use Aurora MySQL with the binary log format set to ROW.",
+      "Run SQL Server on Amazon EC2 instances launched from License Included AMIs to avoid buying licenses up front.",
+      "Use Amazon RDS Custom for SQL Server with Bring Your Own Media to reuse the existing SQL Server licenses.",
+      "Migrate to Aurora MySQL and use AWS SCT to convert the T-SQL procedures to MySQL syntax.",
       "Use Babelfish for Aurora PostgreSQL so that the application connects over the TDS protocol."
     ],
     "answer": [
       3
     ],
-    "explanation": "Babelfish for Aurora PostgreSQL adds an endpoint that understands the SQL Server wire protocol (TDS) and commonly used T-SQL, so applications built for SQL Server can work with Aurora PostgreSQL with few code changes and without changing drivers. The EC2 and RDS Custom options still run licensed SQL Server, and Aurora MySQL does not accept T-SQL or TDS connections.",
+    "explanation": "Babelfish for Aurora PostgreSQL adds an endpoint that understands the SQL Server wire protocol (TDS) and commonly used T-SQL, so applications built for SQL Server can work with Aurora PostgreSQL with few code changes and without changing drivers. The EC2 and RDS Custom options still run licensed SQL Server. Aurora MySQL does not accept T-SQL or TDS connections, so converting the code with AWS SCT would still require substantial application and driver changes.",
     "subtopic": "Babelfish for Aurora PostgreSQL",
     "source": "https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/babelfish.html"
   },
@@ -1380,10 +1380,10 @@
     "difficulty": 2,
     "question": "An Amazon RDS for MySQL DB instance uses 300 GiB of General Purpose SSD (gp2) storage, which provides a baseline of 900 IOPS. The workload now needs a steady 3,000 IOPS, and the team is considering growing the volume to 1,000 GiB only to raise the baseline, although the data will stay under 300 GiB. Which solution is the MOST cost-effective?",
     "options": [
-      "Modify the storage to General Purpose SSD (gp3), which provides a baseline of 3,000 IOPS at this volume size.",
-      "Increase the gp2 volume to 1,000 GiB so that its baseline rises to 3,000 IOPS.",
+      "Modify the storage to gp3, which includes a 3,000 IOPS baseline at this volume size.",
+      "Increase the gp2 volume to 1,000 GiB so that its baseline rises to 3,000 IOPS at 3 IOPS per GiB.",
       "Change the storage to Provisioned IOPS SSD (io2 Block Express) with 3,000 provisioned IOPS.",
-      "Enable storage autoscaling so that RDS adds IOPS when the workload needs them."
+      "Enable storage autoscaling so that RDS adds IOPS automatically when the workload needs more throughput."
     ],
     "answer": [
       0
@@ -1400,10 +1400,10 @@
     "difficulty": 1,
     "question": "An operations team must be notified within minutes whenever an Amazon RDS for MariaDB DB instance fails over or reboots so the team can check application health. Which solution meets this requirement with the LEAST effort?",
     "options": [
-      "Turn on Enhanced Monitoring and review the operating system process list each morning.",
-      "Use RDS event notifications through an Amazon EventBridge rule or an RDS event subscription that publishes to an Amazon SNS topic.",
-      "Search AWS CloudTrail logs every hour for API calls that indicate a failover.",
-      "Enable Performance Insights with a 7-day retention period."
+      "Turn on Enhanced Monitoring at 1-second granularity and review the operating system process list each morning.",
+      "Create an RDS event subscription or EventBridge rule for failover and reboot events that publishes to an SNS topic.",
+      "Query AWS CloudTrail logs every hour for RebootDBInstance API calls that indicate a failover or reboot.",
+      "Enable Performance Insights with a 7-day retention period and watch the database load chart."
     ],
     "answer": [
       1
@@ -1420,9 +1420,9 @@
     "difficulty": 3,
     "question": "A developer accidentally deleted thousands of rows from a table in an Amazon Aurora PostgreSQL cluster 20 minutes ago. Automated backups are retained for 7 days. A team lead asks to rewind the existing cluster in place by using Aurora Backtrack. What should the solutions architect do?",
     "options": [
-      "Enable Backtrack on the cluster now and backtrack it to 25 minutes ago.",
-      "Restore the cluster to a point in time just before the deletion as a new DB cluster, and then recover the rows from it.",
-      "Promote an Aurora Replica, because replicas apply changes after a 30-minute delay.",
+      "Enable Backtrack on the existing cluster now and backtrack it to 25 minutes ago.",
+      "Restore the cluster to a point in time just before the deletion as a new cluster and copy the rows back.",
+      "Promote an Aurora Replica, because Aurora Replicas apply the writer's changes after a 30-minute delay.",
       "Fail over the cluster so that the writer moves to an instance that still has the old data."
     ],
     "answer": [
@@ -1440,10 +1440,10 @@
     "difficulty": 3,
     "question": "An application uses a connection pool that opens 50 long-lived connections to the reader endpoint of an Amazon Aurora MySQL cluster at startup. During a traffic spike, the team added two Aurora Replicas, but the new replicas received almost no queries while the original replicas stayed overloaded. What is the MOST likely reason?",
     "options": [
-      "New replicas must be added to a custom endpoint before the reader endpoint can route to them.",
-      "Aurora Replicas begin serving reads only after the next cluster maintenance window.",
-      "The new replicas were given a failover priority tier that excludes them from the reader endpoint.",
-      "The reader endpoint balances connections, not individual queries, so the existing pooled connections stay on the original replicas."
+      "New Aurora Replicas must first be added to a custom endpoint before the reader endpoint can route connections to them.",
+      "Aurora Replicas start serving reads only after the next cluster maintenance window applies the new configuration.",
+      "The new replicas were given failover priority tier 15, which excludes them from the reader endpoint's load balancing.",
+      "The reader endpoint balances connections rather than queries, so the existing pooled connections stay on the old replicas."
     ],
     "answer": [
       3
@@ -1460,10 +1460,10 @@
     "difficulty": 2,
     "question": "A company runs an Amazon Aurora PostgreSQL cluster in a shared-services VPC. A new application that runs on EC2 instances in a different VPC in the same Region must reach the database with connection pooling. The security team does not allow the database or any proxy to be publicly accessible. Which solution will meet these requirements?",
     "options": [
-      "Create an RDS Proxy for the cluster and add a proxy endpoint in the application's VPC that uses that VPC's subnets and security groups.",
-      "Create an RDS Proxy, make it publicly accessible, and restrict it with a security group.",
-      "Make the Aurora cluster publicly accessible and allow only the application's Elastic IP addresses.",
-      "Create a gateway VPC endpoint for Amazon RDS in the application's VPC."
+      "Create an RDS Proxy for the cluster with an additional proxy endpoint in the application VPC's subnets.",
+      "Create an RDS Proxy, make it publicly accessible, and restrict inbound access with a security group that allows only the application.",
+      "Make the Aurora cluster publicly accessible and allow only the application's Elastic IP addresses in the DB security group.",
+      "Create a gateway VPC endpoint for Amazon RDS in the application's VPC and update the route tables."
     ],
     "answer": [
       0
@@ -1481,9 +1481,9 @@
     "question": "A company runs Amazon RDS for PostgreSQL production DB instances on the db.r6i instance class and expects to resize them several times within that instance class over the next 3 years. It wants Reserved DB instance discounts to keep applying after each resize. Which approach meets this requirement?",
     "options": [
       "Purchase Reserved DB instances for db.r6id.large so they can apply to any r6 instance class variant.",
-      "Purchase db.r6i Reserved DB instances in the same Region, because size flexibility applies the discount across db.r6i sizes for RDS for PostgreSQL.",
+      "Purchase db.r6i Reserved DB instances in the same Region, because size flexibility applies across db.r6i sizes.",
       "Purchase RDS for SQL Server License Included Reserved DB instances, which are the only size-flexible type.",
-      "Purchase the Reserved DB instances in a cheaper Region, because the discount follows the instance to any Region."
+      "Purchase the Reserved DB instances in a cheaper Region, because the discount applies in any Region."
     ],
     "answer": [
       1
@@ -1524,10 +1524,10 @@
     "difficulty": 1,
     "question": "A company runs Amazon RDS for MySQL with automated backups enabled. The business asks how much recent data could be lost if the team must recover from logical corruption by using point-in-time restore. Which statement is correct?",
     "options": [
-      "Only daily snapshots are kept, so up to 24 hours of changes can be lost.",
-      "Point-in-time restore can return the database only to the exact time of a manual snapshot.",
-      "RDS uploads transaction logs to Amazon S3 every 5 minutes, so the latest restorable time is typically within the last 5 minutes.",
-      "Point-in-time restore overwrites the existing DB instance in place, so no data is lost."
+      "Only one automated snapshot is taken per day during the backup window, so up to 24 hours of changes can be lost.",
+      "Point-in-time restore can return the database only to the exact creation time of a manual or automated snapshot.",
+      "RDS uploads transaction logs to S3 every 5 minutes, so the latest restorable time is usually within 5 minutes.",
+      "Point-in-time restore overwrites the existing DB instance in place and replays the logs, so no data is lost."
     ],
     "answer": [
       2
@@ -1584,10 +1584,10 @@
     "difficulty": 3,
     "question": "A Java application connects to an Amazon RDS for MySQL Multi-AZ DB cluster through the cluster endpoint. After a failover that RDS reported as complete within 35 seconds, the application kept failing to connect for a long time until the JVM was restarted. What should the solutions architect do to prevent this?",
     "options": [
-      "Set the JVM DNS cache TTL (networkaddress.cache.ttl) to 60 seconds or less so the application resolves the endpoint's new IP address.",
-      "Connect to the instance endpoint of the writer DB instance instead of the cluster endpoint.",
-      "Increase the backup retention period so that failovers complete faster.",
-      "Turn off semisynchronous replication to shorten the failover time."
+      "Set the JVM DNS cache TTL (networkaddress.cache.ttl) to 60 seconds or less.",
+      "Connect to the instance endpoint of the writer DB instance instead of the cluster endpoint to avoid DNS changes.",
+      "Increase the backup retention period on the DB cluster so that failover completes faster.",
+      "Turn off semisynchronous replication between the writer and readers to shorten the failover time."
     ],
     "answer": [
       0
@@ -1629,9 +1629,9 @@
     "question": "An Amazon RDS for PostgreSQL primary DB instance uses Provisioned IOPS SSD storage to meet strict OLTP latency targets. The company is adding two read replicas for internal reports, where some latency variation is acceptable. The company wants to minimize the cost of the replicas. What should the solutions architect do?",
     "options": [
       "Keep Provisioned IOPS storage on the replicas, because a read replica must use the same storage type as its source.",
-      "Use General Purpose SSD (gp3) storage for the read replicas, because a replica's storage type is independent of the primary's.",
-      "Replace the read replicas with the Multi-AZ standby, which has no storage charges.",
-      "Configure the read replicas with magnetic storage to get the lowest price per GiB."
+      "Use gp3 storage for the read replicas, because a replica's storage type can differ from the primary's.",
+      "Replace the read replicas with the existing Multi-AZ standby instance, which has no additional storage charges.",
+      "Configure the read replicas with magnetic storage, which has the lowest price per GiB of the RDS storage types."
     ],
     "answer": [
       1
@@ -1648,10 +1648,10 @@
     "difficulty": 2,
     "question": "A company runs Amazon RDS for Oracle Enterprise Edition under the Bring Your Own License model. Auditors require that selected sensitive columns be encrypted by the database engine itself, in addition to storage-level encryption, so that data files and backups are protected. Which solution meets this requirement?",
     "options": [
-      "Enable RDS encryption at rest with a customer managed KMS key and make no other changes.",
-      "Set the rds.force_ssl parameter to 1 in the DB parameter group.",
-      "Add the TDE option to a custom option group, associate it with the DB instance, and use TDE column encryption.",
-      "Enable Database Activity Streams so that the sensitive columns are encrypted."
+      "Enable RDS encryption at rest with a customer managed KMS key, which also encrypts snapshots and backups.",
+      "Set rds.force_ssl to 1 in a custom DB parameter group so that data sent to and from the columns is encrypted.",
+      "Add the TDE option to a custom option group for the DB instance and use TDE column encryption.",
+      "Enable Database Activity Streams with a customer managed KMS key so that the sensitive columns are encrypted."
     ],
     "answer": [
       2

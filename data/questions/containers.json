@@ -26,10 +26,10 @@
     "difficulty": 1,
     "question": "A CI pipeline pushes a new image to an Amazon ECR repository on every commit, and storage costs keep growing. The team needs to keep only the 20 most recent tagged release images and remove untagged images after 7 days. Which solution meets this requirement with the LEAST operational overhead?",
     "options": [
-      "Write a scheduled AWS Lambda function that lists and deletes old images through the ECR API every night",
-      "Enable ECR cross-Region replication so that old images are moved to a cheaper Region",
+      "Write a scheduled AWS Lambda function that lists images through the ECR API every night and deletes everything except the latest 20 releases",
+      "Enable ECR cross-Region replication so that older images are moved to a Region with lower storage prices",
       "Create an ECR lifecycle policy with rules that expire untagged images older than 7 days and keep only the last 20 tagged images",
-      "Turn on tag immutability so that new pushes overwrite the storage of older images"
+      "Turn on tag immutability so that each new push replaces the stored layers of the previous image with the same tag"
     ],
     "answer": [
       2
@@ -45,11 +45,11 @@
     "difficulty": 2,
     "question": "A security team wants every container image in Amazon ECR to be checked for vulnerabilities in both operating system packages and application language packages, rechecked automatically when new CVEs are published, and wants critical findings to alert the team right away. Which actions meet these requirements? (Select TWO.)",
     "options": [
-      "Enable ECR basic scanning to scan each image only when it is pushed",
+      "Enable ECR basic scanning with scan on push so that every image is checked when it is pushed to the repository",
       "Create an Amazon EventBridge rule that matches critical Inspector findings and sends them to an Amazon SNS topic",
-      "Enable Amazon GuardDuty Malware Protection on the ECR repositories",
+      "Enable Amazon GuardDuty Runtime Monitoring for the clusters that run the images to detect vulnerable packages",
       "Enable ECR enhanced scanning with Amazon Inspector in continuous scanning mode",
-      "Enable AWS Config rules that compare image digests with an approved list"
+      "Enable AWS Config rules that compare running image digests with an approved list maintained by the security team"
     ],
     "answer": [
       1,
@@ -66,10 +66,10 @@
     "difficulty": 2,
     "question": "A company deploys containerized services from Amazon ECR in us-east-1 and has a disaster recovery environment in eu-west-1. If us-east-1 is unavailable, the DR environment must be able to pull the latest images from inside its own Region. Which solution meets this requirement with the LEAST operational overhead?",
     "options": [
-      "Configure the DR tasks to pull images from the us-east-1 repository URI",
+      "Configure the DR tasks to keep pulling images from the us-east-1 repository URI, which ECS can reach from any Region",
       "Configure ECR registry replication rules that copy the repositories from us-east-1 to eu-west-1",
-      "Export the images to an S3 bucket nightly and use S3 Cross-Region Replication",
-      "Rebuild every image in eu-west-1 from source code during a disaster"
+      "Export the images to an S3 bucket nightly with a script and use S3 Cross-Region Replication to copy them to eu-west-1",
+      "Rebuild every image in eu-west-1 from source code with AWS CodeBuild when a disaster is declared"
     ],
     "answer": [
       1
@@ -126,9 +126,9 @@
     "question": "Builds and Amazon EKS nodes in a company's VPCs pull public base images from Docker Hub. Deployments sometimes fail because of Docker Hub rate limits and outages. The company wants to keep using the same upstream images with minimal changes and with images stored inside AWS. Which solution meets these requirements?",
     "options": [
       "Create an Amazon ECR pull-through cache rule for Docker Hub and change image references to the ECR cache repository",
-      "Configure ECR cross-Region replication from Docker Hub to the company's private registry",
-      "Increase the number of NAT gateways so that pulls come from more source IP addresses",
-      "Enable ECR enhanced scanning so that Docker Hub images are scanned before they are pulled"
+      "Configure ECR replication rules that copy images from Docker Hub into the company's private registry on a schedule",
+      "Add more NAT gateways in each VPC so that image pulls come from more source IP addresses and stay under the rate limits",
+      "Enable ECR enhanced scanning so that Docker Hub images are scanned and stored in ECR before they are pulled"
     ],
     "answer": [
       0
@@ -144,9 +144,9 @@
     "difficulty": 2,
     "question": "A containerized application running as Amazon ECS tasks on AWS Fargate must write items to an Amazon DynamoDB table. The security team prohibits long-term credentials in containers. How should the application get permissions?",
     "options": [
-      "Add the DynamoDB permissions to the task execution role that ECS uses to pull the image",
-      "Store an IAM user's access keys as environment variables in the task definition",
-      "Attach an IAM instance profile with DynamoDB permissions to the Fargate tasks",
+      "Add the DynamoDB permissions to the task execution role, which ECS already uses to provide credentials to the task",
+      "Store an IAM user's access keys as encrypted environment variables in the task definition",
+      "Attach an IAM instance profile with DynamoDB permissions to the Fargate tasks through the capacity provider",
       "Create an IAM role with the DynamoDB permissions and specify it as the task role in the task definition"
     ],
     "answer": [
@@ -205,10 +205,10 @@
     "difficulty": 2,
     "question": "A company runs several copies of the same container on each EC2 container instance in an Amazon ECS cluster that uses the EC2 launch type and bridge network mode. Each container listens on port 8080. The company needs an Application Load Balancer to spread traffic across all copies. How should the task definition be configured?",
     "options": [
-      "Set the host port to 8080 for every task so that the load balancer can use a single port",
+      "Set the host port to 8080 for every task so that the target group can health check every copy on a single port",
       "Set the host port to 0 so that ECS uses dynamic host port mapping and registers each task's port with the target group",
-      "Use host network mode so that all containers share port 8080 on the instance",
-      "Place each container in a separate cluster so that the ports never conflict"
+      "Use host network mode so that all containers share port 8080 on the instance's network interface for the best performance",
+      "Place each container copy in a separate ECS cluster so that the host ports on an instance never conflict"
     ],
     "answer": [
       1
@@ -281,9 +281,9 @@
     "difficulty": 2,
     "question": "A company wants to run a containerized machine learning inference service on Amazon ECS. The containers need NVIDIA GPUs and a specific instance type. Which configuration should a solutions architect choose?",
     "options": [
-      "Use the Fargate launch type and request GPUs in the task definition",
-      "Use Fargate Spot so that GPU capacity is assigned automatically",
-      "Use AWS App Runner with the largest available instance size",
+      "Use the Fargate launch type and request NVIDIA GPUs with the resourceRequirements parameter in the task definition",
+      "Use Fargate Spot capacity providers so that GPU-enabled capacity is assigned to the tasks automatically",
+      "Use AWS App Runner with the largest available instance size of 4 vCPUs and 12 GB of memory",
       "Use the EC2 launch type with GPU-based instances registered to the cluster through a capacity provider"
     ],
     "answer": [
@@ -319,10 +319,10 @@
     "difficulty": 2,
     "question": "An Amazon ECS service on AWS Fargate sits behind an Application Load Balancer. Load testing shows that each task handles about 500 requests per minute before latency rises, and CPU usage is not a good signal of load. How should the service scale?",
     "options": [
-      "Configure target tracking on the service's average CPU usage at 70%",
+      "Configure target tracking on the service's average CPU utilization at 70% so that tasks are added before saturation",
       "Configure target tracking on the ALBRequestCountPerTarget metric with a target of about 500",
-      "Configure scheduled scaling that adds tasks every morning at 08:00",
-      "Configure the ALB to send more requests to tasks with the lowest CPU usage"
+      "Configure scheduled scaling actions that add tasks every morning at 08:00 and remove them at night",
+      "Configure the ALB to use the least outstanding requests algorithm so that busy tasks receive fewer requests"
     ],
     "answer": [
       1
@@ -338,9 +338,9 @@
     "difficulty": 2,
     "question": "A company runs a payments container and a reporting container on the same Amazon ECS cluster. The security team requires that only the payments tasks can reach the payments database, even if both kinds of tasks run on the same host. Which configuration meets this requirement?",
     "options": [
-      "Use bridge network mode and allow the container instance security group in the database security group",
-      "Use host network mode and filter traffic with iptables rules inside each container",
-      "Use a network ACL on the subnet that allows only the payments container's port",
+      "Use bridge network mode and allow the container instance security group as the source in the database security group",
+      "Use host network mode for better network performance and filter traffic with iptables rules inside each container",
+      "Use a network ACL on the database subnet that allows only the payments container's port from the cluster subnets",
       "Use awsvpc network mode and assign a dedicated security group to the payments tasks that the database security group allows"
     ],
     "answer": [
@@ -418,10 +418,10 @@
     "difficulty": 1,
     "question": "A team is new to Kubernetes. Which statement correctly describes a pod?",
     "options": [
-      "A pod is a group of worker nodes that share an Auto Scaling group and a launch template",
-      "A pod is the smallest deployable unit, made of one or more containers that share networking and storage and are scheduled together on a node",
-      "A pod is the control plane component that stores cluster state and schedules workloads",
-      "A pod is a load balancer that exposes a set of containers to traffic from outside the cluster"
+      "A pod is a group of worker nodes that share an Auto Scaling group and a launch template and are managed as one unit",
+      "A pod is the smallest deployable unit: one or more containers that share networking and storage and are scheduled together on a node",
+      "A pod is the control plane component that stores cluster state in etcd and schedules workloads onto the worker nodes",
+      "A pod is a load balancer that exposes a set of containers to traffic from outside the cluster through a stable IP address"
     ],
     "answer": [
       1
@@ -475,9 +475,9 @@
     "difficulty": 2,
     "question": "A company runs a few small, bursty Kubernetes batch workloads on Amazon EKS. The worker nodes are mostly idle between bursts, and the team does not want to manage or right-size nodes for these workloads. Which solution will reduce cost and operational effort?",
     "options": [
-      "Create a larger managed node group and enable detailed monitoring on the instances",
-      "Move the workloads to a self-managed node group that uses Dedicated Hosts",
-      "Run the workloads in EKS Anywhere on the company's on-premises servers",
+      "Create a larger managed node group and enable detailed monitoring on the instances to track the bursts more closely",
+      "Move the workloads to a self-managed node group on Dedicated Hosts so that the team controls instance placement",
+      "Run the workloads in Amazon EKS Anywhere on the company's existing on-premises servers to avoid EC2 charges",
       "Create an EKS Fargate profile that selects the namespace of these workloads so that each pod runs on Fargate"
     ],
     "answer": [
@@ -494,10 +494,10 @@
     "difficulty": 3,
     "question": "A company runs all of its Amazon EKS pods on AWS Fargate. The team now needs to deploy a monitoring agent as a Kubernetes DaemonSet so that one copy runs on every node, but the agent pods are never scheduled. Which solution meets this requirement?",
     "options": [
-      "Increase the vCPU and memory in the Fargate profile so that the DaemonSet pods fit",
+      "Increase the vCPU and memory in the Fargate profile so that the DaemonSet pods have enough capacity to be scheduled",
       "Add an EKS managed node group for the DaemonSet, or run the agent as a sidecar container in the Fargate pods",
-      "Add the DaemonSet's namespace to the Fargate profile selectors",
-      "Enable privileged mode on the Fargate pods that run the DaemonSet"
+      "Add the DaemonSet's namespace and labels to the Fargate profile selectors so that the agent pods match the profile",
+      "Enable privileged mode on the Fargate pods that run the DaemonSet so that the agent can access the host"
     ],
     "answer": [
       1
@@ -513,10 +513,10 @@
     "difficulty": 3,
     "question": "Several applications run as pods on the same Amazon EKS managed node group. One application must read objects from an Amazon S3 bucket, and the others must not have that access. Which solution follows the principle of least privilege?",
     "options": [
-      "Add the S3 permissions to the IAM role of the managed node group's instance profile",
-      "Store an IAM user's access keys in a Kubernetes Secret mounted by every pod",
+      "Add the S3 permissions to the managed node group's IAM role, which the pods obtain through the instance metadata service",
+      "Store an IAM user's access keys in a Kubernetes Secret that is mounted by every pod in the namespace",
       "Associate an IAM role with the application's Kubernetes service account by using EKS Pod Identity or IAM roles for service accounts",
-      "Add the S3 permissions to the EKS cluster IAM role used by the control plane"
+      "Add the S3 permissions to the EKS cluster IAM role that the control plane uses to manage AWS resources"
     ],
     "answer": [
       2
@@ -532,11 +532,11 @@
     "difficulty": 2,
     "question": "A manufacturer must keep some containerized workloads on servers in its factories because of data residency rules, but it wants to manage them with the same Amazon ECS APIs and console it uses in AWS. Which steps are required to use Amazon ECS Anywhere? (Select TWO.)",
     "options": [
-      "Deploy an AWS Outposts rack in each factory before registering the servers",
+      "Deploy an AWS Outposts rack in each factory before registering the servers so that ECS can schedule tasks locally",
       "Install the AWS Systems Manager Agent and the ECS agent on the factory servers by using an SSM activation to register them as external instances",
-      "Migrate the containers to the Fargate launch type so that they can run on premises",
+      "Migrate the containers to the Fargate launch type so that they can run on the factory servers as external capacity",
       "Make sure the factory servers have outbound connectivity to the AWS service endpoints",
-      "Create an EKS Fargate profile for the factory servers"
+      "Create an Amazon EKS Fargate profile that targets the factory servers"
     ],
     "answer": [
       1,
@@ -650,9 +650,9 @@
     "question": "An Amazon ECS service on AWS Fargate needs a database password at startup. Developers currently put the password in plaintext in the task definition environment variables. Which solution keeps the password out of the task definition with the LEAST code change?",
     "options": [
       "Store the password in AWS Secrets Manager and reference it in the secrets section of the container definition",
-      "Store the password in the container image so that it is not visible in the task definition",
-      "Store the password in an Amazon S3 object and download it in the container entrypoint script",
-      "Store the password in an Amazon EFS file shared by all tasks of the service"
+      "Store the password in the container image as a file so that it is not visible in the task definition or the console",
+      "Store the password in an encrypted Amazon S3 object and download it in the container entrypoint script at startup",
+      "Store the password in an Amazon EFS file that is mounted by all tasks of the service with encryption at rest"
     ],
     "answer": [
       0
@@ -770,9 +770,9 @@
     "question": "An Amazon ECS service behind an Application Load Balancer uses rolling deployments with the deployment circuit breaker enabled. A recent release started and passed health checks normally, but a bug made the application return HTTP 500 errors for many requests. The circuit breaker did not roll back the deployment. How can the company make ECS roll back automatically in this situation?",
     "options": [
       "Configure CloudWatch alarms on the load balancer's 5XX error metrics in the service's deployment configuration with rollback enabled",
-      "Lower the ALB health check interval so that the circuit breaker detects the errors faster",
-      "Enable task scale-in protection so that tasks from the previous revision are kept",
-      "Switch the service to Fargate Spot so that unhealthy tasks are replaced more often"
+      "Lower the ALB health check interval and unhealthy threshold so that the circuit breaker detects the failing tasks faster",
+      "Enable task scale-in protection on the service so that tasks from the previous revision are kept running for rollback",
+      "Switch the service to the Fargate Spot capacity provider so that unhealthy tasks are replaced more often during deployments"
     ],
     "answer": [
       0
@@ -869,10 +869,10 @@
     "difficulty": 2,
     "question": "An Amazon ECS service processes video transcoding jobs from an Amazon SQS queue, and some jobs run for up to 3 hours. When service auto scaling scales in during quiet periods, it sometimes stops tasks in the middle of a job, and the work must start over. What should a solutions architect do?",
     "options": [
-      "Set the service minimum healthy percent to 100 so that tasks are never stopped",
-      "Increase the SQS visibility timeout to 12 hours so that interrupted jobs are not lost",
+      "Set the service minimum healthy percent to 100 so that running tasks are never stopped while the service changes size",
+      "Increase the SQS visibility timeout to 12 hours, the maximum, so that interrupted jobs are not lost or processed twice",
       "Have each task set task scale-in protection through the ECS agent endpoint when it starts a job and clear it when the job finishes",
-      "Disable service auto scaling and run the maximum number of tasks at all times"
+      "Disable service auto scaling and run the maximum number of tasks at all times so that no task is ever scaled in"
     ],
     "answer": [
       2
@@ -909,10 +909,10 @@
     "difficulty": 1,
     "question": "A company runs a Linux-based Go API on Amazon ECS with AWS Fargate. The container image is already built for both x86 and arm64. The company wants to lower its Fargate compute bill without changing the application or managing servers. What should a solutions architect recommend?",
     "options": [
-      "Move the tasks to the EC2 launch type with x86 On-Demand Instances",
+      "Move the tasks to the EC2 launch type with x86 On-Demand Instances, which have no per-task Fargate charge",
       "Set the task definition runtime platform CPU architecture to ARM64 so that the tasks run on AWS Graviton",
-      "Double the task CPU so that requests finish faster",
-      "Move the tasks to Windows containers on Fargate"
+      "Double the task CPU so that requests finish faster and fewer tasks are needed to handle the same load",
+      "Move the tasks to Windows containers on Fargate and reduce the task size to the smallest supported configuration"
     ],
     "answer": [
       1
@@ -930,9 +930,9 @@
     "question": "A company keeps an Amazon ECS service with one Fargate task running all day, but the task only does useful work for 10 minutes at 01:00 every night when it exports reports. Which change will reduce costs the MOST while keeping the container image unchanged?",
     "options": [
       "Run the container as a standalone ECS task started by an Amazon EventBridge Scheduler cron schedule",
-      "Keep the service and reduce the task size to the smallest Fargate configuration",
-      "Move the service to an EC2 instance that runs all day",
-      "Keep the service and buy a Compute Savings Plan for the task"
+      "Keep the service and reduce the task size to the smallest Fargate configuration of 0.25 vCPU and 0.5 GB of memory",
+      "Move the service to a small EC2 instance that runs all day and start the export with a cron job",
+      "Keep the service and buy a Compute Savings Plan, which also applies to Fargate usage, for the task"
     ],
     "answer": [
       0
@@ -949,9 +949,9 @@
     "difficulty": 3,
     "question": "An Amazon ECS service on AWS Fargate reads orders from an Amazon SQS queue. Each task can process about 50 messages per minute, and queue depth swings from almost zero to 40,000 messages within minutes. CPU utilization is a poor signal of load. How should the service scale so that the backlog per task stays near a chosen value?",
     "options": [
-      "Use target tracking on the service's average CPU utilization at 60%",
-      "Use scheduled scaling that doubles the task count during business hours",
-      "Use step scaling on the queue's NumberOfMessagesSent metric",
+      "Use target tracking on the service's average CPU utilization at 60% so that tasks are added as processing work increases",
+      "Use scheduled scaling that doubles the task count during business hours, when most orders arrive in the queue",
+      "Use step scaling on the queue's NumberOfMessagesSent metric with larger steps as more messages arrive",
       "Use target tracking with a metric math expression that divides ApproximateNumberOfMessagesVisible by the service's RunningTaskCount"
     ],
     "answer": [
@@ -1031,10 +1031,10 @@
     "difficulty": 3,
     "question": "A retailer has servers in its stores that are connected to AWS through reliable AWS Direct Connect links. It wants to run Kubernetes workloads on these servers, but it does not want to operate a Kubernetes control plane on premises; the control plane should be managed by AWS and highly available. Which solution meets these requirements?",
     "options": [
-      "Amazon EKS Anywhere clusters installed on the store servers",
+      "Amazon EKS Anywhere clusters installed on the store servers and connected to the EKS console with EKS Connector",
       "Amazon EKS Hybrid Nodes that join the store servers to an Amazon EKS cluster in an AWS Region",
-      "Amazon ECS Anywhere with the store servers registered as external instances",
-      "Amazon EKS Distro installed on the store servers with kubeadm"
+      "Amazon ECS Anywhere with the store servers registered as external instances in a Regional cluster",
+      "Amazon EKS Distro installed on the store servers with kubeadm, using the same Kubernetes builds as EKS"
     ],
     "answer": [
       1
@@ -1093,9 +1093,9 @@
     "difficulty": 2,
     "question": "A company needs to give a group of developers, who assume an IAM role, read-only kubectl access to one namespace of an Amazon EKS cluster. The platform team wants to manage this through the EKS API and infrastructure as code, with access changes logged in AWS CloudTrail, instead of editing a ConfigMap inside the cluster. What should the platform team do?",
     "options": [
-      "Add the developers' IAM role to the aws-auth ConfigMap with the system:masters group",
-      "Attach the AmazonEKSClusterPolicy managed policy to the developers' IAM role",
-      "Create IAM users for each developer and share the cluster creator's credentials",
+      "Add the developers' IAM role to the aws-auth ConfigMap in the kube-system namespace and map it to the system:masters group",
+      "Attach the AmazonEKSClusterPolicy managed policy to the developers' IAM role so that they can call the cluster",
+      "Create IAM users for each developer and share the cluster creator's credentials, which have admin access by default",
       "Create an EKS access entry for the IAM role and associate a view access policy scoped to that namespace"
     ],
     "answer": [
@@ -1113,10 +1113,10 @@
     "difficulty": 2,
     "question": "A financial company's security policy states that the Kubernetes API server of its Amazon EKS cluster must not be reachable from the internet. Administrators connect from the corporate network over AWS Direct Connect to the cluster's VPC. How should the cluster endpoint be configured?",
     "options": [
-      "Keep the public endpoint enabled and add the corporate IP range to the public access CIDRs",
-      "Enable public access with an AWS WAF web ACL in front of the endpoint",
+      "Keep the public endpoint enabled and restrict the public access CIDRs to the corporate network's public IP range",
+      "Keep public access enabled and associate an AWS WAF web ACL with the endpoint that allows only the corporate network",
       "Disable public endpoint access, enable private endpoint access, and allow the corporate network on port 443 in the cluster security group",
-      "Create a gateway VPC endpoint for Amazon EKS and remove the internet gateway"
+      "Create a gateway VPC endpoint for Amazon EKS in the cluster VPC and remove the internet gateway from the VPC"
     ],
     "answer": [
       2
@@ -1133,10 +1133,10 @@
     "difficulty": 2,
     "question": "A FinOps review finds that several Amazon EKS clusters cost more per cluster hour than others even though they have the same number of nodes. The expensive clusters run a Kubernetes minor version that was released on EKS more than 14 months ago. What is the MOST likely cause, and how can the company reduce the cost?",
     "options": [
-      "The clusters use more control plane instances; delete and recreate them in another Region",
+      "The clusters run more control plane instances because of their age; delete them and recreate them in another Region",
       "The clusters are in extended support, which has an additional per-cluster-hour charge; upgrade them to a version in standard support",
-      "The clusters use EKS Pod Identity, which is billed per association; switch to IAM roles for service accounts",
-      "The clusters use managed node groups, which add a per-node fee; switch to self-managed nodes"
+      "The clusters use EKS Pod Identity, which is billed for each pod association; switch to IAM roles for service accounts",
+      "The clusters use managed node groups, which add a per-node management fee; switch to self-managed node groups"
     ],
     "answer": [
       1
@@ -1153,9 +1153,9 @@
     "difficulty": 2,
     "question": "A content platform runs on Amazon EKS with nodes in three Availability Zones. Pods in all zones must read and write the same set of uploaded files at the same time, and pods that are rescheduled to another zone must still see the files. Which storage solution should a solutions architect choose?",
     "options": [
-      "Amazon EBS volumes provisioned through the EBS CSI driver for each pod",
-      "The node's local instance store mounted with a hostPath volume",
-      "An Amazon S3 bucket mounted as an emptyDir volume",
+      "Amazon EBS gp3 volumes provisioned dynamically through the EBS CSI driver for each pod",
+      "The node's local NVMe instance store mounted into the pods with a hostPath volume",
+      "An Amazon S3 bucket mounted into every pod as an emptyDir volume",
       "An Amazon EFS file system mounted as a persistent volume through the EFS CSI driver"
     ],
     "answer": [
@@ -1194,9 +1194,9 @@
     "question": "A team moved a pod from an Amazon EKS managed node group to AWS Fargate by using a Fargate profile. The pod uses an EKS Pod Identity association to get an IAM role for Amazon DynamoDB, and since the move its AWS SDK calls fail because no credentials are found. How should the team give the Fargate pod IAM permissions?",
     "options": [
       "Use IAM roles for service accounts by creating an IAM OIDC provider for the cluster and annotating the service account with the role",
-      "Run the EKS Pod Identity Agent as a DaemonSet on the Fargate nodes",
-      "Attach the DynamoDB permissions to the Fargate pod execution role",
-      "Read credentials from the EC2 instance metadata service inside the pod"
+      "Run the EKS Pod Identity Agent as a DaemonSet on the Fargate nodes so that the association can deliver credentials",
+      "Attach the DynamoDB permissions to the Fargate pod execution role that is specified in the Fargate profile",
+      "Configure the AWS SDK in the pod to read credentials from the EC2 instance metadata service at 169.254.169.254"
     ],
     "answer": [
       0
@@ -1213,10 +1213,10 @@
     "difficulty": 3,
     "question": "A company runs an Amazon EKS cluster with a stateless image-rendering service that tolerates interruptions and a StatefulSet message broker that must not be interrupted. Both run on On-Demand managed node groups today. The company wants to cut compute cost while keeping both workloads available. Which actions should a solutions architect take? (Select TWO.)",
     "options": [
-      "Move the StatefulSet to a Spot managed node group with a single instance type",
-      "Run both workloads on one Spot managed node group that uses the largest instance type",
+      "Move the StatefulSet to a Spot managed node group with a single instance type to get the largest Spot discount",
+      "Run both workloads on one Spot managed node group that uses the largest available instance type so that fewer, bigger nodes are needed",
       "Create a Spot managed node group that uses several instance types with the same vCPU and memory for the rendering pods",
-      "Run the rendering pods on EKS Fargate with Fargate Spot",
+      "Run the rendering pods on EKS Fargate with Fargate Spot capacity to avoid managing nodes",
       "Keep the StatefulSet on an On-Demand node group by scheduling it with the eks.amazonaws.com/capacityType: ON_DEMAND label"
     ],
     "answer": [
@@ -1236,10 +1236,10 @@
     "question": "A company builds container images in a central build account in us-east-1. For disaster recovery, every new image pushed to the production repositories must be copied automatically to Amazon ECR in a separate DR account in us-west-2. Which steps are required? (Select TWO.)",
     "options": [
       "In the DR account, add a registry permissions policy that allows the build account to call ecr:ReplicateImage and ecr:CreateRepository",
-      "In the build account, add a repository policy on each source repository that allows the DR account to pull images",
-      "Schedule an AWS Lambda function that pulls each image and pushes it to the DR account",
+      "In the build account, add a repository policy on each source repository that allows the DR account to pull and replicate images",
+      "Schedule an AWS Lambda function that pulls each new image and pushes it to the repository in the DR account",
       "In the build account's registry settings, create a replication rule with the DR account and us-west-2 as the destination",
-      "Enable S3 Cross-Region Replication on the bucket that stores the ECR image layers"
+      "Enable S3 Cross-Region Replication on the Amazon S3 bucket that ECR uses to store the image layers"
     ],
     "answer": [
       0,
@@ -1257,9 +1257,9 @@
     "difficulty": 3,
     "question": "A company wants to cache Docker Hub images in its Amazon ECR private registry to avoid anonymous pull limits. The security team requires that the Docker Hub access token never be stored in build scripts, task definitions, or node configuration. How should the pull through cache rule be set up?",
     "options": [
-      "Create the rule without credentials, because Docker Hub images are always pulled anonymously",
-      "Store the token in an environment variable of every Amazon ECS task and EKS pod that pulls images",
-      "Store the token in an AWS Systems Manager Parameter Store parameter and reference it from the repository policy",
+      "Create the rule without credentials, because ECR authenticates to Docker Hub with its own service account",
+      "Store the token in an encrypted environment variable of every Amazon ECS task and EKS pod that pulls images through the cache",
+      "Store the token as a SecureString parameter in AWS Systems Manager Parameter Store and reference it from the repository policy",
       "Store the Docker Hub credentials in an AWS Secrets Manager secret whose name starts with ecr-pullthroughcache/ and reference it in the rule"
     ],
     "answer": [
@@ -1277,10 +1277,10 @@
     "difficulty": 2,
     "question": "A company's Amazon ECR repository was created with the default encryption settings. A new compliance rule requires that the images be encrypted with a customer managed AWS KMS key that the company can audit and disable. What should a solutions architect do?",
     "options": [
-      "Edit the existing repository's encryption configuration to use the customer managed key",
-      "Create a new repository configured with KMS encryption and the customer managed key, then push the images to it and update image references",
-      "Enable default EBS encryption in the account so that ECR uses the customer managed key",
-      "Turn on enhanced scanning so that images are re-encrypted with the customer managed key"
+      "Edit the existing repository's encryption configuration to use the customer managed key, and ECR re-encrypts the stored images in place",
+      "Create a new repository with KMS encryption using the customer managed key, push the images to it, and update the image references",
+      "Enable default EBS encryption with the customer managed key in the account so that ECR uses that key for image layers",
+      "Turn on enhanced scanning so that images are re-encrypted with the customer managed key when they are rescanned"
     ],
     "answer": [
       1
@@ -1297,10 +1297,10 @@
     "difficulty": 2,
     "question": "An Amazon ECS service on AWS Fargate receives its database password as an environment variable from AWS Secrets Manager through the secrets section of the container definition. After Secrets Manager rotated the password, the running tasks started failing to connect to the database. What should the company do so that tasks use the new password after each rotation?",
     "options": [
-      "Nothing; ECS updates the environment variable inside running containers automatically",
-      "Move the password into the container image so that it is always available",
+      "Nothing; ECS refreshes secrets from Secrets Manager inside running containers automatically after each rotation",
+      "Move the password into the container image so that it is always available, even when Secrets Manager rotates it",
       "Start new tasks after rotation, for example by updating the service with the force new deployment option",
-      "Reduce the Secrets Manager rotation interval so that the value changes more often"
+      "Reduce the Secrets Manager rotation interval so that the value changes more often and tasks stay in sync"
     ],
     "answer": [
       2
@@ -1317,11 +1317,11 @@
     "difficulty": 2,
     "question": "Two applications run as Amazon ECS services on AWS Fargate and share one Amazon EFS file system. Each application must be able to mount only its own directory, file access must be authorized with each service's task IAM role, and data must be encrypted in transit. Which configuration steps should a solutions architect take? (Select TWO.)",
     "options": [
-      "Place the two services in different subnets and use network ACLs to block the other application's directory",
+      "Place the two services in different subnets and use network ACLs to block each application from reaching the other application's directory",
       "Create an EFS access point for each application with its own root directory and reference it in that application's task definition",
       "Enable transit encryption and IAM authorization in the EFS volume configuration, and allow each task role to use only its own access point",
-      "Mount the file system root in both task definitions and set the container user to root",
-      "Attach an Amazon S3 bucket policy that limits each task role to its own prefix"
+      "Mount the file system root in both task definitions and set the container user to root so that file permissions are not an issue",
+      "Attach an Amazon S3 bucket policy that limits each task role to its own prefix in the shared file system"
     ],
     "answer": [
       1,
