@@ -118,6 +118,8 @@ p { margin: 0; }
 .sidebar a.active { background: var(--accent-soft); color: var(--accent-2); }
 .sidebar a.active span { color: var(--accent); }
 .sidebar-foot { margin-top: auto; padding: 12px; font-size: 12px; color: var(--muted); }
+.sidebar-sync { margin-bottom: 8px; }
+.sidebar-sync:empty { display: none; }
 
 .main { flex: 1; min-width: 0; padding: 28px 32px 80px; max-width: 1180px; margin: 0 auto; }
 .loading { color: var(--muted); padding: 40px 0; }

@@ -1,4 +1,5 @@
-# Book pages API: DynamoDB table + Lambda function URL, reachable only through CloudFront (/api/*).
+# Study data API (book pages, notes, exam history, per-question stats, bookmarks):
+# DynamoDB table + Lambda function URL, reachable only through CloudFront (/api/*).
 # CloudFront signs requests with OAC, and the login gate function runs on the /api/* behavior too.
 
 resource "aws_dynamodb_table" "book" {
@@ -26,7 +27,7 @@ resource "aws_dynamodb_table" "book" {
 
 data "archive_file" "api" {
   type        = "zip"
-  source_file = "${path.module}/api/index.mjs"
+  source_dir  = "${path.module}/api"
   output_path = "${path.module}/.build/api.zip"
 }
 
@@ -54,7 +55,7 @@ resource "aws_cloudwatch_log_group" "api" {
 data "aws_iam_policy_document" "api" {
   statement {
     sid       = "BookTable"
-    actions   = ["dynamodb:Query", "dynamodb:PutItem"]
+    actions   = ["dynamodb:Query", "dynamodb:PutItem", "dynamodb:BatchWriteItem"]
     resources = [aws_dynamodb_table.book.arn]
   }
 

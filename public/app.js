@@ -19,9 +19,11 @@
 
   // ---------- State ----------
   const bank = { topics: [], topicMap: {}, questions: [], byId: {}, exams: [] };
-  // book: per-question page state { done, ok, choice, note, at }, synced to /api/book.
-  // bookPos: last page opened per topic. bookPending: qids saved locally but not yet in the cloud.
-  let store = { attempts: [], qstats: {}, bookmarks: [], session: null, prefs: {}, book: {}, bookPos: {}, bookPending: [] };
+  // book: per-question page state { done, ok, choice, later, note, at }. bookPos: last page opened per topic.
+  // attempts, qstats, bookmarks (bookmarksAt) and book are synced to the cloud; see "Cloud sync" below.
+  // session, prefs and bookPos stay on this device.
+  const EMPTY_STORE = () => ({ attempts: [], qstats: {}, bookmarks: [], bookmarksAt: 0, resetAt: 0, session: null, prefs: {}, book: {}, bookPos: {}, syncPending: [], syncWipe: [] });
+  let store = EMPTY_STORE();
   let timerHandle = null;
   let reviewFilter = 'all';
   const PAGE_SIZE = 20;
@@ -108,6 +110,11 @@
       const raw = localStorage.getItem(STORE_KEY);
       if (raw) store = Object.assign(store, JSON.parse(raw));
     } catch (_) { /* storage unavailable: run in-memory */ }
+    // Pages queued by the first book-only sync version
+    if (Array.isArray(store.bookPending)) {
+      store.bookPending.forEach(id => { if (!store.syncPending.includes('book:' + id)) store.syncPending.push('book:' + id); });
+      delete store.bookPending;
+    }
   }
   function saveStore() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (_) { /* ignore */ }
@@ -119,20 +126,24 @@
     if (correct) s.correct++;
     s.last = correct;
     s.at = Date.now();
+    markDirty('qstat', q.id);
   }
   const mistakeIds = () => Object.keys(store.qstats).filter(id => store.qstats[id].last === false && bank.byId[id]);
 
-  // ---------- Book pages & cloud sync ----------
-  // Every change is saved in localStorage first, then sent to /api/book (DynamoDB behind CloudFront).
-  // If the API can't be reached the page stays queued in bookPending and is retried later.
-  const cloud = { state: 'idle', timers: {} }; // idle | syncing | synced | local
+  // ---------- Cloud sync ----------
+  // All study data (book pages and notes, per-question stats, exam history, bookmarks) is saved in
+  // localStorage first, then sent to /api/data (DynamoDB behind CloudFront). Keys that haven't reached
+  // the cloud yet wait in syncPending ("kind:id") and are retried; "Reset" wipes wait in syncWipe.
+  // Each item carries an "at" timestamp and the newest copy wins, so two devices merge instead of overwrite.
+  const cloud = { state: 'idle', timer: null, running: null, again: false, lastPull: 0 }; // idle | syncing | synced | local
   const bookEntry = id => store.book[id] || {};
+  const BATCH = 50;
 
   async function sha256Hex(text) {
     const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
     return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
   }
-  // The Lambda origin sits behind CloudFront OAC, which requires the payload hash on PUT requests.
+  // The Lambda origin sits behind CloudFront OAC, which requires the payload hash on requests with a body.
   async function api(method, path, body) {
     const opts = { method, headers: { Accept: 'application/json' }, credentials: 'same-origin' };
     if (body !== undefined) {
@@ -149,9 +160,11 @@
     cloud.state = state;
     const el = $('#syncState');
     if (el) el.outerHTML = syncBadge();
+    const side = $('#syncSide');
+    if (side) side.innerHTML = syncBadge('syncSideBadge');
   }
-  function syncBadge() {
-    const pending = store.bookPending.length;
+  function syncBadge(id = 'syncState') {
+    const pending = store.syncPending.length + store.syncWipe.length;
     const map = {
       idle: ['muted', 'Saved'],
       syncing: ['muted', 'Saving…'],
@@ -159,58 +172,151 @@
       local: ['warn', `Saved on this device${pending ? ` · ${pending} waiting to sync` : ''}`],
     };
     const [cls, label] = map[cloud.state] || map.idle;
-    return `<span class="sync ${cls}" id="syncState" title="${cloud.state === 'local' ? 'The cloud copy is unavailable right now; changes sync automatically when it is back.' : ''}">${label}</span>`;
+    return `<span class="sync ${cls}" id="${id}" title="${cloud.state === 'local' ? 'The cloud copy is unavailable right now; changes sync automatically when it is back.' : ''}">${label}</span>`;
+  }
+
+  // What gets sent for one key; null when the item no longer exists locally.
+  function payloadFor(kind, id) {
+    if (kind === 'book') return store.book[id] || null;
+    if (kind === 'qstat') return store.qstats[id] ? { ...store.qstats[id], at: store.qstats[id].at || 1 } : null;
+    if (kind === 'attempt') {
+      const a = store.attempts.find(x => x.id === id);
+      return a ? { json: JSON.stringify(a), at: a.date } : null;
+    }
+    if (kind === 'meta' && id === 'bookmarks') return { list: store.bookmarks, at: store.bookmarksAt || 1 };
+    if (kind === 'meta' && id === 'reset') return store.resetAt ? { list: [], at: store.resetAt } : null;
+    return null;
+  }
+
+  function markDirty(kind, id, delay = 300) {
+    const key = `${kind}:${id}`;
+    if (!store.syncPending.includes(key)) store.syncPending.push(key);
+    clearTimeout(cloud.timer);
+    cloud.timer = setTimeout(flush, delay);
   }
 
   function saveBook(id, patch, delay = 0) {
     store.book[id] = Object.assign({}, bookEntry(id), patch, { at: Date.now() });
-    if (!store.bookPending.includes(id)) store.bookPending.push(id);
+    markDirty('book', id, delay);
     saveStore();
-    clearTimeout(cloud.timers[id]);
-    cloud.timers[id] = setTimeout(() => pushBook([id]), delay);
   }
 
-  async function pushBook(ids = store.bookPending.slice()) {
-    if (!ids.length) return;
-    setCloud('syncing');
-    let failed = false;
-    for (const id of ids) {
-      const e = store.book[id];
-      if (!e) continue;
+  // Sends pending wipes, then pending items in batches. Only one flush runs at a time.
+  function flush() {
+    if (cloud.running) { cloud.again = true; return cloud.running; }
+    cloud.running = (async () => {
+      let failed = false;
       try {
-        await api('PUT', '/book/' + encodeURIComponent(id), e);
-        // Only clear it if nothing changed while the request was in flight
-        if (store.book[id] === e) store.bookPending = store.bookPending.filter(x => x !== id);
-      } catch (_) { failed = true; break; }
-    }
-    saveStore();
-    setCloud(failed ? 'local' : store.bookPending.length ? 'syncing' : 'synced');
+        for (const kind of store.syncWipe.slice()) {
+          await api('DELETE', '/data/' + kind);
+          store.syncWipe = store.syncWipe.filter(k => k !== kind);
+          saveStore();
+        }
+        if (store.syncPending.length) setCloud('syncing');
+        while (store.syncPending.length) {
+          const keys = store.syncPending.slice(0, BATCH);
+          const sent = keys.map(key => {
+            const [kind, ...rest] = key.split(':');
+            const id = rest.join(':');
+            return { key, kind, id, item: payloadFor(kind, id) };
+          });
+          const live = sent.filter(s => s.item);
+          if (live.length) await api('POST', '/data/batch', { items: live.map(({ kind, id, item }) => ({ kind, id, item })) });
+          // Clear a key only if it didn't change again while the request was in flight
+          const done = new Set(sent.filter(s => !s.item || (payloadFor(s.kind, s.id) || {}).at === s.item.at).map(s => s.key));
+          store.syncPending = store.syncPending.filter(k => !done.has(k));
+          saveStore();
+          if (!done.size) break;
+        }
+      } catch (_) { failed = true; }
+      setCloud(failed ? 'local' : store.syncPending.length ? 'syncing' : 'synced');
+    })().finally(() => {
+      cloud.running = null;
+      if (cloud.again) { cloud.again = false; flush(); }
+    });
+    return cloud.running;
   }
 
-  // Newest timestamp wins per page, so edits from another device are merged instead of overwritten.
-  async function pullBook() {
-    try {
-      const { items } = await api('GET', '/book');
-      items.forEach(it => {
-        const mine = store.book[it.qid];
-        if (!mine || (it.at || 0) > (mine.at || 0)) {
-          const { qid, ...rest } = it;
-          store.book[qid] = rest;
-          store.bookPending = store.bookPending.filter(x => x !== qid);
-        } else if ((mine.at || 0) > (it.at || 0) && !store.bookPending.includes(it.qid)) store.bookPending.push(it.qid);
+  // Newest timestamp wins per item; anything only this device has is queued for upload.
+  function mergeRemote(remote) {
+    const queue = key => { if (!store.syncPending.includes(key)) store.syncPending.push(key); };
+    // Another device reset its progress: drop this device's history and stats from before that moment
+    const reset = (remote.meta || []).find(m => m.id === 'reset');
+    if (reset && reset.at > (store.resetAt || 0)) {
+      store.resetAt = reset.at;
+      store.attempts = store.attempts.filter(a => a.date > reset.at);
+      Object.keys(store.qstats).forEach(id => { if ((store.qstats[id].at || 0) <= reset.at) delete store.qstats[id]; });
+      store.syncPending = store.syncPending.filter(k => {
+        const [kind, ...rest] = k.split(':');
+        return !(kind === 'attempt' || kind === 'qstat') || payloadFor(kind, rest.join(':'));
       });
-      const remote = new Set(items.map(it => it.qid));
-      Object.keys(store.book).forEach(id => { if (!remote.has(id) && !store.bookPending.includes(id)) store.bookPending.push(id); });
+    }
+    const lww = (kind, box) => {
+      if (store.syncWipe.includes(kind)) return; // a reset from this device hasn't reached the cloud yet
+      const seen = new Set();
+      (remote[kind] || []).forEach(({ id, ...it }) => {
+        seen.add(id);
+        const mine = box[id];
+        if (!mine || (it.at || 0) > (mine.at || 0)) {
+          box[id] = it;
+          store.syncPending = store.syncPending.filter(k => k !== `${kind}:${id}`);
+        } else if ((mine.at || 0) > (it.at || 0)) queue(`${kind}:${id}`);
+      });
+      Object.keys(box).forEach(id => { if (!seen.has(id)) queue(`${kind}:${id}`); });
+    };
+    lww('book', store.book);
+    lww('qstat', store.qstats);
+
+    if (!store.syncWipe.includes('attempt')) {
+      const have = new Set(store.attempts.map(a => a.id));
+      const remoteIds = new Set();
+      (remote.attempt || []).forEach(({ id, json }) => {
+        remoteIds.add(id);
+        if (have.has(id)) return;
+        try { store.attempts.push(JSON.parse(json)); } catch (_) { /* skip a damaged record */ }
+      });
+      store.attempts.forEach(a => { if (!remoteIds.has(a.id)) queue(`attempt:${a.id}`); });
+      store.attempts.sort((a, b) => b.date - a.date);
+      store.attempts = store.attempts.slice(0, 300);
+    }
+
+    const bm = (remote.meta || []).find(m => m.id === 'bookmarks');
+    const mineAt = store.bookmarksAt || 0;
+    if (bm && bm.at > mineAt) {
+      store.bookmarks = bm.list || [];
+      store.bookmarksAt = bm.at;
+      store.syncPending = store.syncPending.filter(k => k !== 'meta:bookmarks');
+    } else if ((bm && mineAt > bm.at) || (!bm && (store.bookmarks.length || mineAt))) {
+      if (!store.bookmarksAt) store.bookmarksAt = Date.now();
+      queue('meta:bookmarks');
+    }
+  }
+
+  async function pull() {
+    cloud.lastPull = Date.now();
+    try {
+      if (store.syncWipe.length) await flush();
+      if (store.syncWipe.length) throw new Error('reset not synced yet');
+      const remote = await api('GET', '/data');
+      mergeRemote(remote);
       saveStore();
-      setCloud('synced');
-      await pushBook();
+      setCloud(store.syncPending.length ? 'syncing' : 'synced');
+      await flush();
       return true;
     } catch (_) {
       setCloud('local');
       return false;
     }
   }
-  window.addEventListener('online', () => pushBook());
+  // Don't redraw under the user's hands: not during a quiz session or while typing a note
+  function rerenderIfIdle() {
+    if (location.hash === '#/quiz' || /textarea|input/i.test((document.activeElement || {}).tagName)) return;
+    rerender();
+  }
+  window.addEventListener('online', () => flush());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && Date.now() - cloud.lastPull > 30000) pull().then(ok => ok && rerenderIfIdle());
+  });
 
   function updateCounts() {
     if (!bank.questions.length) return;
@@ -366,6 +472,7 @@
     };
     store.attempts.unshift(attempt);
     store.attempts = store.attempts.slice(0, 300);
+    markDirty('attempt', attempt.id);
     store.session = null;
     saveStore();
     if (auto) toast("Time's up — exam submitted");
@@ -1133,11 +1240,11 @@
     historyPage = Math.max(0, Math.min(historyPage, Math.ceil(total / PAGE_SIZE) - 1));
     app().innerHTML = `
       ${resumeBanner()}
-      <div class="page-head"><div><h1>History</h1><p>${total} attempt${total === 1 ? '' : 's'} saved in this browser.</p></div>
+      <div class="page-head"><div><h1>History</h1><p>${total} attempt${total === 1 ? '' : 's'} synced to the cloud.</p></div>
         <div class="row"><button class="btn sm" data-action="export">Export progress</button><button class="btn sm" data-action="import">Import progress</button></div></div>
       ${total ? historyTable(store.attempts.slice(historyPage * PAGE_SIZE, (historyPage + 1) * PAGE_SIZE)) + pager(historyPage, total, PAGE_SIZE, 'history-page') : '<div class="empty">No attempts yet.</div>'}
       <div class="section danger-zone">
-        <div><h3>Danger zone</h3><p class="small text-2">Delete every attempt, statistic and bookmark stored in this browser. Book pages and your notes are kept. Export first if you want a backup.</p></div>
+        <div><h3>Danger zone</h3><p class="small text-2">Delete every exam attempt, statistic and bookmark, on this device and in the cloud. Book pages and your notes are kept. Export first if you want a backup.</p></div>
         <button class="btn danger" data-action="reset">Reset all progress</button>
       </div>`;
   }
@@ -1180,7 +1287,7 @@
             <li>Practice exams: 65 questions, 130 min timer, domain mix 20/17/15/13, results only after submit.</li>
             <li>All 65 questions are scored here; the scaled score is an estimate (72% ≈ 720).</li>
             <li>Topic books follow the course sections: one question per page, instant feedback, your own notes and "solve later" marks.</li>
-            <li>Book pages and notes sync to the cloud; exam history and statistics stay in this browser (History → Export to back them up).</li>
+            <li>Your progress (book pages, notes, exam history, statistics, bookmarks) is saved on this device and synced to the cloud, so it follows you to any browser after you sign in.</li>
           </ul>
         </div>
         <div class="card pad-lg">
@@ -1241,9 +1348,19 @@
     next();
   }
 
+  // Queue the cloud wipe of history and stats (sent before any new uploads of those kinds)
+  function startWipe() {
+    store.resetAt = Date.now();
+    markDirty('meta', 'reset');
+    store.syncWipe = ['qstat', 'attempt'];
+    store.syncPending = store.syncPending.filter(k => !k.startsWith('qstat:') && !k.startsWith('attempt:'));
+  }
+
   function toggleBookmark(id) {
     const i = store.bookmarks.indexOf(id);
     if (i >= 0) store.bookmarks.splice(i, 1); else store.bookmarks.push(id);
+    store.bookmarksAt = Date.now();
+    markDirty('meta', 'bookmarks');
     saveStore();
     toast(i >= 0 ? 'Bookmark removed' : 'Bookmarked');
   }
@@ -1368,7 +1485,15 @@
             `Importing replaces your current ${store.attempts.length} attempt(s), statistics and bookmarks with the ${data.attempts.length} attempt(s) in this file. Export first if you want to keep the current data.`,
             'Replace with file', true, 'Keep current progress');
           if (!ok) return;
-          store = Object.assign({ attempts: [], qstats: {}, bookmarks: [], session: null, prefs: {}, book: store.book, bookPos: store.bookPos, bookPending: store.bookPending }, data);
+          // Replace history, stats and bookmarks here and in the cloud; book pages and notes stay as they are
+          store.attempts = data.attempts.filter(a => a && a.id && a.date).slice(0, 300);
+          store.qstats = data.qstats || {};
+          store.bookmarks = Array.isArray(data.bookmarks) ? data.bookmarks : [];
+          store.bookmarksAt = Date.now();
+          startWipe();
+          Object.keys(store.qstats).forEach(id => markDirty('qstat', id));
+          store.attempts.forEach(a => markDirty('attempt', a.id));
+          markDirty('meta', 'bookmarks');
           saveStore();
           toast('Progress imported');
           rerender();
@@ -1377,8 +1502,14 @@
         return;
       }
       case 'reset': {
-        const ok = await confirmModal('Reset all progress?', 'This deletes every attempt, statistic and bookmark stored in this browser.', 'Reset everything', true, 'Keep my progress');
-        if (ok) { store = { attempts: [], qstats: {}, bookmarks: [], session: null, prefs: store.prefs, book: store.book, bookPos: store.bookPos, bookPending: store.bookPending }; saveStore(); rerender(); }
+        const ok = await confirmModal('Reset all progress?', 'This deletes every exam attempt, statistic and bookmark on this device and in the cloud. Book pages and your notes are kept.', 'Reset everything', true, 'Keep my progress');
+        if (ok) {
+          Object.assign(store, { attempts: [], qstats: {}, bookmarks: [], bookmarksAt: Date.now(), session: null });
+          startWipe();
+          markDirty('meta', 'bookmarks');
+          saveStore();
+          rerender();
+        }
         return;
       }
     }
@@ -1454,7 +1585,8 @@
     app().innerHTML = '<div class="loading">Loading question bank…</div>';
     loadBank().then(() => {
       route();
-      pullBook().then(ok => { if (ok && /^#\/(book|topics|notes)/.test(location.hash) && !/textarea/i.test((document.activeElement || {}).tagName)) rerender(); });
+      setCloud(cloud.state);
+      pull().then(ok => ok && rerenderIfIdle());
     }).catch(err => {
       console.error('Failed to load question bank', err);
       app().innerHTML = `<div class="empty">
