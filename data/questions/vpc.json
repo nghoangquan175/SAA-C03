@@ -1853,5 +1853,149 @@
     "explanation": "Security groups and Network Firewall stateful rule groups are stateful: they inspect traffic in the context of its flow, so the return traffic of an allowed connection is permitted. Network ACLs and Network Firewall stateless rule groups inspect each packet in isolation, so both directions need explicit rules. Route tables only decide where traffic goes and do not filter it.",
     "subtopic": "Stateful vs Stateless Firewalls",
     "source": "https://docs.aws.amazon.com/network-firewall/latest/developerguide/firewall-rules-engines.html"
+  },
+  {
+    "id": "vpc-094",
+    "topic": "vpc",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company is planning subnets for a new VPC with the CIDR block 10.16.0.0/16. The VPC will use three Availability Zones now and possibly a fourth later. Each AZ needs web, application, and database subnets, plus one spare subnet for a future tier. All subnets must be the same size, each must provide at least 4,000 assignable IPv4 addresses, and the plan must fit every current and future subnet without re-addressing. Which subnet size meets these requirements?",
+    "options": [
+      "/19",
+      "/21",
+      "/20",
+      "/18"
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Four AZs times four tiers is 16 subnets. Splitting a /16 into /20 blocks gives exactly 16 subnets of 4,096 addresses each, and after AWS reserves five addresses per subnet, 4,091 can be assigned. A /19 or /18 yields only 8 or 4 subnets, so the future AZ or tier would not fit, and a /21 leaves only 2,043 assignable addresses per subnet.",
+    "subtopic": "Multi-tier Subnets",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/subnet-sizing.html"
+  },
+  {
+    "id": "vpc-095",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A three-tier application uses three Availability Zones. Each AZ has a public subnet for the load balancer and a NAT gateway, a private application subnet, and a private database subnet. Application instances must reach the internet through the NAT gateway in their own AZ so that an AZ failure does not affect the other AZs. Database subnets must have no route outside the VPC. What is the MINIMUM number of route tables needed?",
+    "options": [
+      "3",
+      "5",
+      "7",
+      "9"
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "The three public subnets have identical routes to the internet gateway, so they can share one route table, and the three database subnets need only the local route, so they can share one table such as the main route table. Each application subnet needs a default route to a different NAT gateway, so the application tier needs one route table per AZ, three in total. AWS recommends a NAT gateway in each AZ with routing that keeps resources on the NAT gateway in the same AZ, because a shared NAT gateway takes internet access away from every AZ when its own AZ fails.",
+    "subtopic": "Multi-tier Subnets",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nat-gateway-basics.html"
+  },
+  {
+    "id": "vpc-096",
+    "topic": "vpc",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A team created two /28 public subnets in two Availability Zones for an internet-facing Application Load Balancer, and placed NAT gateways and bastion hosts in the same subnets. During traffic spikes the load balancer returns 5xx errors and cannot scale. The application instances in private subnets are healthy. What should the solutions architect do?",
+    "options": [
+      "Move the load balancer to public subnets that use at least a /27 CIDR block and keep at least eight free IP addresses in each subnet.",
+      "Move the load balancer to the larger private application subnets so that it has more IP addresses to scale into.",
+      "Turn on cross-zone load balancing so that traffic is spread across both subnets.",
+      "Add a third /28 public subnet in another Availability Zone and register no targets in it."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "AWS recommends that each Availability Zone subnet of an Application Load Balancer use at least a /27 CIDR block and keep at least eight free IP addresses, because the load balancer needs those addresses to scale out. When the subnets run out of addresses, scaling stalls and clients can see 5xx errors or timeouts. An internet-facing load balancer must stay in public subnets, cross-zone load balancing is always on for Application Load Balancers, and another tiny subnet in an AZ without targets does not fix the address shortage.",
+    "subtopic": "Multi-tier Subnets",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/application-load-balancers.html"
+  },
+  {
+    "id": "vpc-097",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A company is building a multi-tier VPC in which only the load balancer is reachable from the internet, application servers need outbound internet access for updates, and the database must not be reachable from outside the VPC. Which components should be placed in the public subnets? (Select TWO.)",
+    "options": [
+      "The internet-facing Application Load Balancer",
+      "The Auto Scaling group of application servers",
+      "The Amazon RDS Multi-AZ DB instance",
+      "The zonal public NAT gateways",
+      "The internal Application Load Balancer between the web and application tiers"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "In the AWS reference design, each public subnet contains a load balancer node and a NAT gateway, while the servers run in private subnets and receive traffic only through the load balancer. A zonal public NAT gateway must sit in a public subnet so its traffic can reach the internet gateway. Application servers, the database, and an internal load balancer belong in private subnets because nothing on the internet should reach them directly.",
+    "subtopic": "Multi-tier Subnets",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-example-private-subnets-nat.html"
+  },
+  {
+    "id": "vpc-098",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company runs an Amazon ECS service with the EC2 launch type and the awsvpc network mode. To save on NAT gateway costs, the tasks were moved into public subnets that route 0.0.0.0/0 to an internet gateway. The tasks can no longer download data from external APIs. What should the solutions architect do?",
+    "options": [
+      "Enable the auto-assign public IPv4 address setting on the public subnets so that the task network interfaces receive public addresses.",
+      "Associate an Elastic IP address with the container instance's primary network interface.",
+      "Add an outbound security group rule that allows all traffic to 0.0.0.0/0 for the task network interfaces.",
+      "Move the tasks back to private subnets that route outbound traffic through a NAT gateway."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "With the awsvpc network mode on EC2 instances, each task gets its own network interface, and task network interfaces are not given public IP addresses. Tasks launched in public subnets therefore have no internet access, and AWS directs you to launch them in private subnets that use a NAT gateway. An Elastic IP address on the instance's primary interface does not apply to the task interfaces, and security group rules cannot create a public address.",
+    "subtopic": "Multi-tier Subnets",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-networking-awsvpc.html"
+  },
+  {
+    "id": "vpc-099",
+    "topic": "vpc",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application tier runs as an Amazon ECS service in the awsvpc network mode, and each task needs its own security group. The service must scale to 1,500 tasks in each of three Availability Zones. The current application subnets are /24 in each AZ. Which change should the solutions architect make to the subnet plan?",
+    "options": [
+      "Keep the /24 subnets, because tasks share the private IP address of the container instance that hosts them.",
+      "Create a /21 application subnet in each AZ so that each task can receive its own private IP address.",
+      "Create one /20 application subnet that spans all three Availability Zones.",
+      "Place the tasks in the public subnets because they are larger than the application subnets."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "In the awsvpc network mode each task receives its own network interface with a private IPv4 address from the subnet, so the application tier needs at least 1,500 free addresses per AZ. A /24 has only 251 assignable addresses, while a /21 provides 2,043. Subnets cannot span Availability Zones, and placing tasks in public subnets would not give them internet access or follow the multi-tier design.",
+    "subtopic": "Multi-tier Subnets",
+    "source": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-networking-awsvpc.html"
+  },
+  {
+    "id": "vpc-100",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A developer asks why a multi-tier design uses separate web, application, and database subnets in each Availability Zone instead of one subnet per AZ with security groups for every tier. Which reasons are correct? (Select TWO.)",
+    "options": [
+      "Security groups can be attached only to instances that are in different subnets.",
+      "Each subnet gets its own internet gateway, which increases bandwidth for each tier.",
+      "Route tables are associated with subnets, so only separate subnets let one tier route to the internet while another tier has no internet route.",
+      "Separate subnets give each tier higher network throughput than a shared subnet.",
+      "Network ACLs are associated with subnets, so separate subnets allow a subnet-level rule set for each tier."
+    ],
+    "answer": [
+      2,
+      4
+    ],
+    "explanation": "Every subnet is associated with exactly one route table and one network ACL, so routing and subnet-level filtering can differ only between subnets. Separate tier subnets let the public tier route to the internet gateway while the database tier keeps only the local route, and let each tier have its own network ACL. Security groups work within a subnet, a VPC has a single internet gateway, and subnet layout does not change network throughput.",
+    "subtopic": "Multi-tier Subnets",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html"
   }
 ]
