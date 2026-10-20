@@ -1489,5 +1489,47 @@
     "explanation": "In the AWS centralized outbound pattern, the egress VPC attachment uses private subnets whose route table sends 0.0.0.0/0 to the NAT gateway, and the public NAT gateway subnets route the spoke CIDR blocks back to the transit gateway. If the attachment uses the public subnets, spoke traffic is sent straight to the internet gateway, which drops it because the instances have no public IP addresses. Appliance mode is for stateful appliances and does not perform translation, and spoke CIDRs must not be routed to the internet gateway.",
     "subtopic": "Centralized Egress",
     "source": "https://docs.aws.amazon.com/vpc/latest/tgw/how-transit-gateways-work.html"
+  },
+  {
+    "id": "vpc-advanced-076",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company uses AWS Network Firewall with a stateful domain list rule group that allows outbound HTTPS only to approved domains. To reduce latency, an engineer adds a stateless rule that matches all outbound TCP 443 traffic with the Pass action. Afterward, instances can reach any HTTPS website. What should the engineer do?",
+    "options": [
+      "Turn on TLS inspection, because stateful domain list rules cannot inspect HTTPS traffic.",
+      "Give the stateful rule group a higher priority than the stateless rule group so that it is evaluated first.",
+      "Change the stateless rule's action to Forward to stateful rules so that the domain list still inspects the traffic.",
+      "Move the approved domains into a stateless rule group so that they are evaluated before the Pass rule."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Network Firewall inspects packets with the stateless engine first. A stateless Pass action discontinues all inspection and sends the packet to its destination, so the traffic never reaches the stateful domain list. Using Forward to stateful rules ends stateless inspection and hands the packet to the stateful engine. Domain list rule groups already filter HTTPS by the TLS SNI without TLS inspection, the stateful engine always runs after the stateless engine, and stateless rules cannot match domain names.",
+    "subtopic": "AWS Network Firewall",
+    "source": "https://docs.aws.amazon.com/network-firewall/latest/developerguide/rule-action.html"
+  },
+  {
+    "id": "vpc-advanced-077",
+    "topic": "vpc-advanced",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A security engineer is designing an AWS Network Firewall policy. Which statements about its rules engines are correct? (Select TWO.)",
+    "options": [
+      "The stateful engine evaluates packets before the stateless engine.",
+      "The stateless engine inspects each packet in isolation, similar to network ACLs.",
+      "With the default action order, the stateful engine denies traffic that matches no rule, like a security group.",
+      "The stateful engine inspects packets in the context of their traffic flow and accepts Suricata-compatible rules.",
+      "Stateless rules can allow or block traffic by the domain name in the TLS SNI field."
+    ],
+    "answer": [
+      1,
+      3
+    ],
+    "explanation": "The stateless engine runs first and inspects each packet without regard to direction or existing connections, which makes it similar to network ACLs. The stateful engine inspects packets in the context of their flow, considers traffic direction, and uses Suricata-compatible rules, which makes it similar to security groups. Unlike security groups, the stateful engine allows traffic to pass by default when no rule matches, and domain-based filtering is done with stateful rules, not stateless rules.",
+    "subtopic": "AWS Network Firewall",
+    "source": "https://docs.aws.amazon.com/network-firewall/latest/developerguide/firewall-rules-engines.html"
   }
 ]

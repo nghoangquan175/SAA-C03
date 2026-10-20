@@ -141,24 +141,37 @@
     updateCounts();
   }
 
-  // Last question id per topic in the first bank release. Exams are dealt from those questions first,
-  // so adding questions only creates new exams and never reshuffles the ones already taken.
-  const FIRST_RELEASE = {
-    analytics: 45, cdn: 45, containers: 35, 'ec2-advanced': 40, ec2: 60, fundamentals: 45, 'ha-scaling': 55,
-    hybrid: 45, 'iam-org': 45, 'nosql-caching': 45, rds: 55, route53: 45, s3: 70, security: 45,
-    serverless: 75, storage: 45, 'vpc-advanced': 45, vpc: 45,
+  // Last question id per topic in each bank release. Exams are dealt release by release, each shuffled
+  // on its own, so adding questions only creates new exams and never reshuffles the ones already taken.
+  // When questions are added, append a new entry with the current last ids before shipping more.
+  const RELEASES = [
+    {
+      analytics: 45, cdn: 45, containers: 35, 'ec2-advanced': 40, ec2: 60, fundamentals: 45, 'ha-scaling': 55,
+      hybrid: 45, 'iam-org': 45, 'nosql-caching': 45, rds: 55, route53: 45, s3: 70, security: 45,
+      serverless: 75, storage: 45, 'vpc-advanced': 45, vpc: 45,
+    },
+    {
+      analytics: 75, cdn: 75, containers: 70, 'ec2-advanced': 70, ec2: 90, fundamentals: 75, 'ha-scaling': 85,
+      hybrid: 75, 'iam-org': 75, 'nosql-caching': 75, rds: 85, route53: 75, s3: 100, security: 75,
+      serverless: 105, storage: 75, 'vpc-advanced': 75, vpc: 75,
+    },
+  ];
+  const releaseOf = q => {
+    const n = Number(q.id.slice(q.id.lastIndexOf('-') + 1));
+    const i = RELEASES.findIndex(r => n <= (r[q.topic] || 0));
+    return i === -1 ? RELEASES.length : i;
   };
-  const inFirstRelease = q => Number(q.id.slice(q.id.lastIndexOf('-') + 1)) <= (FIRST_RELEASE[q.topic] || 0);
+  const releaseSeed = i => (i === 0 ? 'saa-exam-' : `saa-exam-v${i + 1}-`);
 
   // Fixed exams: each domain pool is shuffled with a stable seed and dealt out without overlap
   function buildExams() {
     const pools = {};
     DKEYS.forEach(d => {
-      const ids = first => bank.questions.filter(q => q.domain === d && inFirstRelease(q) === first).map(q => q.id).sort();
-      pools[d] = [
-        ...shuffle(ids(true), rng(hashStr('saa-exam-' + d))),
-        ...shuffle(ids(false), rng(hashStr('saa-exam-v2-' + d))),
-      ];
+      pools[d] = [];
+      for (let i = 0; i <= RELEASES.length; i++) {
+        const ids = bank.questions.filter(q => q.domain === d && releaseOf(q) === i).map(q => q.id).sort();
+        pools[d].push(...shuffle(ids, rng(hashStr(releaseSeed(i) + d))));
+      }
     });
     const count = Math.min(...DKEYS.map(d => Math.floor(pools[d].length / DOMAINS[d].target)));
     bank.exams = [];

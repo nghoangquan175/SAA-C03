@@ -1487,5 +1487,371 @@
     "explanation": "Each subnet has a modifiable setting that determines whether network interfaces created in it receive a public IPv4 address, so disabling it stops new workers from getting billed public addresses. AWS charges for all public IPv4 addresses, including Elastic IP addresses. Network ACL rules and route changes affect traffic but do not stop the addresses from being assigned and billed.",
     "subtopic": "Public IPv4 Addresses",
     "source": "https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html"
+  },
+  {
+    "id": "vpc-076",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A web application runs on Amazon EC2 instances in private subnets behind an internet-facing Application Load Balancer in public subnets. During an attack from 198.51.100.0/24, an engineer added an inbound deny rule for that range to the network ACL of the private subnets, but the attack traffic still reaches the application. What should the engineer do to block the range at the network layer?",
+    "options": [
+      "Move the deny rule to the outbound rules of the private subnets' network ACL, because network ACLs are stateless.",
+      "Add the deny rule to the network ACL of the load balancer's public subnets, because the instances receive connections from the load balancer's own IP addresses.",
+      "Add a deny rule for the range to the instances' security group and give it a higher priority than the allow rule.",
+      "Renumber the deny rule so that it is higher than every allow rule and is evaluated last."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "An Application Load Balancer terminates the client connection and opens a new connection to the target, so the instances only see the load balancer's IP address as the source and the client address is carried in the X-Forwarded-For HTTP header, which network ACLs cannot inspect. The deny rule must therefore be placed on the network ACL of the subnets where the load balancer nodes receive the client traffic. Security groups have no deny rules, moving the rule to outbound does not change which source is seen, and a deny rule numbered after the allow rules would never match first.",
+    "subtopic": "Network ACLs",
+    "source": "https://docs.aws.amazon.com/elasticloadbalancing/latest/application/x-forwarded-headers.html"
+  },
+  {
+    "id": "vpc-077",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A company serves its website through an Amazon CloudFront distribution that uses an Application Load Balancer as the origin. The security team must block requests from a list of 40 malicious IP addresses before the requests reach the origin. Which solution meets this requirement?",
+    "options": [
+      "Add inbound deny rules for the 40 addresses to the network ACL of the load balancer's subnets.",
+      "Add the 40 addresses to a CloudFront geographic restriction block list on the distribution.",
+      "Add deny rules for the 40 addresses to the security group that is attached to the load balancer.",
+      "Create an AWS WAF IP set in the Global (CloudFront) scope, block it with an IP set match rule in a web ACL, and associate the web ACL with the distribution."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "With CloudFront in front, connections to the load balancer come from CloudFront, not from the viewers, so a network ACL on the load balancer subnets never sees the malicious addresses. AWS WAF associated with the distribution inspects the viewer's IP address at the edge, and an IP set for CloudFront must be created in the Global (CloudFront) scope. Geographic restrictions match countries rather than individual IP addresses, and security groups support only allow rules.",
+    "subtopic": "Network ACLs vs AWS WAF",
+    "source": "https://docs.aws.amazon.com/waf/latest/developerguide/waf-ip-set-managing.html"
+  },
+  {
+    "id": "vpc-078",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A threat intelligence feed provides about 3,000 IPv4 addresses that must be blocked from reaching a public Application Load Balancer. The list changes daily and is updated by an automated job. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Store the addresses in an AWS WAF IP set that is referenced by a blocking rule in a web ACL associated with the load balancer, and have the job update the IP set.",
+      "Add a deny rule for each address to the network ACL of the load balancer's subnets after requesting the maximum rule quota increase.",
+      "Create security groups that contain one rule per address and attach them to the load balancer.",
+      "Add a route for each address to the public subnets' route table with a blackhole target."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "An AWS WAF IP set can hold up to 10,000 addresses or ranges, and when the job updates the set, every rule that references it is updated automatically. Network ACLs are limited to 20 rules per direction by default and at most 40 after an increase, far below 3,000. Security groups cannot deny traffic, and VPC route tables do not let you create blackhole routes for arbitrary addresses.",
+    "subtopic": "Network ACLs vs AWS WAF",
+    "source": "https://docs.aws.amazon.com/waf/latest/developerguide/waf-rule-statement-type-ipset-match.html"
+  },
+  {
+    "id": "vpc-079",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 3,
+    "question": "During a security incident, an engineer removes the inbound rule that allowed SSH from 203.0.113.25/32 from an EC2 instance's security group. The attacker's SSH session from that address, which was established before the change, stays connected. The engineer must immediately cut off all traffic between that address and the instance's subnet. What should the engineer do?",
+    "options": [
+      "Enable VPC Flow Logs on the subnet with a filter that captures only rejected traffic from the address.",
+      "Remove all outbound rules from the instance's security group so that the session's response traffic is blocked.",
+      "Add inbound and outbound deny rules for 203.0.113.25/32 to the subnet's network ACL with rule numbers lower than any allow rules.",
+      "Add a deny rule for 203.0.113.25/32 to the instance's security group."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Security groups are stateful, so when a rule changes, connections that are already tracked are not interrupted and continue until they time out, and their response traffic is allowed regardless of outbound rules. Network ACLs are stateless, so adding a deny rule breaks existing connections immediately, as long as it is evaluated before any matching allow rule. Flow logs only record traffic, and security groups cannot contain deny rules.",
+    "subtopic": "Network ACLs",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-connection-tracking.html"
+  },
+  {
+    "id": "vpc-080",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A security engineer is writing network ACL rules for a VPC. Which statements about network ACL rules are correct? (Select TWO.)",
+    "options": [
+      "The source of an inbound rule is a CIDR range, so a rule cannot reference a security group.",
+      "A rule can reference a security group ID so that it follows instances as an Auto Scaling group scales.",
+      "To deny a few ports inside a wide allowed range, the deny rule must have a lower rule number than the allow rule.",
+      "Network ACL rules can block instances from reaching the instance metadata service.",
+      "When multiple rules match, the rule with the most specific CIDR range is applied regardless of rule number."
+    ],
+    "answer": [
+      0,
+      2
+    ],
+    "explanation": "Network ACL rules specify a CIDR range as the source or destination, so unlike security groups they cannot reference security group IDs. Rules are evaluated from the lowest number and the first match is applied, so a deny rule for specific ports must be numbered lower than the rule that allows the wider range. Network ACLs do not filter traffic to the instance metadata service, and CIDR specificity does not change the evaluation order.",
+    "subtopic": "Network ACLs",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/nacl-rules.html"
+  },
+  {
+    "id": "vpc-081",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "Instances in an application subnet may send traffic to any destination except a decommissioned partner network, 192.0.2.0/24. The block must hold even if a developer later adds a broad outbound security group rule. Which solution meets these requirements?",
+    "options": [
+      "Add an outbound security group rule that allows 0.0.0.0/0 and a second outbound rule that denies 192.0.2.0/24.",
+      "Add an outbound deny rule for 192.0.2.0/24 to the subnet's network ACL with a lower rule number than the rule that allows all outbound traffic.",
+      "Attach a gateway VPC endpoint policy that denies traffic to 192.0.2.0/24.",
+      "Allow outbound 0.0.0.0/0 in the security group and rely on the security group's implicit deny for 192.0.2.0/24."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Network ACLs support explicit deny rules at the subnet level, and because rules are evaluated in order, a lower-numbered deny for 192.0.2.0/24 blocks that network while a later rule still allows everything else. Because the control is on the subnet, a broad security group rule added later cannot override it. Security groups support only allow rules, so an allow for 0.0.0.0/0 also allows 192.0.2.0/24, and gateway endpoint policies control access to Amazon S3 or DynamoDB, not arbitrary networks.",
+    "subtopic": "Network ACLs",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html"
+  },
+  {
+    "id": "vpc-082",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 1,
+    "question": "An engineer creates a new custom network ACL and associates it with a subnet of web servers, planning to add rules later. Immediately afterward, the web servers stop receiving and sending all traffic. What is the cause?",
+    "options": [
+      "The subnet is still associated with the default network ACL, which denies all traffic by default.",
+      "The subnet is now associated with two network ACLs, and the more restrictive one is applied.",
+      "Network ACL changes take effect only after the instances in the subnet are restarted.",
+      "A new custom network ACL contains only the non-modifiable asterisk rules, which deny all inbound and outbound traffic until allow rules are added."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Every network ACL ends with asterisk rules that deny any packet that does not match a numbered rule, and a new custom network ACL has no numbered allow rules yet, so it denies all traffic in both directions. Associating it replaces the subnet's previous association, because a subnet has exactly one network ACL. The default network ACL allows all traffic, and rule changes apply to associated subnets without restarting instances.",
+    "subtopic": "Network ACLs",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/create-network-acl.html"
+  },
+  {
+    "id": "vpc-083",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A central security team manages 60 AWS accounts in AWS Organizations. Application teams manage their own security groups, but every subnet in every account, including subnets created in the future, must have network ACL rules that deny inbound traffic on a set of high-risk ports. Noncompliant network ACLs must be fixed automatically. Which solution meets these requirements with the LEAST operational overhead?",
+    "options": [
+      "Deploy an AWS Config rule in each account that reports subnets whose network ACL lacks the deny rules, and have the security team fix them manually.",
+      "Attach a service control policy that denies ec2:CreateNetworkAclEntry to the application teams' accounts.",
+      "Create an AWS Firewall Manager network ACL policy from the administrator account that defines the required deny rules, scopes all accounts and subnets, and enables automatic remediation.",
+      "Use AWS CloudFormation StackSets to deploy a network ACL with the deny rules to every account once."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "AWS Firewall Manager network ACL policies let one administrator account define the minimum network ACL rules for in-scope accounts and subnets, report compliance, and automatically remediate noncompliant network ACLs, including those for new subnets. This keeps subnet-level guardrails with the security team while application teams keep control of their security groups. A Config rule only detects drift, an SCP blocks changes but does not add the required rules, and a one-time StackSets deployment does not cover subnets created later or fix drift.",
+    "subtopic": "Network ACLs",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/create-network-acl.html"
+  },
+  {
+    "id": "vpc-084",
+    "topic": "vpc",
+    "domain": "performance",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An application runs on an EC2 instance in a public subnet and has an Elastic IP address. At startup, the application must register a callback URL that contains the instance's public IPv4 address with a partner. The developers read the address from the operating system's network configuration, but it always returns a 10.x.x.x address. What should the developers do?",
+    "options": [
+      "Configure the Elastic IP address as a secondary address on the instance's network interface inside the operating system.",
+      "Attach a second network interface from another public subnet so that the operating system receives a public address.",
+      "Read the public-ipv4 value from the instance metadata service when the application starts.",
+      "Enable DNS hostnames on the VPC so that the operating system resolves its own public IPv4 address."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "An instance is only aware of the private address space of its VPC and subnet. The internet gateway logically performs one-to-one NAT between the private address and the public or Elastic IP address, so the public address never appears in the operating system. The instance metadata service exposes the associated public IPv4 address in its public-ipv4 category. Adding the Elastic IP inside the operating system breaks traffic because packets arrive addressed to the private IP, and extra interfaces or DNS settings do not change what the operating system is assigned.",
+    "subtopic": "Internet Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/VPC_Internet_Gateway.html"
+  },
+  {
+    "id": "vpc-085",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An engineer creates a zonal public NAT gateway with an Elastic IP address in private subnet A and adds a 0.0.0.0/0 route to the NAT gateway in the route table of the application subnets. Private subnet A's route table contains only the local route. The application instances still cannot reach the internet. What should the engineer do?",
+    "options": [
+      "Create the public NAT gateway in a public subnet whose route table sends 0.0.0.0/0 to the internet gateway, and point the application subnets' default route to it.",
+      "Assign public IPv4 addresses to the application instances so that the NAT gateway can translate them.",
+      "Add a second 0.0.0.0/0 route to the internet gateway in the application subnets' route table.",
+      "Attach a second internet gateway to the VPC and associate it with private subnet A."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "A zonal public NAT gateway must be created in a public subnet, and its traffic reaches the internet gateway through the route table of the subnet where the NAT gateway lives. The route in the application subnets only sends traffic to the NAT gateway as the next hop, so the NAT gateway's own subnet needs the 0.0.0.0/0 route to the internet gateway. Instances behind a NAT gateway do not need public addresses, a route table cannot have two routes for the same destination, and a VPC can have only one internet gateway attached. A regional NAT gateway is the exception: it needs no public subnet because it has its own route table with a route to the internet gateway.",
+    "subtopic": "NAT Gateway",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html"
+  },
+  {
+    "id": "vpc-086",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A private subnet hosts 20 application instances that must not have a route to the internet. One new reporting instance must be reachable directly from a partner over HTTPS at a fixed public IPv4 address. Which solution meets these requirements?",
+    "options": [
+      "Associate a custom route table that has a 0.0.0.0/0 route to the internet gateway with the reporting instance's network interface.",
+      "Add a 0.0.0.0/0 route to the internet gateway in the private subnet's route table and use security groups to keep the other instances private.",
+      "Add a /32 route for the reporting instance's private IP address that targets the internet gateway in the private subnet's route table.",
+      "Launch the reporting instance in a separate public subnet whose route table has a route to the internet gateway, and associate an Elastic IP address with it."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "Route tables are associated with subnets, not with individual instances or network interfaces, so every instance in a subnet follows the same routes. Placing the reporting instance in its own public subnet with an internet gateway route and an Elastic IP address gives it a fixed public address while the private subnet keeps no internet route. Adding an internet gateway route to the private subnet would turn the whole subnet public, and a route's destination matches the destination of outgoing traffic, so a route for the instance's own address does not give it internet access.",
+    "subtopic": "Route Tables",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/subnet-route-tables.html"
+  },
+  {
+    "id": "vpc-087",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A VPC uses 10.16.0.0/16. Twelve /20 subnets across three Availability Zones use 10.16.0.0 through 10.16.191.255, and 10.16.192.0/18 is not allocated to any subnet. The application subnet in AZ A, 10.16.32.0/20, has run out of free addresses, and the subnet 10.16.48.0/20 is also in AZ A. Which solution adds capacity for the application tier in AZ A with the LEAST disruption?",
+    "options": [
+      "Modify the application subnet's CIDR block to 10.16.32.0/19 so that it includes more addresses.",
+      "Create a new subnet in AZ A from the unallocated range, such as 10.16.192.0/20, associate the application route table and network ACL, and add it to the Auto Scaling group.",
+      "Wait for the application subnet to extend automatically into the unallocated 10.16.192.0/18 range.",
+      "Add a secondary CIDR block of 10.16.0.0/16 to the VPC and recreate the application subnet in it."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "A subnet's size is fixed by its prefix, and a subnet never grows into unallocated VPC space. The unallocated 10.16.192.0/18 range is still part of the VPC, so a new non-overlapping subnet can be created there in AZ A and added to the Auto Scaling group with the same routing and network ACL. A /19 starting at 10.16.32.0 would overlap the existing 10.16.48.0/20 subnet, and subnet CIDR blocks in a VPC cannot overlap. A secondary CIDR block cannot repeat the VPC's existing range.",
+    "subtopic": "Subnet Sizing",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/subnet-sizing.html"
+  },
+  {
+    "id": "vpc-088",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "multi",
+    "difficulty": 2,
+    "question": "A subnet uses the CIDR block 10.16.48.0/20. Which IPv4 addresses can be assigned to an EC2 instance's network interface in this subnet? (Select TWO.)",
+    "options": [
+      "10.16.48.3",
+      "10.16.48.4",
+      "10.16.63.255",
+      "10.16.64.10",
+      "10.16.63.254"
+    ],
+    "answer": [
+      1,
+      4
+    ],
+    "explanation": "A /20 leaves 12 host bits, so 10.16.48.0/20 covers 10.16.48.0 through 10.16.63.255, or 4,096 addresses. AWS reserves the first four addresses and the last address of every subnet: 10.16.48.0 for the network, 10.16.48.1 for the VPC router, 10.16.48.2 for DNS, 10.16.48.3 for future use, and 10.16.63.255 as the broadcast address. That leaves 10.16.48.4 through 10.16.63.254 assignable, while 10.16.64.10 belongs to the next /20 block.",
+    "subtopic": "Subnet Reserved IPs",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/subnet-sizing.html"
+  },
+  {
+    "id": "vpc-089",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "A company runs a web tier on EC2 instances in an Auto Scaling group across three Availability Zones. Peak load needs 12 instances. The company must keep serving peak traffic if one Availability Zone fails, even if the EC2 APIs that launch new instances are impaired during the event. Which design meets this requirement?",
+    "options": [
+      "Run 12 instances across the three AZs and configure a target tracking policy to launch replacements in the remaining AZs when an AZ fails.",
+      "Run 12 instances across the three AZs and use an Amazon EventBridge rule with an AWS Lambda function that launches instances from an AMI when an AZ fails.",
+      "Run 12 instances in one AZ and enable EC2 automatic recovery on each instance.",
+      "Run 18 instances, 6 in each AZ, so that the two remaining AZs can serve the full peak load without launching new instances."
+    ],
+    "answer": [
+      3
+    ],
+    "explanation": "This is static stability: the workload keeps running without needing changes during a failure. Launching instances is a control plane action, and control planes are statistically more likely to be impaired than data planes, so a recovery plan that depends on launching instances can fail at the worst time. Pre-provisioning enough capacity that any two AZs can carry the full peak removes that dependency. Scaling policies and Lambda-based launches both rely on the EC2 control plane, and a single AZ cannot survive the loss of that AZ.",
+    "subtopic": "Static Stability",
+    "source": "https://docs.aws.amazon.com/whitepapers/latest/aws-fault-isolation-boundaries/static-stability.html"
+  },
+  {
+    "id": "vpc-090",
+    "topic": "vpc",
+    "domain": "cost",
+    "type": "single",
+    "difficulty": 2,
+    "question": "A legacy web server on a single EC2 instance hosts three websites. Each website uses its own TLS certificate and must be reached at its own public IPv4 address. The company does not want to add instances or load balancers. Which solution is the MOST cost-effective?",
+    "options": [
+      "Associate three Elastic IP addresses with the primary private IPv4 address of the instance's network interface.",
+      "Attach three internet gateways to the VPC and route each website's traffic through a different gateway.",
+      "Assign two secondary private IPv4 addresses to the instance's network interface and associate an Elastic IP address with each private address, including the primary.",
+      "Configure the three public IPv4 addresses directly on the network interface inside the operating system."
+    ],
+    "answer": [
+      2
+    ],
+    "explanation": "Hosting multiple websites with separate certificates on one server is a documented use case for assigning multiple private IP addresses to a network interface. An Elastic IP address is associated with one private IPv4 address, so each website needs its own private address with its own Elastic IP address. One private address cannot hold three Elastic IP addresses, a VPC can have only one internet gateway attached, and public addresses configured inside the operating system do not work because the internet gateway translates them to private addresses.",
+    "subtopic": "Elastic IP Addresses",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-instance-addressing.html"
+  },
+  {
+    "id": "vpc-091",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "single",
+    "difficulty": 2,
+    "question": "An EC2 instance in a private subnet calls an external HTTPS API through a NAT gateway. Its security group has one outbound rule that allows TCP 443 to 0.0.0.0/0 and no inbound rules, and the subnet uses the default network ACL. An engineer proposes adding an inbound security group rule that allows TCP 1024-65535 from 0.0.0.0/0 so that the API responses can return. What should the solutions architect advise?",
+    "options": [
+      "Add the rule, because security groups evaluate response traffic against inbound rules in the same way as network ACLs.",
+      "Do not add the rule, because security groups are stateful and responses to allowed outbound requests are allowed regardless of inbound rules.",
+      "Add an inbound rule that allows TCP 443 from 0.0.0.0/0 instead, because the API responses arrive on port 443.",
+      "Replace the NAT gateway with an internet gateway route, because a NAT gateway drops responses unless the security group allows ephemeral ports."
+    ],
+    "answer": [
+      1
+    ],
+    "explanation": "Security groups use connection tracking, so responses to traffic that an outbound rule allowed flow back to the instance regardless of the inbound rules. The proposed rule is unnecessary and would only widen what can reach the instance. Ephemeral port rules are needed for stateless network ACLs, not security groups, and the NAT gateway returns responses to the instance without any special security group rule.",
+    "subtopic": "Security Groups",
+    "source": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/security-group-connection-tracking.html"
+  },
+  {
+    "id": "vpc-092",
+    "topic": "vpc",
+    "domain": "resilient",
+    "type": "single",
+    "difficulty": 3,
+    "question": "Web instances in private subnets are registered with an Application Load Balancer. A custom network ACL on the instance subnets allows inbound TCP 8080 from the load balancer subnet CIDRs and outbound TCP 32768-65535 to the load balancer subnet CIDRs. Users report intermittent errors, and some health checks fail. What should the solutions architect change?",
+    "options": [
+      "Change the outbound rule to allow TCP 1024-65535 to the load balancer subnet CIDRs.",
+      "Add an inbound rule that allows TCP 32768-65535 from the load balancer subnet CIDRs.",
+      "Add an outbound rule for TCP 1024-65535 to the instances' security group.",
+      "Turn on cross-zone load balancing so that requests are spread across healthy targets."
+    ],
+    "answer": [
+      0
+    ],
+    "explanation": "Network ACLs are stateless, so the responses from the instances to the load balancer need an outbound rule that covers the load balancer's source ports. Requests that originate from Elastic Load Balancing use ephemeral ports 1024-65535, so responses to connections that used a port below 32768 are dropped, which causes intermittent failures. Inbound ephemeral rules would be for connections the instances start, security groups already allow responses because they are stateful, and cross-zone load balancing does not change network ACL filtering.",
+    "subtopic": "Network ACLs",
+    "source": "https://docs.aws.amazon.com/vpc/latest/userguide/custom-network-acl.html"
+  },
+  {
+    "id": "vpc-093",
+    "topic": "vpc",
+    "domain": "secure",
+    "type": "multi",
+    "difficulty": 1,
+    "question": "A team is reviewing which network controls automatically allow the response traffic of a permitted connection without a separate rule for the return direction. Which controls behave this way? (Select TWO.)",
+    "options": [
+      "Security groups",
+      "Custom network ACLs",
+      "AWS Network Firewall stateless rule groups",
+      "AWS Network Firewall stateful rule groups",
+      "Subnet route tables"
+    ],
+    "answer": [
+      0,
+      3
+    ],
+    "explanation": "Security groups and Network Firewall stateful rule groups are stateful: they inspect traffic in the context of its flow, so the return traffic of an allowed connection is permitted. Network ACLs and Network Firewall stateless rule groups inspect each packet in isolation, so both directions need explicit rules. Route tables only decide where traffic goes and do not filter it.",
+    "subtopic": "Stateful vs Stateless Firewalls",
+    "source": "https://docs.aws.amazon.com/network-firewall/latest/developerguide/firewall-rules-engines.html"
   }
 ]

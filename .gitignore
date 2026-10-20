@@ -6,3 +6,6 @@ infras/.terraform/
 infras/*.tfstate.backup
 infras/*.tfplan
 infras/crash.log
+
+# Screenshots shared for review, not part of the app
+example/
