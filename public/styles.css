@@ -521,4 +521,48 @@ kbd {
   .grid-4 { grid-template-columns: 1fr 1fr; }
   .hero { padding: 20px; }
   .hero h1 { font-size: 22px; }
+  .hero-actions .btn { flex: 1 1 100%; }
+  .page-head > .row, .page-head > .row .btn { width: 100%; }
+  .page-head > .row .btn { flex: 1 1 0; }
+
+  /* Question card actions: hint on its own line, buttons share the row */
+  .qactions { gap: 8px; }
+  .qactions > .spacer { display: none; }
+  .qactions > span.small { order: -1; width: 100%; text-align: right; }
+  .qactions > .btn { flex: 1 1 0; padding: 0 10px; }
+  .qmeta .icon-btn { width: 40px; }
+  .qmeta > .chip { order: 5; } /* question number and buttons stay on the first line, chips wrap below */
+
+  /* Review lists: domain chip moves under the question instead of squeezing it */
+  .review-item > summary { grid-template-columns: 30px minmax(0, 1fr); }
+  .review-item > summary > .chip { grid-column: 2; justify-self: start; }
+
+  /* History table becomes one card per attempt */
+  .table thead { display: none; }
+  .table tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .table-wrap .table tr:last-child { border-bottom: 0; }
+  .table td { padding: 0; border: 0; }
+  .table td:nth-child(2) { grid-column: 1; grid-row: 1; font-weight: 600; }
+  .table td:nth-child(1) { grid-column: 1; grid-row: 2; font-size: 12.5px; }
+  .table td:nth-child(3) { grid-column: 1; grid-row: 3; }
+  .table td:nth-child(5) { grid-column: 2; grid-row: 1; }
+  .table td:nth-child(4) { grid-column: 2; grid-row: 2; font-size: 12.5px; color: var(--text-2); }
+  .table td:nth-child(6) { grid-column: 2; grid-row: 3; font-size: 12.5px; }
+
+  /* Keyword cheat sheet: keyword above its explanation */
+  .kw-table td { display: block; border: 0; padding: 0 6px; }
+  .kw-table td:first-child { white-space: normal; padding-top: 10px; }
+  .kw-table tr { display: block; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
+  .result-hero h2 { font-size: 24px !important; }
+  .book-head h1 { font-size: 20px; }
+}
+/* Single-column layouts: keep long page/question grids from stretching the page */
+@media (max-width: 1100px) {
+  .navigator .nav-grid { max-height: 240px; overflow-y: auto; }
+}
+/* iOS zooms into fields with text under 16px, so phones get 16px inputs */
+@media (max-width: 820px), (pointer: coarse) {
+  input, select, textarea, .notes-card textarea { font-size: 16px; }
+  .login-card input { min-height: 44px; }
 }
