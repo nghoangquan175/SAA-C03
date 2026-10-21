@@ -984,16 +984,12 @@
     return [{ part: el.dataset.hl, s, e: s + mark.textContent.length }];
   }
 
-  // Releasing a drag over text highlights it; double-clicking a highlight removes it.
+  // Releasing a drag over text highlights it; double-clicking a highlight removes it (see the click handler).
   // On touch screens the selection is made by long-press and handles, so a lift with text selected counts.
   document.addEventListener('mouseup', e => {
     if (e.button === 0 && dragged(e)) saveHighlights(selectionParts(), false);
   });
   document.addEventListener('touchend', () => setTimeout(() => saveHighlights(selectionParts(), false), 60));
-  document.addEventListener('dblclick', e => {
-    const mark = e.target.closest('mark.hl');
-    if (mark && mark.closest('[data-hl]') && bookCtx()) saveHighlights(markParts(mark), true);
-  });
 
   function viewNotes() {
     setActiveNav('notes');
@@ -1475,7 +1471,7 @@
   }
 
   // ---------- Events ----------
-  let downAt = null;
+  let downAt = null, preClickDraft = null;
   document.addEventListener('mousedown', e => { downAt = [e.clientX, e.clientY]; });
   const dragged = e => e.detail > 0 && downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5;
   document.addEventListener('click', async e => {
@@ -1484,6 +1480,16 @@
 
     const opt = e.target.closest('[data-opt]:not([aria-disabled])');
     if (opt && dragged(e)) return; // the pointer moved: that was a text selection, not a pick
+    // Double-click on a highlight removes it. Handled on the second click rather than "dblclick",
+    // because the first click on an option re-renders the page and the browser then never fires
+    // dblclick; that first click's pick is undone.
+    const mark = e.target.closest('mark.hl');
+    if (mark && e.detail === 2 && mark.closest('[data-hl]') && bookCtx()) {
+      const p = preClickDraft;
+      if (opt && p && p.id === bookDraft.id && p.opt === opt.dataset.opt && e.timeStamp - p.t < 800) bookDraft = { id: p.id, choice: p.choice };
+      return saveHighlights(markParts(mark), true);
+    }
+    if (opt && e.detail === 1) preClickDraft = { id: bookDraft.id, choice: bookDraft.choice.slice(), opt: opt.dataset.opt, t: e.timeStamp };
     if (opt && store.session && location.hash === '#/quiz') return selectOption(Number(opt.dataset.opt));
     if (opt && bookCtx()) return bookSelect(Number(opt.dataset.opt));
 
