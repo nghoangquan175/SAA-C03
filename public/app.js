@@ -812,7 +812,7 @@
               <label for="pageNote"><b>My notes</b> <span class="muted small">— how you understand this question, in your own words</span></label>
               ${syncBadge()}
             </div>
-            <textarea id="pageNote" data-qid="${q.id}" rows="4" placeholder="e.g. Regional NAT gateway has its own route table to the IGW, so the VPC needs no public subnet">${esc(e.note || '')}</textarea>
+            <textarea id="pageNote" data-qid="${q.id}" rows="4" spellcheck="false" placeholder="e.g. Regional NAT gateway has its own route table to the IGW, so the VPC needs no public subnet">${esc(e.note || '')}</textarea>
           </section>
           <div class="kbd-hint"><kbd>1</kbd>–<kbd>6</kbd> or <kbd>A</kbd>–<kbd>F</kbd> select · <kbd>Enter</kbd> check / next page · <kbd>←</kbd> <kbd>→</kbd> turn pages · <kbd>M</kbd> solve later · <kbd>S</kbd> star · <kbd>N</kbd> write a note · drag over text to highlight, double-click a highlight to remove it</div>
         </div>
