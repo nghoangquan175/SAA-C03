@@ -22,6 +22,19 @@ export function validId(kind, id) {
   return false;
 }
 
+// Highlights on a book page: { part: [[start, end], ...] } where part is q (question),
+// o0-o7 (options) or x (explanation) and start/end are character offsets in that text.
+function cleanHighlights(v) {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  for (const [part, list] of Object.entries(v)) {
+    if (!/^(q|x|o[0-7])$/.test(part) || !Array.isArray(list)) continue;
+    const ranges = list.filter(r => Array.isArray(r) && r.length === 2 && Number.isInteger(r[0]) && Number.isInteger(r[1]) && r[0] >= 0 && r[0] < r[1] && r[1] <= 20000).slice(0, 100);
+    if (ranges.length) out[part] = ranges;
+  }
+  return out;
+}
+
 // Returns the cleaned item (only known fields) or null when the body is unusable.
 export function cleanItem(kind, body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null;
@@ -34,6 +47,7 @@ export function cleanItem(kind, body) {
       choice: Array.isArray(body.choice) ? body.choice.filter(n => Number.isInteger(n) && n >= 0 && n < 8).slice(0, 8) : [],
       later: body.later === true,
       note: typeof body.note === 'string' ? body.note.slice(0, 20000) : '',
+      hl: cleanHighlights(body.hl),
       at,
     };
   }

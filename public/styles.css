@@ -568,3 +568,6 @@ kbd {
   input, select, textarea, .notes-card textarea { font-size: 16px; }
   .login-card input { min-height: 44px; }
 }
+
+/* Highlights on book pages */
+mark.hl { background: var(--warn); color: #1a1405; border-radius: 3px; padding: 0 1px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
