@@ -347,9 +347,11 @@ a.nav-cell { display: grid; place-items: center; text-decoration: none; }
   padding: 14px 16px; border-radius: 10px; cursor: pointer;
   border: 1px solid var(--border-strong); background: var(--bg-2);
   line-height: 1.5; transition: border-color .12s, background .12s;
+  user-select: text; -webkit-user-select: text;
 }
-.option:hover:not(:disabled) { border-color: #4a5868; background: var(--surface-2); }
-.option:disabled { cursor: default; }
+.option:hover:not([aria-disabled]) { border-color: #4a5868; background: var(--surface-2); }
+.option[aria-disabled] { cursor: text; }
+.option:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .option .key {
   flex-shrink: 0; width: 28px; height: 28px; display: grid; place-items: center;
   border: 1.5px solid var(--border-strong); color: var(--text-2);

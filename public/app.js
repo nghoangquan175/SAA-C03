@@ -554,9 +554,10 @@
         else if (isAns) { cls += ' correct missed'; tag = 'Correct answer'; }
         else if (isSel) { cls += ' wrong'; tag = '✗ Your answer'; }
       } else if (isSel) cls += ' selected';
-      return `<button class="${cls}" data-opt="${i}" ${interactive ? '' : 'disabled'}>
+      // a div, not a button, so the option text can be selected and copied
+      return `<div class="${cls}" data-opt="${i}" role="button" ${interactive ? 'tabindex="0"' : 'aria-disabled="true"'}>
         <span class="key">${LETTERS[i]}</span><span class="txt">${esc(opt)}</span>${tag ? `<span class="tag">${tag}</span>` : ''}
-      </button>`;
+      </div>`;
     }).join('')}</div>`;
   }
 
@@ -1366,13 +1367,17 @@
   }
 
   // ---------- Events ----------
+  let downAt = null;
+  document.addEventListener('mousedown', e => { downAt = [e.clientX, e.clientY]; });
+  const dragged = e => e.detail > 0 && downAt && Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 5;
   document.addEventListener('click', async e => {
     const href = e.target.closest('[data-href]');
     if (href && !e.target.closest('a,button')) { location.hash = href.dataset.href; return; }
 
-    const opt = e.target.closest('[data-opt]');
-    if (opt && !opt.disabled && store.session && location.hash === '#/quiz') return selectOption(Number(opt.dataset.opt));
-    if (opt && !opt.disabled && bookCtx()) return bookSelect(Number(opt.dataset.opt));
+    const opt = e.target.closest('[data-opt]:not([aria-disabled])');
+    if (opt && dragged(e)) return; // the pointer moved: that was a text selection, not a pick
+    if (opt && store.session && location.hash === '#/quiz') return selectOption(Number(opt.dataset.opt));
+    if (opt && bookCtx()) return bookSelect(Number(opt.dataset.opt));
 
     const gotoEl = e.target.closest('[data-goto]');
     if (gotoEl) { store.session.current = Number(gotoEl.dataset.goto); saveStore(); return viewQuiz(); }
@@ -1542,6 +1547,7 @@
   }
 
   document.addEventListener('keydown', e => {
+    if (e.key === ' ' && e.target.matches('[data-opt][tabindex]')) { e.preventDefault(); return e.target.click(); }
     if (!$('#modal').hidden || e.ctrlKey || e.metaKey || e.altKey || /input|select|textarea/i.test(e.target.tagName)) return;
     if (location.hash.startsWith('#/book/')) return bookKeys(e);
     if (location.hash !== '#/quiz' || !store.session) return;
