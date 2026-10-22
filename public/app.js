@@ -748,6 +748,13 @@
     return true;
   }
 
+  // Tag filters in Contents: the page's domain and a search over its subtopic; reset when another book opens
+  let bookTags = { key: null, domain: 'all', text: '' };
+  function tagMatches(q, domain = bookTags.domain, text = bookTags.text) {
+    const t = text.trim().toLowerCase();
+    return (domain === 'all' || q.domain === domain) && (!t || (q.subtopic || '').toLowerCase().includes(t));
+  }
+
   function viewBook(key, pageArg) {
     setActiveNav('topics');
     const t = bank.topicMap[key];
@@ -769,7 +776,9 @@
     const need = requiredCount(q);
     const s = bookStats(key);
     const bookmarked = store.bookmarks.includes(q.id);
-    const shown = pages.map((p, k) => [p, k]).filter(([p]) => pageMatches(p, bookFilter));
+    if (bookTags.key !== key) bookTags = { key, domain: 'all', text: '' };
+    const shown = pages.map((p, k) => [p, k]).filter(([p]) => pageMatches(p, bookFilter) && tagMatches(p));
+    const subtopics = [...new Set(pages.map(p => p.subtopic).filter(Boolean))].sort((a, b) => a.localeCompare(b));
     const marks = { hl: e.hl || {}, tn: e.tn || {} };
 
     app().innerHTML = `
@@ -821,9 +830,21 @@
         <aside class="navigator"><div class="card">
           <div class="row" style="justify-content:space-between"><b>Contents</b><span class="muted small">${s.done}/${s.total} done</span></div>
           <div class="toc-filters">${BOOK_FILTERS.map(([k, l]) => {
-            const c = pages.filter(p => pageMatches(p, k)).length;
+            const c = pages.filter(p => pageMatches(p, k) && tagMatches(p)).length;
             return `<button class="select-chip sm ${bookFilter === k ? 'on' : ''}" data-action="book-filter" data-key="${k}">${l} (${c})</button>`;
           }).join('')}</div>
+          <div class="toc-label muted small">Domain</div>
+          <div class="toc-filters tight">${[['all', 'All'], ...DKEYS.filter(d => pages.some(p => p.domain === d)).map(d => [d, DOMAINS[d].short])].map(([d, l]) => {
+            const c = pages.filter(p => pageMatches(p, bookFilter) && tagMatches(p, d)).length;
+            return `<button class="select-chip sm ${d !== 'all' ? 'dom ' + d : ''} ${bookTags.domain === d ? 'on' : ''}" data-action="book-domain" data-key="${d}">${esc(l)} (${c})</button>`;
+          }).join('')}</div>
+          <div class="toc-label muted small">Topic</div>
+          <div class="toc-search">
+            <input type="text" id="tocSearch" list="tocTopics" autocomplete="off" spellcheck="false" placeholder="e.g. S3, IAM roles, placement" value="${esc(bookTags.text)}" aria-label="Filter pages by topic">
+            ${bookTags.text ? `<button class="icon-btn sm" data-action="book-topic-clear" title="Clear topic" aria-label="Clear topic">×</button>` : ''}
+          </div>
+          <datalist id="tocTopics">${subtopics.map(t => `<option value="${esc(t)}"></option>`).join('')}</datalist>
+          ${bookTags.domain !== 'all' || bookTags.text.trim() ? `<div class="muted small toc-match">${shown.length} page${shown.length === 1 ? '' : 's'} match · <a href="#" data-action="book-tags-clear">clear tags</a></div>` : ''}
           ${shown.length ? `<div class="nav-grid">${shown.map(([p, k]) => {
             const pe = bookEntry(p.id);
             let cls = 'nav-cell';
@@ -1718,6 +1739,9 @@
       }
       case 'book-star': { const c = bookCtx(); if (c) { toggleBookmark(c.q.id); rerender(); } return; }
       case 'book-filter': bookFilter = el.dataset.key; return rerender();
+      case 'book-domain': bookTags.domain = el.dataset.key; return rerender();
+      case 'book-topic-clear': bookTags.text = ''; rerender(); return $('#tocSearch').focus();
+      case 'book-tags-clear': e.preventDefault(); bookTags.domain = 'all'; bookTags.text = ''; return rerender();
       case 'next-open': return bookJump(p => !bookEntry(p.id).done);
       case 'next-later': return bookJump(p => !!bookEntry(p.id).later);
       case 'history-page': historyPage = Number(el.dataset.page); return route();
@@ -1798,6 +1822,16 @@
   });
 
   // Notes autosave: local immediately, cloud after a short pause in typing
+  // Typing in the topic box filters Contents as you type; focus and caret survive the redraw
+  document.addEventListener('input', e => {
+    if (e.target.id !== 'tocSearch') return;
+    const pos = e.target.selectionStart;
+    bookTags.text = e.target.value.slice(0, 80);
+    rerender();
+    const box = $('#tocSearch');
+    box.focus();
+    box.setSelectionRange(pos, pos);
+  });
   document.addEventListener('input', e => {
     if (e.target.id !== 'pageNote') return;
     saveBook(e.target.dataset.qid, { note: e.target.value.slice(0, 20000) }, 800);

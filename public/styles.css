@@ -298,6 +298,16 @@ label.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; 
 .sync.good { color: var(--good); } .sync.warn { color: var(--warn); } .sync.muted { color: var(--muted); }
 .toc-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .select-chip.sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.toc-label { margin-top: 12px; }
+.toc-filters.tight { margin-top: 6px; }
+.select-chip.dom.secure.on { border-color: var(--d-secure); background: rgba(255,122,89,.13); color: var(--d-secure); }
+.select-chip.dom.resilient.on { border-color: var(--d-resilient); background: rgba(90,169,255,.13); color: var(--d-resilient); }
+.select-chip.dom.performance.on { border-color: var(--d-performance); background: rgba(180,140,255,.14); color: var(--d-performance); }
+.select-chip.dom.cost.on { border-color: var(--d-cost); background: rgba(63,207,142,.13); color: var(--d-cost); }
+.toc-search { position: relative; margin-top: 6px; }
+.toc-search input { width: 100%; padding-right: 34px; }
+.toc-search .icon-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border: 0; background: transparent; font-size: 18px; }
+.toc-match { margin-top: 8px; }
 a.nav-cell { display: grid; place-items: center; text-decoration: none; }
 .nav-cell.noted::before {
   content: ""; position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
