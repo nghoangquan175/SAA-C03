@@ -542,7 +542,7 @@
     }).join('');
   }
 
-  function renderOptions(q, chosen, reveal, interactive, hl) {
+  function renderOptions(q, chosen, reveal, interactive, marks) {
     const multi = q.type === 'multi';
     return `<div class="options">${q.options.map((opt, i) => {
       const isSel = chosen.includes(i);
@@ -556,18 +556,18 @@
       } else if (isSel) cls += ' selected';
       // a div, not a button, so the option text can be selected and copied
       return `<div class="${cls}" data-opt="${i}" role="button" ${interactive ? 'tabindex="0"' : 'aria-disabled="true"'}>
-        <span class="key">${LETTERS[i]}</span><span class="txt"${hl ? ` data-hl="o${i}"` : ''}>${hl ? hlText(opt, hl['o' + i]) : esc(opt)}</span>${tag ? `<span class="tag">${tag}</span>` : ''}
+        <span class="key">${LETTERS[i]}</span><span class="txt"${marks ? ` data-hl="o${i}"` : ''}>${marks ? markText(opt, marks, 'o' + i) : esc(opt)}</span>${tag ? `<span class="tag">${tag}</span>` : ''}
       </div>`;
     }).join('')}</div>`;
   }
 
-  function explanationBlock(q, chosen, hl) {
+  function explanationBlock(q, chosen, marks) {
     const ok = sameSet(chosen, q.answer);
     const answered = chosen.length > 0;
     const head = !answered ? 'Not answered' : ok ? 'Correct' : 'Incorrect';
     return `<div class="explain ${answered ? (ok ? 'good' : 'bad') : ''}">
       <h4>${head} — answer: ${q.answer.map(a => LETTERS[a]).join(', ')}</h4>
-      <p${hl ? ' data-hl="x"' : ''}>${hl ? hlText(q.explanation, hl.x) : esc(q.explanation)}</p>
+      <p${marks ? ' data-hl="x"' : ''}>${marks ? markText(q.explanation, marks, 'x') : esc(q.explanation)}</p>
       ${q.source ? `<a class="source" href="${esc(q.source)}" target="_blank" rel="noopener noreferrer">Source: AWS documentation ↗</a>` : ''}
     </div>`;
   }
@@ -688,6 +688,7 @@
 
   // ---------- Books (one per topic, one question per page) ----------
   const bookPages = key => bank.questions.filter(q => q.topic === key); // file order = page order
+  const hasNotes = e => !!((e.note && e.note.trim()) || (e.tn && Object.keys(e.tn).length));
   function bookStats(key) {
     const pages = bookPages(key);
     const s = { total: pages.length, done: 0, ok: 0, later: 0, notes: 0, firstOpen: -1 };
@@ -695,7 +696,7 @@
       const e = bookEntry(q.id);
       if (e.done) { s.done++; if (e.ok) s.ok++; } else if (s.firstOpen < 0) s.firstOpen = i;
       if (e.later) s.later++;
-      if (e.note && e.note.trim()) s.notes++;
+      if (hasNotes(e)) s.notes++;
     });
     return s;
   }
@@ -743,7 +744,7 @@
     if (f === 'open') return !e.done;
     if (f === 'wrong') return e.done && !e.ok;
     if (f === 'later') return !!e.later;
-    if (f === 'notes') return !!(e.note && e.note.trim());
+    if (f === 'notes') return hasNotes(e);
     return true;
   }
 
@@ -769,7 +770,7 @@
     const s = bookStats(key);
     const bookmarked = store.bookmarks.includes(q.id);
     const shown = pages.map((p, k) => [p, k]).filter(([p]) => pageMatches(p, bookFilter));
-    const hl = e.hl || {};
+    const marks = { hl: e.hl || {}, tn: e.tn || {} };
 
     app().innerHTML = `
       <div class="book-head">
@@ -791,10 +792,10 @@
               <button class="btn sm ${e.later ? 'later-on' : 'ghost'}" data-action="toggle-later" title="Mark to solve later (M)">${e.later ? '⚑ Solve later' : '⚐ Solve later'}</button>
               <button class="icon-btn ${bookmarked ? 'on' : ''}" data-action="book-star" title="Bookmark (S)" aria-label="Bookmark">★</button>
             </div>
-            <div class="qtext" data-hl="q">${hlText(q.question, hl.q)}</div>
+            <div class="qtext" data-hl="q">${markText(q.question, marks, 'q')}</div>
             ${q.type === 'multi' ? `<div class="qhint">Multiple response — choose ${need}.${e.done ? '' : ` Selected ${chosen.length}/${need}.`}</div>` : ''}
-            ${renderOptions(q, chosen, !!e.done, !e.done, hl)}
-            ${e.done ? explanationBlock(q, chosen, hl) : ''}
+            ${renderOptions(q, chosen, !!e.done, !e.done, marks)}
+            ${e.done ? explanationBlock(q, chosen, marks) : ''}
             <div class="qactions">
               <button class="btn" data-action="page-prev" ${i === 0 ? 'disabled' : ''}>← Previous page</button>
               <span class="spacer"></span>
@@ -814,7 +815,7 @@
             </div>
             <textarea id="pageNote" data-qid="${q.id}" rows="4" spellcheck="false" placeholder="e.g. Regional NAT gateway has its own route table to the IGW, so the VPC needs no public subnet">${esc(e.note || '')}</textarea>
           </section>
-          <div class="kbd-hint"><kbd>1</kbd>–<kbd>6</kbd> or <kbd>A</kbd>–<kbd>F</kbd> select · <kbd>Enter</kbd> check / next page · <kbd>←</kbd> <kbd>→</kbd> turn pages · <kbd>M</kbd> solve later · <kbd>S</kbd> star · <kbd>N</kbd> write a note · drag over text to highlight, double-click a highlight to remove it</div>
+          <div class="kbd-hint"><kbd>1</kbd>–<kbd>6</kbd> or <kbd>A</kbd>–<kbd>F</kbd> select · <kbd>Enter</kbd> check / next page · <kbd>←</kbd> <kbd>→</kbd> turn pages · <kbd>M</kbd> solve later · <kbd>S</kbd> star · <kbd>N</kbd> write a note · drag over text to highlight it or take a note · hover a blue note to read it · double-click a highlight or note to remove it</div>
         </div>
 
         <aside class="navigator"><div class="card">
@@ -828,7 +829,7 @@
             let cls = 'nav-cell';
             if (pe.done) cls += pe.ok ? ' correct' : ' wrong';
             if (pe.later) cls += ' flagged';
-            if (pe.note && pe.note.trim()) cls += ' noted';
+            if (hasNotes(pe)) cls += ' noted';
             if (k === i) cls += ' current';
             return `<a class="${cls}" href="#/book/${key}/${k + 1}" title="Page ${k + 1}">${k + 1}</a>`;
           }).join('')}</div>` : `<p class="muted small" style="margin-top:12px">No pages match this filter.</p>`}
@@ -888,20 +889,23 @@
     toast('None left');
   }
 
-  // ---------- Highlights (book pages) ----------
-  // Stored on the book entry as { q: [[start, end], ...], o0: [...], x: [...] }: character ranges
-  // in the question, each option and the explanation, kept sorted and non-overlapping.
-  function hlText(text, ranges) {
-    let html = '', pos = 0;
-    (ranges || []).forEach(([s, e]) => {
-      s = Math.max(s, pos);
-      e = Math.min(e, text.length);
-      if (e <= s) return;
-      html += esc(text.slice(pos, s)) + `<mark class="hl">${esc(text.slice(s, e))}</mark>`;
-      pos = e;
-    });
-    return html + esc(text.slice(pos));
+  // ---------- Highlights and text notes (book pages) ----------
+  // Stored on the book entry as hl: { q: [[start, end], ...], o0: [...], x: [...] } and
+  // tn: { q: [[start, end, text], ...], ... }: character ranges in the question, each option and the
+  // explanation, each kind kept sorted and non-overlapping. A highlight and a note may overlap.
+  function hlText(text, ranges, notes) {
+    ranges = ranges || [];
+    notes = notes || [];
+    const cuts = [...new Set([0, text.length, ...[...ranges, ...notes].flatMap(([s, e]) => [s, e]).map(n => Math.min(n, text.length))])].sort((a, b) => a - b);
+    let html = '';
+    for (let k = 1; k < cuts.length; k++) {
+      const s = cuts[k - 1], e = cuts[k];
+      const cls = [ranges.some(([a, b]) => a <= s && e <= b) && 'hl', notes.some(([a, b]) => a <= s && e <= b) && 'tn'].filter(Boolean).join(' ');
+      html += cls ? `<mark class="${cls}">${esc(text.slice(s, e))}</mark>` : esc(text.slice(s, e));
+    }
+    return html;
   }
+  const markText = (text, marks, part) => hlText(text, marks.hl[part], marks.tn[part]);
   function hlAdd(list, s, e) {
     const out = [];
     [...list, [s, e]].sort((x, y) => x[0] - y[0]).forEach(([a, b]) => {
@@ -974,26 +978,172 @@
     else selectParts(parts);
   }
 
-  // The range one <mark> covers, for removing it
-  function markParts(mark) {
+  // Notes overlapping the given parts are replaced; an empty text only removes them
+  function saveTextNotes(parts, text) {
+    const c = bookCtx();
+    if (!c || !parts.length) return;
+    const before = bookEntry(c.q.id).tn || {};
+    const tn = { ...before };
+    parts.forEach(({ part, s, e }) => {
+      const list = (tn[part] || []).filter(([a, b]) => b <= s || a >= e);
+      if (text) list.push([s, e, text]);
+      tn[part] = list.sort((x, y) => x[0] - y[0]);
+      if (!tn[part].length) delete tn[part];
+    });
+    if (JSON.stringify(tn) === JSON.stringify(before)) return;
+    saveBook(c.q.id, { tn });
+    hideNoteTip();
+    rerender();
+  }
+  const notesOver = parts => {
+    const tn = bookEntry(bookCtx().q.id).tn || {};
+    return parts.flatMap(({ part, s, e }) => (tn[part] || []).filter(([a, b]) => a < e && b > s));
+  };
+
+  // Where one <mark> starts: its part and character offset
+  function markAt(mark) {
     const el = mark.closest('[data-hl]');
     const x = document.createRange();
     x.setStart(el, 0);
     x.setEndBefore(mark);
-    const s = x.toString().length;
-    return [{ part: el.dataset.hl, s, e: s + mark.textContent.length }];
+    return { part: el.dataset.hl, s: x.toString().length };
+  }
+  const noteAt = mark => {
+    const { part, s } = markAt(mark);
+    return ((bookEntry(bookCtx().q.id).tn || {})[part] || []).find(([a, b]) => a <= s && s < b);
+  };
+
+  // Double-click removes a note first (with its pieces in the other parts of the same selection), else a highlight
+  function removeMark(mark) {
+    const { part, s } = markAt(mark);
+    const e = bookEntry(bookCtx().q.id);
+    if (mark.classList.contains('tn')) {
+      const note = noteAt(mark);
+      if (!note) return;
+      const parts = [];
+      Object.entries(e.tn || {}).forEach(([p, list]) => list.forEach(([a, b, text]) => { if (text === note[2]) parts.push({ part: p, s: a, e: b }); }));
+      return saveTextNotes(parts, '');
+    }
+    const range = ((e.hl || {})[part] || []).find(([a, b]) => a <= s && s < b);
+    if (range) saveHighlights([{ part, s: range[0], e: range[1] }], true);
   }
 
-  // Releasing a drag over text highlights it; double-clicking a highlight removes it (see the click handler).
+  // Releasing a drag over text opens a small menu: highlight it, or take a note on it.
   // On touch screens the selection is made by long-press and handles, so a lift with text selected counts.
-  document.addEventListener('mouseup', e => {
-    if (e.button === 0 && dragged(e)) saveHighlights(selectionParts(), false);
+  const floating = cls => {
+    const el = document.createElement('div');
+    el.className = cls;
+    el.hidden = true;
+    document.body.appendChild(el);
+    return el;
+  };
+  const selPop = floating('sel-pop'), noteTip = floating('note-tip');
+  let selState = null; // { parts, at } with the anchor in page coordinates
+
+  const pageRect = r => ({ x: r.left + r.width / 2 + scrollX, top: r.top + scrollY, bottom: r.bottom + scrollY });
+  // Centres a floating box on the anchor, below it (or above when there's no room), inside the viewport
+  function place(box, at, below) {
+    box.style.left = box.style.top = '0px';
+    const w = box.offsetWidth, h = box.offsetHeight;
+    if (below && at.bottom + 8 + h > scrollY + innerHeight && at.top - 8 - h >= scrollY) below = false;
+    if (!below && at.top - 8 - h < scrollY) below = true;
+    box.style.left = Math.max(scrollX + 8, Math.min(at.x - w / 2, scrollX + document.documentElement.clientWidth - w - 8)) + 'px';
+    box.style.top = (below ? at.bottom + 8 : at.top - 8 - h) + 'px';
+  }
+
+  function openSelMenu() {
+    const parts = selectionParts();
+    if (!parts.length) return;
+    const range = getSelection().getRangeAt(0);
+    const rects = [...range.getClientRects()].filter(r => r.width);
+    selState = { parts, at: pageRect(rects[rects.length - 1] || range.getBoundingClientRect()) };
+    selPop.className = 'sel-pop';
+    selPop.innerHTML = `<button data-sel="hl"><i class="sw hl"></i>Highlight</button><button data-sel="note"><i class="sw tn"></i>Take note</button>`;
+    selPop.hidden = false;
+    place(selPop, selState.at, true);
+  }
+  function openNoteEditor() {
+    const old = notesOver(selState.parts)[0];
+    selPop.className = 'sel-pop editing';
+    selPop.innerHTML = `<div class="sel-quote">${esc(selectedText(selState.parts))}</div>
+      <textarea rows="3" maxlength="2000" spellcheck="false" placeholder="Your note on this text">${esc(old ? old[2] : '')}</textarea>
+      <div class="row"><span class="muted small">Enter to save</span><span class="spacer"></span>
+        <button class="btn sm ghost" data-sel="cancel">Cancel</button><button class="btn sm primary" data-sel="save">Save note</button></div>`;
+    place(selPop, selState.at, true);
+    getSelection().removeAllRanges();
+    const ta = selPop.querySelector('textarea');
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+  }
+  function selectedText(parts) {
+    const q = bookCtx().q;
+    const source = p => (p === 'q' ? q.question : p === 'x' ? q.explanation : q.options[Number(p.slice(1))]) || '';
+    const t = parts.map(({ part, s, e }) => source(part).slice(s, e)).join(' … ');
+    return t.length > 160 ? t.slice(0, 157) + '…' : t;
+  }
+  function closeSelPop() {
+    selPop.hidden = true;
+    selPop.innerHTML = '';
+    selState = null;
+  }
+
+  selPop.addEventListener('mousedown', e => { if (!e.target.closest('textarea')) e.preventDefault(); }); // keeps the text selected
+  selPop.addEventListener('click', e => {
+    e.stopPropagation();
+    const b = e.target.closest('[data-sel]');
+    const st = selState;
+    if (!b || !st || !bookCtx()) return;
+    if (b.dataset.sel === 'note') return openNoteEditor();
+    const text = b.dataset.sel === 'save' ? selPop.querySelector('textarea').value.trim() : '';
+    closeSelPop();
+    if (b.dataset.sel === 'hl') saveHighlights(st.parts, false);
+    if (b.dataset.sel === 'save') saveTextNotes(st.parts, text);
   });
-  document.addEventListener('touchend', () => setTimeout(() => saveHighlights(selectionParts(), false), 60));
+  selPop.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.stopPropagation(); return closeSelPop(); }
+    if (e.key === 'Enter' && !e.shiftKey && e.target.matches('textarea')) { e.preventDefault(); selPop.querySelector('[data-sel="save"]').click(); }
+  });
+  document.addEventListener('mousedown', e => { if (!selPop.hidden && !selPop.contains(e.target)) closeSelPop(); });
+  document.addEventListener('touchstart', e => { if (!selPop.hidden && !selPop.contains(e.target)) closeSelPop(); }, { passive: true });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !selPop.hidden) closeSelPop(); });
+  window.addEventListener('hashchange', () => { closeSelPop(); hideNoteTip(); });
+  document.addEventListener('mouseup', e => {
+    if (e.button === 0 && dragged(e) && !selPop.contains(e.target)) openSelMenu();
+  });
+  // A tap away from a selection that already had its menu (or was just highlighted) doesn't bring it back
+  let touchKey = '';
+  document.addEventListener('selectionchange', () => { if (getSelection().isCollapsed) touchKey = ''; });
+  document.addEventListener('touchend', e => {
+    if (selPop.contains(e.target)) return;
+    setTimeout(() => {
+      const key = JSON.stringify(selectionParts());
+      if (selPop.hidden && key !== touchKey) { touchKey = key; openSelMenu(); }
+    }, 60);
+  });
+
+  // Hovering (or tapping) a note shows its text above it
+  function showNoteTip(mark) {
+    const note = noteAt(mark);
+    if (!note) return hideNoteTip();
+    noteTip.textContent = note[2];
+    noteTip.hidden = false;
+    place(noteTip, pageRect(mark.getBoundingClientRect()), false);
+  }
+  function hideNoteTip() { noteTip.hidden = true; }
+  document.addEventListener('mouseover', e => {
+    const mark = e.target.closest && e.target.closest('mark.tn');
+    if (mark && mark.closest('[data-hl]') && bookCtx()) showNoteTip(mark);
+    else if (!noteTip.hidden) hideNoteTip();
+  });
 
   function viewNotes() {
     setActiveNav('notes');
-    const items = bank.questions.filter(q => (bookEntry(q.id).note || '').trim());
+    // A page counts if it has a written note or notes taken on its text (shown as quote — note)
+    const textNotes = (q, e) => Object.entries(e.tn || {}).flatMap(([part, list]) => {
+      const src = part === 'q' ? q.question : part === 'x' ? q.explanation : q.options[Number(part.slice(1))];
+      return src ? list.map(([s, end, text]) => ({ quote: src.slice(s, end), text })) : [];
+    });
+    const items = bank.questions.filter(q => hasNotes(bookEntry(q.id)));
     const byTopic = {};
     items.forEach(q => (byTopic[q.topic] = byTopic[q.topic] || []).push(q));
     const index = q => bookPages(q.topic).indexOf(q);
@@ -1007,11 +1157,12 @@
             const e = bookEntry(q.id);
             return `<a class="card clickable note-item" href="#/book/${t.key}/${index(q) + 1}">
               <div class="muted small">Page ${index(q) + 1}${q.subtopic && e.done ? ` · ${esc(q.subtopic)}` : ''}${e.done ? (e.ok ? ' · ✓ correct' : ' · ✗ incorrect') : ' · not solved yet'}${e.later ? ' · ⚑ solve later' : ''}</div>
-              <div class="note-text">${esc(e.note)}</div>
+              ${(e.note || '').trim() ? `<div class="note-text">${esc(e.note)}</div>` : ''}
+              ${textNotes(q, e).map(n => `<div class="note-text"><mark class="tn">${esc(n.quote)}</mark> — ${esc(n.text)}</div>`).join('')}
               <div class="stem muted small">${esc(q.question)}</div>
             </a>`;
           }).join('')}
-        </div>`).join('') : `<div class="empty">No notes yet. Open any book and write in "My notes" under a page.</div>`}`;
+        </div>`).join('') : `<div class="empty">No notes yet. Open any book and write in "My notes" under a page, or select text on a page and choose "Take note".</div>`}`;
   }
 
   function filterChips(name, options, current) {
@@ -1480,14 +1631,14 @@
 
     const opt = e.target.closest('[data-opt]:not([aria-disabled])');
     if (opt && dragged(e)) return; // the pointer moved: that was a text selection, not a pick
-    // Double-click on a highlight removes it. Handled on the second click rather than "dblclick",
+    // Double-click on a highlight or a note removes it. Handled on the second click rather than "dblclick",
     // because the first click on an option re-renders the page and the browser then never fires
     // dblclick; that first click's pick is undone.
-    const mark = e.target.closest('mark.hl');
+    const mark = e.target.closest('mark.hl, mark.tn');
     if (mark && e.detail === 2 && mark.closest('[data-hl]') && bookCtx()) {
       const p = preClickDraft;
       if (opt && p && p.id === bookDraft.id && p.opt === opt.dataset.opt && e.timeStamp - p.t < 800) bookDraft = { id: p.id, choice: p.choice };
-      return saveHighlights(markParts(mark), true);
+      return removeMark(mark);
     }
     if (opt && e.detail === 1) preClickDraft = { id: bookDraft.id, choice: bookDraft.choice.slice(), opt: opt.dataset.opt, t: e.timeStamp };
     if (opt && store.session && location.hash === '#/quiz') return selectOption(Number(opt.dataset.opt));

@@ -35,6 +35,21 @@ function cleanHighlights(v) {
   return out;
 }
 
+// Text notes on a book page: { part: [[start, end, text], ...] }, parts and offsets as for highlights.
+function cleanTextNotes(v) {
+  const out = {};
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  for (const [part, list] of Object.entries(v)) {
+    if (!/^(q|x|o[0-7])$/.test(part) || !Array.isArray(list)) continue;
+    const notes = list
+      .filter(r => Array.isArray(r) && r.length === 3 && Number.isInteger(r[0]) && Number.isInteger(r[1]) && r[0] >= 0 && r[0] < r[1] && r[1] <= 20000 && typeof r[2] === 'string' && r[2].trim())
+      .map(([s, e, text]) => [s, e, text.slice(0, 2000)])
+      .slice(0, 100);
+    if (notes.length) out[part] = notes;
+  }
+  return out;
+}
+
 // Returns the cleaned item (only known fields) or null when the body is unusable.
 export function cleanItem(kind, body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null;
@@ -48,6 +63,7 @@ export function cleanItem(kind, body) {
       later: body.later === true,
       note: typeof body.note === 'string' ? body.note.slice(0, 20000) : '',
       hl: cleanHighlights(body.hl),
+      tn: cleanTextNotes(body.tn),
       at,
     };
   }
