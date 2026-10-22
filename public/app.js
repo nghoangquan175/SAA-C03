@@ -1107,8 +1107,10 @@
   document.addEventListener('touchstart', e => { if (!selPop.hidden && !selPop.contains(e.target)) closeSelPop(); }, { passive: true });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !selPop.hidden) closeSelPop(); });
   window.addEventListener('hashchange', () => { closeSelPop(); hideNoteTip(); });
+  // A double-click (word) or triple-click (paragraph) selection counts too, except on a mark: that removes it
   document.addEventListener('mouseup', e => {
-    if (e.button === 0 && dragged(e) && !selPop.contains(e.target)) openSelMenu();
+    if (e.button !== 0 || selPop.contains(e.target)) return;
+    if (dragged(e) || (e.detail >= 2 && !e.target.closest('mark.hl, mark.tn'))) openSelMenu();
   });
   // A tap away from a selection that already had its menu (or was just highlighted) doesn't bring it back
   let touchKey = '';
@@ -1639,6 +1641,16 @@
       const p = preClickDraft;
       if (opt && p && p.id === bookDraft.id && p.opt === opt.dataset.opt && e.timeStamp - p.t < 800) bookDraft = { id: p.id, choice: p.choice };
       return removeMark(mark);
+    }
+    // Double-clicking a word in an option selects it for the menu: undo the first click's pick
+    if (opt && e.detail >= 2 && !selPop.hidden && selState && bookCtx()) {
+      const p = preClickDraft;
+      if (p && p.id === bookDraft.id && p.opt === opt.dataset.opt && e.timeStamp - p.t < 800) {
+        bookDraft = { id: p.id, choice: p.choice };
+        rerender();
+        selectParts(selState.parts);
+      }
+      return;
     }
     if (opt && e.detail === 1) preClickDraft = { id: bookDraft.id, choice: bookDraft.choice.slice(), opt: opt.dataset.opt, t: e.timeStamp };
     if (opt && store.session && location.hash === '#/quiz') return selectOption(Number(opt.dataset.opt));
