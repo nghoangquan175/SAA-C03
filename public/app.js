@@ -748,11 +748,61 @@
     return true;
   }
 
-  // Tag filters in Contents: the page's domain and a search over its subtopic; reset when another book opens
-  let bookTags = { key: null, domain: 'all', text: '' };
+  // Tag filters in Contents: the page's domain and a search over its subtopic; reset when another book opens.
+  // They sit with the status filter in one collapsible "Filters" box; active is the highlighted topic suggestion (arrow keys).
+  let bookTags = { key: null, domain: 'all', text: '', open: false, active: -1 };
   function tagMatches(q, domain = bookTags.domain, text = bookTags.text) {
     const t = text.trim().toLowerCase();
     return (domain === 'all' || q.domain === domain) && (!t || (q.subtopic || '').toLowerCase().includes(t));
+  }
+
+  const ICON_SEARCH = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5 14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  const TAG_DOMAIN = { secure: 'Secure', resilient: 'Resilient', performance: 'Performance', cost: 'Cost' }; // fit the narrow Contents panel
+  // Topic suggestions for the typed text, with how many pages (under the other filters) each one has
+  function topicSuggestions(pages, subtopics) {
+    const t = bookTags.text.trim().toLowerCase();
+    return subtopics
+      .filter(name => !t || name.toLowerCase().includes(t))
+      .map(name => [name, pages.filter(p => p.subtopic === name && pageMatches(p, bookFilter) && tagMatches(p, bookTags.domain, '')).length]);
+  }
+  function tagPanel(pages, subtopics, matched) {
+    const domains = DKEYS.filter(d => pages.some(p => p.domain === d));
+    const text = bookTags.text.trim();
+    const pills = [
+      bookFilter !== 'all' && `<span class="tag-pill">${esc(BOOK_FILTERS.find(([k]) => k === bookFilter)[1])}</span>`,
+      bookTags.domain !== 'all' && `<span class="tag-pill dom ${bookTags.domain}">${esc(TAG_DOMAIN[bookTags.domain])}</span>`,
+      text && `<span class="tag-pill">${esc(text)}</span>`,
+    ].filter(Boolean).join('');
+    const sugg = topicSuggestions(pages, subtopics);
+    return `<div class="tag-box ${bookTags.open ? 'open' : ''}">
+      <button class="tag-head" data-action="book-tags-toggle" aria-expanded="${bookTags.open}">
+        <span class="tag-title">Filters</span>${pills ? `<span class="tag-pills">${pills}</span>` : `<span class="tag-none">All pages</span>`}
+        <span class="tag-caret" aria-hidden="true">▾</span>
+      </button>
+      ${bookTags.open ? `<div class="tag-body">
+        <div class="tag-label">Status</div>
+        <div class="tag-status">${BOOK_FILTERS.map(([k, l]) => {
+          const c = pages.filter(p => pageMatches(p, k) && tagMatches(p)).length;
+          return `<button class="stat-opt ${bookFilter === k ? 'on' : ''}" data-action="book-filter" data-key="${k}" aria-pressed="${bookFilter === k}">${l}<em>${c}</em></button>`;
+        }).join('')}</div>
+        <div class="tag-label">Domain</div>
+        <div class="tag-domains">${domains.map(d => {
+          const c = pages.filter(p => pageMatches(p, bookFilter) && tagMatches(p, d)).length;
+          return `<button class="dom-opt ${d} ${bookTags.domain === d ? 'on' : ''}" data-action="book-domain" data-key="${d}" aria-pressed="${bookTags.domain === d}"><i></i>${esc(TAG_DOMAIN[d])}<em>${c}</em></button>`;
+        }).join('')}</div>
+        <div class="tag-label">Topic</div>
+        <div class="topic-combo">
+          <div class="topic-field">${ICON_SEARCH}
+            <input type="text" id="tocSearch" autocomplete="off" spellcheck="false" placeholder="Search topics, e.g. S3" value="${esc(bookTags.text)}" aria-label="Filter pages by topic" role="combobox" aria-controls="tocTopics">
+            ${bookTags.text ? `<button class="topic-clear" data-action="book-topic-clear" title="Clear topic" aria-label="Clear topic">×</button>` : ''}
+          </div>
+          <div class="topic-list" id="tocTopics" role="listbox">${sugg.length ? sugg.map(([name, c], k) =>
+            `<div class="topic-opt ${k === bookTags.active ? 'active' : ''} ${name === bookTags.text ? 'on' : ''}" role="option" data-topic="${esc(name)}"><span>${esc(name)}</span><em>${c}</em></div>`).join('')
+            : `<div class="topic-empty">No topic matches</div>`}</div>
+        </div>
+        ${bookFilter !== 'all' || bookTags.domain !== 'all' || text ? `<div class="tag-foot"><span>${matched} page${matched === 1 ? '' : 's'} match</span><button class="link-btn" data-action="book-tags-clear">Clear all</button></div>` : ''}
+      </div>` : ''}
+    </div>`;
   }
 
   function viewBook(key, pageArg) {
@@ -776,7 +826,7 @@
     const need = requiredCount(q);
     const s = bookStats(key);
     const bookmarked = store.bookmarks.includes(q.id);
-    if (bookTags.key !== key) bookTags = { key, domain: 'all', text: '' };
+    if (bookTags.key !== key) bookTags = { key, domain: 'all', text: '', open: false, active: -1 };
     const shown = pages.map((p, k) => [p, k]).filter(([p]) => pageMatches(p, bookFilter) && tagMatches(p));
     const subtopics = [...new Set(pages.map(p => p.subtopic).filter(Boolean))].sort((a, b) => a.localeCompare(b));
     const marks = { hl: e.hl || {}, tn: e.tn || {} };
@@ -829,22 +879,7 @@
 
         <aside class="navigator"><div class="card">
           <div class="row" style="justify-content:space-between"><b>Contents</b><span class="muted small">${s.done}/${s.total} done</span></div>
-          <div class="toc-filters">${BOOK_FILTERS.map(([k, l]) => {
-            const c = pages.filter(p => pageMatches(p, k) && tagMatches(p)).length;
-            return `<button class="select-chip sm ${bookFilter === k ? 'on' : ''}" data-action="book-filter" data-key="${k}">${l} (${c})</button>`;
-          }).join('')}</div>
-          <div class="toc-label muted small">Domain</div>
-          <div class="toc-filters tight">${[['all', 'All'], ...DKEYS.filter(d => pages.some(p => p.domain === d)).map(d => [d, DOMAINS[d].short])].map(([d, l]) => {
-            const c = pages.filter(p => pageMatches(p, bookFilter) && tagMatches(p, d)).length;
-            return `<button class="select-chip sm ${d !== 'all' ? 'dom ' + d : ''} ${bookTags.domain === d ? 'on' : ''}" data-action="book-domain" data-key="${d}">${esc(l)} (${c})</button>`;
-          }).join('')}</div>
-          <div class="toc-label muted small">Topic</div>
-          <div class="toc-search">
-            <input type="text" id="tocSearch" list="tocTopics" autocomplete="off" spellcheck="false" placeholder="e.g. S3, IAM roles, placement" value="${esc(bookTags.text)}" aria-label="Filter pages by topic">
-            ${bookTags.text ? `<button class="icon-btn sm" data-action="book-topic-clear" title="Clear topic" aria-label="Clear topic">×</button>` : ''}
-          </div>
-          <datalist id="tocTopics">${subtopics.map(t => `<option value="${esc(t)}"></option>`).join('')}</datalist>
-          ${bookTags.domain !== 'all' || bookTags.text.trim() ? `<div class="muted small toc-match">${shown.length} page${shown.length === 1 ? '' : 's'} match · <a href="#" data-action="book-tags-clear">clear tags</a></div>` : ''}
+          ${tagPanel(pages, subtopics, shown.length)}
           ${shown.length ? `<div class="nav-grid">${shown.map(([p, k]) => {
             const pe = bookEntry(p.id);
             let cls = 'nav-cell';
@@ -1739,9 +1774,10 @@
       }
       case 'book-star': { const c = bookCtx(); if (c) { toggleBookmark(c.q.id); rerender(); } return; }
       case 'book-filter': bookFilter = el.dataset.key; return rerender();
-      case 'book-domain': bookTags.domain = el.dataset.key; return rerender();
-      case 'book-topic-clear': bookTags.text = ''; rerender(); return $('#tocSearch').focus();
-      case 'book-tags-clear': e.preventDefault(); bookTags.domain = 'all'; bookTags.text = ''; return rerender();
+      case 'book-tags-toggle': bookTags.open = !bookTags.open; return rerender();
+      case 'book-domain': bookTags.domain = bookTags.domain === el.dataset.key ? 'all' : el.dataset.key; return rerender(); // clicking the chosen one again clears it
+      case 'book-topic-clear': bookTags.text = ''; bookTags.active = -1; rerender(); return $('#tocSearch').focus();
+      case 'book-tags-clear': bookFilter = 'all'; bookTags.domain = 'all'; bookTags.text = ''; bookTags.active = -1; return rerender();
       case 'next-open': return bookJump(p => !bookEntry(p.id).done);
       case 'next-later': return bookJump(p => !!bookEntry(p.id).later);
       case 'history-page': historyPage = Number(el.dataset.page); return route();
@@ -1822,15 +1858,52 @@
   });
 
   // Notes autosave: local immediately, cloud after a short pause in typing
-  // Typing in the topic box filters Contents as you type; focus and caret survive the redraw
-  document.addEventListener('input', e => {
-    if (e.target.id !== 'tocSearch') return;
-    const pos = e.target.selectionStart;
-    bookTags.text = e.target.value.slice(0, 80);
+  // Typing in the topic box filters Contents as you type; focus and caret survive the redraw.
+  // The suggestion list shows while the box has focus (CSS); arrows move through it, Enter picks, Esc closes.
+  function redrawTopic(pos) {
     rerender();
     const box = $('#tocSearch');
+    if (!box) return;
     box.focus();
     box.setSelectionRange(pos, pos);
+    const act = $('.topic-opt.active');
+    if (act) act.scrollIntoView({ block: 'nearest' });
+  }
+  function pickTopic(name) {
+    bookTags.text = name;
+    bookTags.active = -1;
+    if (document.activeElement) document.activeElement.blur();
+    rerender();
+  }
+  document.addEventListener('input', e => {
+    if (e.target.id !== 'tocSearch') return;
+    bookTags.text = e.target.value.slice(0, 80);
+    bookTags.active = -1;
+    redrawTopic(e.target.selectionStart);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.target.id !== 'tocSearch') return;
+    const n = document.querySelectorAll('.topic-opt').length;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!n) return;
+      bookTags.active = e.key === 'ArrowDown' ? (bookTags.active + 1) % n : (bookTags.active - 1 + n) % n;
+      redrawTopic(e.target.selectionStart);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const opt = document.querySelectorAll('.topic-opt')[bookTags.active];
+      if (opt) pickTopic(opt.dataset.topic);
+      else e.target.blur();
+    } else if (e.key === 'Escape') {
+      bookTags.active = -1;
+      e.target.blur();
+    }
+  });
+  // mousedown would blur the box and hide the list before the click lands
+  document.addEventListener('mousedown', e => { if (e.target.closest('.topic-list')) e.preventDefault(); });
+  document.addEventListener('click', e => {
+    const opt = e.target.closest('.topic-opt');
+    if (opt) pickTopic(opt.dataset.topic);
   });
   document.addEventListener('input', e => {
     if (e.target.id !== 'pageNote') return;
