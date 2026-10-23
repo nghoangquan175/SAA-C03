@@ -575,6 +575,7 @@
   function setActiveNav(name) {
     document.querySelectorAll('.sidebar a').forEach(a => a.classList.toggle('active', a.dataset.nav === name));
     $('#sidebar').classList.remove('open');
+    if (matchMedia('(max-width: 820px)').matches) $('#menuBtn').setAttribute('aria-expanded', 'false');
   }
 
   // Only the dashboard makes Resume its primary action; other pages keep their own primary
@@ -1952,7 +1953,26 @@
     }
   });
 
-  $('#menuBtn').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
+  // ☰ slides the sidebar over the page on phones; on tablet/desktop it collapses it and remembers that
+  const SIDEBAR_KEY = 'saa-sidebar-collapsed';
+  const isPhone = () => matchMedia('(max-width: 820px)').matches;
+  const syncMenuBtn = () => $('#menuBtn').setAttribute('aria-expanded', String(isPhone()
+    ? $('#sidebar').classList.contains('open')
+    : !document.body.classList.contains('sidebar-collapsed')));
+  try { document.body.classList.toggle('sidebar-collapsed', localStorage.getItem(SIDEBAR_KEY) === '1'); } catch (_) { /* ignore */ }
+  $('#menuBtn').setAttribute('aria-controls', 'sidebar');
+  syncMenuBtn();
+  $('#menuBtn').addEventListener('click', () => {
+    if (isPhone()) {
+      $('#sidebar').classList.toggle('open');
+    } else {
+      document.body.classList.add('sidebar-anim');
+      const collapsed = document.body.classList.toggle('sidebar-collapsed');
+      try { localStorage.setItem(SIDEBAR_KEY, collapsed ? '1' : '0'); } catch (_) { /* ignore */ }
+    }
+    syncMenuBtn();
+  });
+  matchMedia('(max-width: 820px)').addEventListener('change', syncMenuBtn);
   window.addEventListener('hashchange', route);
   window.addEventListener('beforeunload', saveStore);
 
