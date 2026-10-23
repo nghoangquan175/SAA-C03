@@ -1124,7 +1124,7 @@
     selPop.className = 'sel-pop editing';
     selPop.innerHTML = `<div class="sel-quote">${esc(selectedText(selState.parts))}</div>
       <textarea rows="3" maxlength="2000" spellcheck="false" placeholder="Your note on this text">${esc(old ? old[2] : '')}</textarea>
-      <div class="row"><span class="muted small">Enter to save</span><span class="spacer"></span>
+      <div class="row"><span class="muted small">${/Mac|iP(hone|ad)/.test(navigator.platform) ? '⌘' : 'Ctrl'}+Enter to save</span><span class="spacer"></span>
         <button class="btn sm ghost" data-sel="cancel">Cancel</button><button class="btn sm primary" data-sel="save">Save note</button></div>`;
     place(selPop, selState.at, true);
     getSelection().removeAllRanges();
@@ -1158,7 +1158,8 @@
   });
   selPop.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.stopPropagation(); return closeSelPop(); }
-    if (e.key === 'Enter' && !e.shiftKey && e.target.matches('textarea')) { e.preventDefault(); selPop.querySelector('[data-sel="save"]').click(); }
+    // Enter starts a new line; Ctrl/Cmd+Enter saves
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.matches('textarea')) { e.preventDefault(); selPop.querySelector('[data-sel="save"]').click(); }
   });
   document.addEventListener('mousedown', e => { if (!selPop.hidden && !selPop.contains(e.target)) closeSelPop(); });
   document.addEventListener('touchstart', e => { if (!selPop.hidden && !selPop.contains(e.target)) closeSelPop(); }, { passive: true });
