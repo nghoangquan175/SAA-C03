@@ -657,7 +657,7 @@ mark.tn { background: rgba(90, 169, 255, 0.34); color: inherit; border-radius: 3
 .sel-pop.editing { flex-direction: column; gap: 8px; padding: 10px; width: min(360px, calc(100vw - 16px)); }
 .sel-quote { color: var(--text-2); font-size: 13px; border-left: 3px solid var(--blue); padding-left: 8px; overflow-wrap: anywhere; }
 .sel-pop textarea {
-  width: 100%; resize: vertical; min-height: 64px; padding: 8px 10px; border-radius: var(--radius-sm);
+  width: 100%; resize: vertical; min-height: 64px; max-height: 50vh; padding: 8px 10px; border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong); background: var(--bg-2); color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.45;
 }
 .sel-pop textarea:focus { outline: none; border-color: var(--blue); }

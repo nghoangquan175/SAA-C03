@@ -900,6 +900,15 @@
           ${s.later ? `<button class="btn sm" style="margin-top:8px;width:100%" data-action="next-later">Next "solve later" page</button>` : ''}
         </div></aside>
       </div>`;
+    fitTextarea($('#pageNote'));
+  }
+
+  // Grows a note box to its text plus two empty lines, so it never needs scrolling to read
+  function fitTextarea(ta) {
+    if (!ta) return;
+    const line = parseFloat(getComputedStyle(ta).lineHeight) || 22;
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + (ta.offsetHeight - ta.clientHeight) + line * 2 + 'px';
   }
 
   function bookCtx() {
@@ -1129,6 +1138,8 @@
     place(selPop, selState.at, true);
     getSelection().removeAllRanges();
     const ta = selPop.querySelector('textarea');
+    fitTextarea(ta);
+    place(selPop, selState.at, true);
     ta.focus();
     ta.setSelectionRange(ta.value.length, ta.value.length);
   }
@@ -1156,6 +1167,8 @@
     if (b.dataset.sel === 'hl') saveHighlights(st.parts, false);
     if (b.dataset.sel === 'save') saveTextNotes(st.parts, text);
   });
+  selPop.addEventListener('input', e => { if (e.target.matches('textarea')) fitTextarea(e.target); });
+  window.addEventListener('resize', () => fitTextarea($('#pageNote')));
   selPop.addEventListener('keydown', e => {
     if (e.key === 'Escape') { e.stopPropagation(); return closeSelPop(); }
     // Enter starts a new line; Ctrl/Cmd+Enter saves
@@ -1909,6 +1922,7 @@
   });
   document.addEventListener('input', e => {
     if (e.target.id !== 'pageNote') return;
+    fitTextarea(e.target);
     saveBook(e.target.dataset.qid, { note: e.target.value.slice(0, 20000) }, 800);
     setCloud('syncing');
   });
