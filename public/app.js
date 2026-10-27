@@ -901,6 +901,30 @@
         </div></aside>
       </div>`;
     fitTextarea($('#pageNote'));
+    placeBookNav(key);
+  }
+
+  // Contents scroll: opening a book centres the current page; after that the panel keeps the reader's
+  // own scroll position through every redraw (picking a page, answering), only nudging the current
+  // page into view when it falls outside it (next/previous page, keyboard).
+  let bookNav = { key: null, top: 0 };
+  function placeBookNav(key) {
+    const grid = $('.navigator .nav-grid');
+    if (!grid) return;
+    const cell = grid.querySelector('.nav-cell.current');
+    if (bookNav.key === key) {
+      grid.scrollTop = bookNav.top;
+      if (cell) {
+        const g = grid.getBoundingClientRect(), c = cell.getBoundingClientRect();
+        if (c.top < g.top) grid.scrollTop -= g.top - c.top + 4;
+        else if (c.bottom > g.bottom) grid.scrollTop += c.bottom - g.bottom + 4;
+      }
+    } else if (cell) {
+      const g = grid.getBoundingClientRect(), c = cell.getBoundingClientRect();
+      grid.scrollTop += c.top - g.top - (grid.clientHeight - c.height) / 2;
+    }
+    bookNav = { key, top: grid.scrollTop };
+    grid.addEventListener('scroll', () => { bookNav.top = grid.scrollTop; }, { passive: true });
   }
 
   // Grows a note box to its text plus two empty lines, so it never needs scrolling to read
@@ -1643,6 +1667,7 @@
     const parts = location.hash.replace(/^#\/?/, '').split('/');
     const [page, arg] = parts;
     if (page !== route.lastPage) { listLimit = PAGE_SIZE; historyPage = 0; }
+    if (page !== 'book') bookNav.key = null; // coming back to a book counts as opening it again
     route.lastPage = page;
     switch (page) {
       case '': return viewHome();
