@@ -751,15 +751,18 @@
 
   // Tag filters in Contents: a search over the page's subtopic and a word search; reset when another book opens.
   // They sit with the status filter in one collapsible "Filters" box; active is the highlighted topic suggestion (arrow keys).
-  // words: free-text search over the question, its options and its domain name, so typing a domain ("cost",
-  // "resilient") also filters by domain. Every typed word must appear, each matched at the start of a word
+  // words: free-text search over the question, its options, its domain name (so typing a domain such as "cost"
+  // or "resilient" also filters by domain) and the reader's own notes on the page (page note + text notes). Every typed word must appear, each matched at the start of a word
   // ("replic" finds "replication", "IAM" does not find "diameter").
   let bookTags = { key: null, text: '', words: '', open: false, active: -1 };
   const wordText = {}; // question id -> lower-cased question, options and domain names
   function wordsMatch(q, words) {
     const terms = words.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (!terms.length) return true;
-    const hay = wordText[q.id] || (wordText[q.id] = [q.question, ...q.options, q.domain, DOMAINS[q.domain].short].join('\n').toLowerCase());
+    const fixed = wordText[q.id] || (wordText[q.id] = [q.question, ...q.options, q.domain, DOMAINS[q.domain].short].join('\n').toLowerCase());
+    const e = bookEntry(q.id); // notes change as you write, so they are read fresh rather than cached
+    const notes = [e.note || '', ...Object.values(e.tn || {}).flatMap(list => list.map(n => n[2] || ''))].join('\n').toLowerCase();
+    const hay = notes.trim() ? fixed + '\n' + notes : fixed;
     return terms.every(t => new RegExp('(^|[^a-z0-9])' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(hay));
   }
   function tagMatches(q, text = bookTags.text, words = bookTags.words) {
@@ -807,7 +810,7 @@
         </div>
         <div class="tag-label">Words</div>
         <div class="topic-field">${ICON_SEARCH}
-          <input type="text" id="tocWords" autocomplete="off" spellcheck="false" placeholder="Words or a domain, e.g. NAT gateway, cost" value="${esc(bookTags.words)}" aria-label="Filter pages by words in the question, its options or its domain">
+          <input type="text" id="tocWords" autocomplete="off" spellcheck="false" placeholder="Words, a domain or your notes, e.g. NAT gateway" value="${esc(bookTags.words)}" aria-label="Filter pages by words in the question, its options, its domain or your notes">
           ${bookTags.words ? `<button class="topic-clear" data-action="book-words-clear" title="Clear words" aria-label="Clear words">×</button>` : ''}
         </div>
         ${bookFilter !== 'all' || text || words ? `<div class="tag-foot"><span>${matched} page${matched === 1 ? '' : 's'} match</span><button class="link-btn" data-action="book-tags-clear">Clear all</button></div>` : ''}
