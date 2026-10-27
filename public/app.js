@@ -749,39 +749,37 @@
     return true;
   }
 
-  // Tag filters in Contents: the page's domain and a search over its subtopic; reset when another book opens.
+  // Tag filters in Contents: a search over the page's subtopic and a word search; reset when another book opens.
   // They sit with the status filter in one collapsible "Filters" box; active is the highlighted topic suggestion (arrow keys).
-  // words: free-text search over the question and its options; every typed word must appear, each
-  // matched at the start of a word ("replic" finds "replication", "IAM" does not find "diameter").
-  let bookTags = { key: null, domain: 'all', text: '', words: '', open: false, active: -1 };
-  const wordText = {}; // question id -> lower-cased question + options
+  // words: free-text search over the question, its options and its domain name, so typing a domain ("cost",
+  // "resilient") also filters by domain. Every typed word must appear, each matched at the start of a word
+  // ("replic" finds "replication", "IAM" does not find "diameter").
+  let bookTags = { key: null, text: '', words: '', open: false, active: -1 };
+  const wordText = {}; // question id -> lower-cased question, options and domain names
   function wordsMatch(q, words) {
     const terms = words.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (!terms.length) return true;
-    const hay = wordText[q.id] || (wordText[q.id] = [q.question, ...q.options].join('\n').toLowerCase());
+    const hay = wordText[q.id] || (wordText[q.id] = [q.question, ...q.options, q.domain, DOMAINS[q.domain].short].join('\n').toLowerCase());
     return terms.every(t => new RegExp('(^|[^a-z0-9])' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(hay));
   }
-  function tagMatches(q, domain = bookTags.domain, text = bookTags.text, words = bookTags.words) {
+  function tagMatches(q, text = bookTags.text, words = bookTags.words) {
     const t = text.trim().toLowerCase();
-    return (domain === 'all' || q.domain === domain) && (!t || (q.subtopic || '').toLowerCase().includes(t)) && wordsMatch(q, words);
+    return (!t || (q.subtopic || '').toLowerCase().includes(t)) && wordsMatch(q, words);
   }
 
   const ICON_SEARCH = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5 14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
-  const TAG_DOMAIN = { secure: 'Secure', resilient: 'Resilient', performance: 'Performance', cost: 'Cost' }; // fit the narrow Contents panel
   // Topic suggestions for the typed text, with how many pages (under the other filters) each one has
   function topicSuggestions(pages, subtopics) {
     const t = bookTags.text.trim().toLowerCase();
     return subtopics
       .filter(name => !t || name.toLowerCase().includes(t))
-      .map(name => [name, pages.filter(p => p.subtopic === name && pageMatches(p, bookFilter) && tagMatches(p, bookTags.domain, '')).length]);
+      .map(name => [name, pages.filter(p => p.subtopic === name && pageMatches(p, bookFilter) && tagMatches(p, '')).length]);
   }
   function tagPanel(pages, subtopics, matched) {
-    const domains = DKEYS.filter(d => pages.some(p => p.domain === d));
     const text = bookTags.text.trim();
     const words = bookTags.words.trim();
     const pills = [
       bookFilter !== 'all' && `<span class="tag-pill">${esc(BOOK_FILTERS.find(([k]) => k === bookFilter)[1])}</span>`,
-      bookTags.domain !== 'all' && `<span class="tag-pill dom ${bookTags.domain}">${esc(TAG_DOMAIN[bookTags.domain])}</span>`,
       text && `<span class="tag-pill">${esc(text)}</span>`,
       words && `<span class="tag-pill">“${esc(words)}”</span>`,
     ].filter(Boolean).join('');
@@ -797,11 +795,6 @@
           const c = pages.filter(p => pageMatches(p, k) && tagMatches(p)).length;
           return `<button class="stat-opt ${bookFilter === k ? 'on' : ''}" data-action="book-filter" data-key="${k}" aria-pressed="${bookFilter === k}">${l}<em>${c}</em></button>`;
         }).join('')}</div>
-        <div class="tag-label">Domain</div>
-        <div class="tag-domains">${domains.map(d => {
-          const c = pages.filter(p => pageMatches(p, bookFilter) && tagMatches(p, d)).length;
-          return `<button class="dom-opt ${d} ${bookTags.domain === d ? 'on' : ''}" data-action="book-domain" data-key="${d}" aria-pressed="${bookTags.domain === d}"><i></i>${esc(TAG_DOMAIN[d])}<em>${c}</em></button>`;
-        }).join('')}</div>
         <div class="tag-label">Topic</div>
         <div class="topic-combo">
           <div class="topic-field">${ICON_SEARCH}
@@ -814,10 +807,10 @@
         </div>
         <div class="tag-label">Words</div>
         <div class="topic-field">${ICON_SEARCH}
-          <input type="text" id="tocWords" autocomplete="off" spellcheck="false" placeholder="In question or options, e.g. NAT gateway" value="${esc(bookTags.words)}" aria-label="Filter pages by words in the question or options">
+          <input type="text" id="tocWords" autocomplete="off" spellcheck="false" placeholder="Words or a domain, e.g. NAT gateway, cost" value="${esc(bookTags.words)}" aria-label="Filter pages by words in the question, its options or its domain">
           ${bookTags.words ? `<button class="topic-clear" data-action="book-words-clear" title="Clear words" aria-label="Clear words">×</button>` : ''}
         </div>
-        ${bookFilter !== 'all' || bookTags.domain !== 'all' || text || words ? `<div class="tag-foot"><span>${matched} page${matched === 1 ? '' : 's'} match</span><button class="link-btn" data-action="book-tags-clear">Clear all</button></div>` : ''}
+        ${bookFilter !== 'all' || text || words ? `<div class="tag-foot"><span>${matched} page${matched === 1 ? '' : 's'} match</span><button class="link-btn" data-action="book-tags-clear">Clear all</button></div>` : ''}
       </div>` : ''}
     </div>`;
   }
@@ -843,7 +836,7 @@
     const need = requiredCount(q);
     const s = bookStats(key);
     const bookmarked = store.bookmarks.includes(q.id);
-    if (bookTags.key !== key) bookTags = { key, domain: 'all', text: '', words: '', open: false, active: -1 };
+    if (bookTags.key !== key) bookTags = { key, text: '', words: '', open: false, active: -1 };
     const shown = pages.map((p, k) => [p, k]).filter(([p]) => pageMatches(p, bookFilter) && tagMatches(p));
     const subtopics = [...new Set(pages.map(p => p.subtopic).filter(Boolean))].sort((a, b) => a.localeCompare(b));
     const marks = { hl: e.hl || {}, tn: e.tn || {} };
@@ -1834,10 +1827,9 @@
       case 'book-star': { const c = bookCtx(); if (c) { toggleBookmark(c.q.id); rerender(); } return; }
       case 'book-filter': bookFilter = el.dataset.key; return rerender();
       case 'book-tags-toggle': bookTags.open = !bookTags.open; return rerender();
-      case 'book-domain': bookTags.domain = bookTags.domain === el.dataset.key ? 'all' : el.dataset.key; return rerender(); // clicking the chosen one again clears it
       case 'book-topic-clear': bookTags.text = ''; bookTags.active = -1; rerender(); return $('#tocSearch').focus();
       case 'book-words-clear': bookTags.words = ''; rerender(); return $('#tocWords').focus();
-      case 'book-tags-clear': bookFilter = 'all'; bookTags.domain = 'all'; bookTags.text = ''; bookTags.words = ''; bookTags.active = -1; return rerender();
+      case 'book-tags-clear': bookFilter = 'all'; bookTags.text = ''; bookTags.words = ''; bookTags.active = -1; return rerender();
       case 'next-open': return bookJump(p => !bookEntry(p.id).done);
       case 'next-later': return bookJump(p => !!bookEntry(p.id).later);
       case 'history-page': historyPage = Number(el.dataset.page); return route();
