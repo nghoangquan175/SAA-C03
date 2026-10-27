@@ -751,10 +751,19 @@
 
   // Tag filters in Contents: the page's domain and a search over its subtopic; reset when another book opens.
   // They sit with the status filter in one collapsible "Filters" box; active is the highlighted topic suggestion (arrow keys).
-  let bookTags = { key: null, domain: 'all', text: '', open: false, active: -1 };
-  function tagMatches(q, domain = bookTags.domain, text = bookTags.text) {
+  // words: free-text search over the question and its options; every typed word must appear, each
+  // matched at the start of a word ("replic" finds "replication", "IAM" does not find "diameter").
+  let bookTags = { key: null, domain: 'all', text: '', words: '', open: false, active: -1 };
+  const wordText = {}; // question id -> lower-cased question + options
+  function wordsMatch(q, words) {
+    const terms = words.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length) return true;
+    const hay = wordText[q.id] || (wordText[q.id] = [q.question, ...q.options].join('\n').toLowerCase());
+    return terms.every(t => new RegExp('(^|[^a-z0-9])' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(hay));
+  }
+  function tagMatches(q, domain = bookTags.domain, text = bookTags.text, words = bookTags.words) {
     const t = text.trim().toLowerCase();
-    return (domain === 'all' || q.domain === domain) && (!t || (q.subtopic || '').toLowerCase().includes(t));
+    return (domain === 'all' || q.domain === domain) && (!t || (q.subtopic || '').toLowerCase().includes(t)) && wordsMatch(q, words);
   }
 
   const ICON_SEARCH = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5 14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
@@ -769,10 +778,12 @@
   function tagPanel(pages, subtopics, matched) {
     const domains = DKEYS.filter(d => pages.some(p => p.domain === d));
     const text = bookTags.text.trim();
+    const words = bookTags.words.trim();
     const pills = [
       bookFilter !== 'all' && `<span class="tag-pill">${esc(BOOK_FILTERS.find(([k]) => k === bookFilter)[1])}</span>`,
       bookTags.domain !== 'all' && `<span class="tag-pill dom ${bookTags.domain}">${esc(TAG_DOMAIN[bookTags.domain])}</span>`,
       text && `<span class="tag-pill">${esc(text)}</span>`,
+      words && `<span class="tag-pill">“${esc(words)}”</span>`,
     ].filter(Boolean).join('');
     const sugg = topicSuggestions(pages, subtopics);
     return `<div class="tag-box ${bookTags.open ? 'open' : ''}">
@@ -801,7 +812,12 @@
             `<div class="topic-opt ${k === bookTags.active ? 'active' : ''} ${name === bookTags.text ? 'on' : ''}" role="option" data-topic="${esc(name)}"><span>${esc(name)}</span><em>${c}</em></div>`).join('')
             : `<div class="topic-empty">No topic matches</div>`}</div>
         </div>
-        ${bookFilter !== 'all' || bookTags.domain !== 'all' || text ? `<div class="tag-foot"><span>${matched} page${matched === 1 ? '' : 's'} match</span><button class="link-btn" data-action="book-tags-clear">Clear all</button></div>` : ''}
+        <div class="tag-label">Words</div>
+        <div class="topic-field">${ICON_SEARCH}
+          <input type="text" id="tocWords" autocomplete="off" spellcheck="false" placeholder="In question or options, e.g. NAT gateway" value="${esc(bookTags.words)}" aria-label="Filter pages by words in the question or options">
+          ${bookTags.words ? `<button class="topic-clear" data-action="book-words-clear" title="Clear words" aria-label="Clear words">×</button>` : ''}
+        </div>
+        ${bookFilter !== 'all' || bookTags.domain !== 'all' || text || words ? `<div class="tag-foot"><span>${matched} page${matched === 1 ? '' : 's'} match</span><button class="link-btn" data-action="book-tags-clear">Clear all</button></div>` : ''}
       </div>` : ''}
     </div>`;
   }
@@ -827,7 +843,7 @@
     const need = requiredCount(q);
     const s = bookStats(key);
     const bookmarked = store.bookmarks.includes(q.id);
-    if (bookTags.key !== key) bookTags = { key, domain: 'all', text: '', open: false, active: -1 };
+    if (bookTags.key !== key) bookTags = { key, domain: 'all', text: '', words: '', open: false, active: -1 };
     const shown = pages.map((p, k) => [p, k]).filter(([p]) => pageMatches(p, bookFilter) && tagMatches(p));
     const subtopics = [...new Set(pages.map(p => p.subtopic).filter(Boolean))].sort((a, b) => a.localeCompare(b));
     const marks = { hl: e.hl || {}, tn: e.tn || {} };
@@ -1820,7 +1836,8 @@
       case 'book-tags-toggle': bookTags.open = !bookTags.open; return rerender();
       case 'book-domain': bookTags.domain = bookTags.domain === el.dataset.key ? 'all' : el.dataset.key; return rerender(); // clicking the chosen one again clears it
       case 'book-topic-clear': bookTags.text = ''; bookTags.active = -1; rerender(); return $('#tocSearch').focus();
-      case 'book-tags-clear': bookFilter = 'all'; bookTags.domain = 'all'; bookTags.text = ''; bookTags.active = -1; return rerender();
+      case 'book-words-clear': bookTags.words = ''; rerender(); return $('#tocWords').focus();
+      case 'book-tags-clear': bookFilter = 'all'; bookTags.domain = 'all'; bookTags.text = ''; bookTags.words = ''; bookTags.active = -1; return rerender();
       case 'next-open': return bookJump(p => !bookEntry(p.id).done);
       case 'next-later': return bookJump(p => !!bookEntry(p.id).later);
       case 'history-page': historyPage = Number(el.dataset.page); return route();
@@ -1918,6 +1935,18 @@
     if (document.activeElement) document.activeElement.blur();
     rerender();
   }
+  // The words box filters as you type too, keeping focus and caret; Enter or Esc leaves it.
+  document.addEventListener('input', e => {
+    if (e.target.id !== 'tocWords') return;
+    bookTags.words = e.target.value.slice(0, 120);
+    const pos = e.target.selectionStart;
+    rerender();
+    const box = $('#tocWords');
+    if (box) { box.focus(); box.setSelectionRange(pos, pos); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.target.id === 'tocWords' && (e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); e.target.blur(); }
+  });
   document.addEventListener('input', e => {
     if (e.target.id !== 'tocSearch') return;
     bookTags.text = e.target.value.slice(0, 80);
