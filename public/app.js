@@ -974,7 +974,10 @@
     if (!c) return;
     for (let step = 1; step <= c.pages.length; step++) {
       const k = (c.i + step) % c.pages.length;
-      if (pred(c.pages[k])) return gotoPage(c.key, k);
+      if (pred(c.pages[k])) {
+        bookNav.key = null; // a jump can land anywhere, so Contents centres it like a fresh open
+        return gotoPage(c.key, k);
+      }
     }
     toast('None left');
   }
